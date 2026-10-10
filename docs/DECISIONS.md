@@ -82,10 +82,53 @@ Shiganshina sans toucher à un équilibrage qui reste unique. Une partie jouée
 en skin Thiercelieux et la même en skin Shiganshina produisent exactement
 les mêmes états.
 
+### D7 — La palette de Thiercelieux : bleu nocturne, lanterne et sang
+
+**10 octobre 2026.** Le fond de tout l'écran est le bleu nocturne `#131726`,
+qu'aucun jeu de la collection n'occupe ; le village a la couleur de la
+lanterne `#e6a852`, les loups celle du sang `#dd5f52`, le narrateur et les
+morts celle de la lune `#aab4c8`. La nuit brune de Bataillotom a été
+écartée : trop voisine du bar de Bataillotom et de la table de Belotom.
+
+**Pourquoi.** La paire lanterne/sang donne un camp une couleur — le bleu
+profond les rend lisibles le soir, contrastes mesurés dans
+[`refs/design.md`](refs/design.md) : papier à 14,0:1, sang tenu aux aplats.
+
+### D8 — Trois polices : Cormorant, Alegreya Sans, IBM Plex Mono
+
+**10 octobre 2026.** Cormorant pour l'identité (titres, noms de rôles sur
+les cartes — jamais dans une phrase), Alegreya Sans pour le corps, IBM Plex
+Mono pour les minuteries et le code de salon.
+
+**Pourquoi.** Une garalde de conte pour un jeu de conte ; le sans-serif de
+la même fonderie garde le petit texte lisible sur fond sombre ; et aucun jeu
+de la collection n'emploie Plex Mono — le code de salon gagne à être neuf.
+
+### D9 — Symboles gravés en v1, l'art ensuite
+
+**10 octobre 2026.** Les cartes de rôles sont typographie + symbole gravé
+en v1. L'illustration par rôle et par skin viendra plus tard, sans rien
+casser : la carte ne connaît pas la mécanique.
+
+**Pourquoi.** Huit illustrations par skin, c'est un coût réel pour un gain
+que la typographie Cormorant donne déjà moitié. Mieux vaut un gravé
+définitif qu'une illustration hâtive.
+
+### D10 — Hurlement et glas dès la v1
+
+**10 octobre 2026.** L'atelier sonore compte deux voix propres dès la v1 :
+le hurlement bref à la chute de la nuit, le glas à l'annonce des morts —
+synthétisés en WebAudio sur `bus()`, zéro fichier, comme le cadre.
+
+**Pourquoi.** Un loup-garou sans hurlement s'entend à peine. Deux voix
+synthétisées ne retardent rien ; en skin Shiganshina, le hurlement devient
+un cri de Titan sans toucher au moteur.
+
 ## Questions ouvertes
 
 | Sujet | La question |
 |---|---|
 | Robots et rôles cachés | Que faire d'un joueur qui ne revient pas après le délai de grâce, quand son rôle est secret ? Un robot de loup qui dévore est un aveu ; le pattern collection (`reprise-et-robots.md`) ne s'applique pas tel quel. |
-| Identité Thiercelieux | Palette, polices, art : la proposition de [`refs/design.md`](refs/design.md) attend validation. |
+| Le fil sur mobile | Tiroir qui pousse la place, ou colonne permanente compacte sous la place ? À décider devant le client réel. |
+| Les minuteries | Barre toujours visible, ou mention discrète qui ne s'agite que dans les trente dernières secondes ? À décider devant le client réel. |
 | Rôles suivants | La boîte en a d'autres (`refs/roles.md`, « Rôles envisagés pour plus tard ») : lesquels méritent la v2 ? |

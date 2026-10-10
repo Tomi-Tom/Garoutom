@@ -47,8 +47,10 @@ heure à Garoutom, et elle lui va comme un gant.
 
 ## 1. L'identité Thiercelieux — le skin par défaut
 
-> **PROPOSITION.** Tout ce qui suit est à valider par Tom ; la section
-> « À décider » regroupe les points de goût. Rien n'est gravé avant.
+> **Choisi le 10 octobre 2026.** La palette, les polices, les symboles gravés
+> et l'atelier sonore sont validés ; les questions restées ouvertes — le fil
+> sur mobile, la présentation des minuteries — attendent le client réel, et
+> sont suivies dans [`../DECISIONS.md`](../DECISIONS.md).
 
 **La place du village, entre chien et loup.** La matière est le **carton
 jauni des cartes à jouer** posé sur la pierre de la place ; la lumière est la
@@ -60,7 +62,7 @@ feutre, Yamstom et son carnet) : Garoutom s'en distingue par le lieu — une
 place extérieure, pas une pièce — et par la teinte dominante, **un bleu
 nocturne**, qu'aucun jeu de la collection n'occupe.
 
-### La palette (PROPOSITION)
+### La palette (choisie)
 
 | Nom | Hex | Rôle | Contraste sur `--nuit` |
 |---|---|---|---|
@@ -105,7 +107,7 @@ Variables du cadre remplies :
 --arcade-fond-sur-accent: var(--nuit-creux);
 ```
 
-### Les polices (PROPOSITION)
+### Les polices (choisies)
 
 | Emploi | Police | `@fontsource` | Usage |
 |---|---|---|---|
@@ -359,8 +361,8 @@ même pas que le registre existe.
 
 ### Ébauche de mapping : Thiercelieux ↔ Shiganshina
 
-Les huit rôles de la v1 (PROPOSITION, ébauche à affiner avec un connaisseur
-de l'univers) :
+Les huit rôles de la v1 (ébauche, à affiner avec un connaisseur de
+l'univers) :
 
 | `RoleId` (moteur) | Skin Thiercelieux | Skin Shiganshina (Attack on Titan) |
 |---|---|---|
@@ -381,21 +383,21 @@ sans assaut ». Le mécanisme sous les phrases — `DeathCause`, `NightStep`,
 tous les univers, et la carte de la Voyante comme celle de l'Éclaireuse
 répondent au même prompt `sonder`.
 
-## 5. À décider (pour nourrir `docs/DECISIONS.md`)
+## 5. Ce qui a été tranché, ce qui attend
 
-1. **La palette exacte.** Bleu nocturne proposé (`#131726`) ou nuit brune
-   comme Bataillotom (`#1A1614`) ? Et les deux couleurs de camp —
-   `--lanterne`/`--sang` — sont-elles la bonne paire ?
-2. **La police d'identité.** Cormorant (proposé), ou une voix plus rustique
-   (Almendra), ou typographie seule pour la v1 ?
-3. **Les cartes de rôles.** Illustration (art par rôle et par skin, coût
-   réel), ou typographie + symbole gravé pour la v1, l'art venant ensuite ?
-4. **L'atelier sonore.** Le hurlement et le glas dès la v1, ou s'en tenir aux
-   quatre bruitages du cadre pour sortir plus tôt ?
+Tranché le 10 octobre 2026 — le détail vit dans
+[`../DECISIONS.md`](../DECISIONS.md) :
+
+1. **La palette** — bleu nocturne `#131726`, la paire `--lanterne`/`--sang`.
+2. **La police d'identité** — Cormorant.
+3. **Les cartes de rôles** — typographie + symbole gravé en v1 ; l'art par
+   rôle et par skin viendra ensuite, sans rien casser.
+4. **L'atelier sonore** — hurlement et glas dès la v1, synthétisés en
+   WebAudio sur `bus()`, zéro fichier.
+
+Toujours ouvert, à décider devant le client réel :
+
 5. **Le fil sur mobile.** Tiroir poussant (proposé) ou colonne permanente
    compacte sous la place ?
 6. **Les minuteries.** Barre visible à tout instant, ou mention discrète qui
    ne s'agite que dans les trente dernières secondes ?
-
-Chacune trouve ici une recommandation ; `DECISIONS.md` gardera la réponse de
-Tom, et la décision prise.
