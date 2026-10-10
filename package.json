@@ -1,0 +1,29 @@
+{
+  "name": "garoutom",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Garoutom — les loups-garous en ligne, de 6 à 18 joueurs",
+  "type": "module",
+  "workspaces": [
+    "packages/engine",
+    "packages/server",
+    "packages/client",
+    "packages/worker"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @garoutom/engine && npm-run-all --parallel dev:server dev:client",
+    "dev:server": "npm run dev -w @garoutom/server",
+    "dev:client": "npm run dev -w @garoutom/client",
+    "build": "npm run build -w @garoutom/engine && npm run build -w @garoutom/client",
+    "start": "npm run start -w @garoutom/server",
+    "test": "npm run test -w @garoutom/engine && npm run test -w @garoutom/server && npm run test -w @garoutom/client",
+    "typecheck": "npm run build -w @garoutom/engine && npm run typecheck -w @garoutom/engine && npm run typecheck -w @garoutom/server && npm run typecheck -w @garoutom/client && npm run typecheck -w @garoutom/worker"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
