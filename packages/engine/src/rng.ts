@@ -1,7 +1,7 @@
 /**
  * Générateur déterministe à graine.
  *
- * Le moteur n'appelle jamais Math.random (R133) : une partie doit pouvoir être
+ * Le moteur n'appelle jamais Math.random (R86) : une partie doit pouvoir être
  * rejouée à l'identique, sans quoi ni les tests ni le fuzz ne prouvent rien.
  */
 

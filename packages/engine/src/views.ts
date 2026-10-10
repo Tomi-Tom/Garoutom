@@ -10,7 +10,7 @@
  * siège a une raison explicite de la connaître.
  */
 
-import { pendingActors, speakableChannels } from './game.js';
+import { speakableChannels } from './game.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -41,7 +41,14 @@ export type Prompt =
   | { kind: 'proteger'; forbidden: number | null }
   | { kind: 'sonder' }
   | { kind: 'devorer' }
-  | { kind: 'sorciere'; victim: number | null; vie: boolean; mort: boolean }
+  | {
+      kind: 'sorciere';
+      victim: number | null;
+      vie: boolean;
+      mort: boolean;
+      /** Faux quand la victime est la Sorcière et que la table le lui interdit. */
+      peutSeSauver: boolean;
+    }
   | { kind: 'tirer' }
   | { kind: 'successeur' }
   | { kind: 'voter'; election: boolean };
@@ -87,7 +94,9 @@ function readableChannels(state: GameState, seat: number | null, omniscient: boo
   if (seat === null) return readable;
   const player = state.players[seat];
   if (!player) return readable;
-  if (player.role === 'loup') readable.add('loups');
+  // La meute ne compte ses morts : un loup mort ne lit plus le canal des
+  // loups — sauf à voir tout, comme les autres morts.
+  if (player.alive && player.role === 'loup') readable.add('loups');
   if (state.lovers?.includes(seat)) readable.add('amoureux');
   if (!player.alive) readable.add('morts');
   return readable;
@@ -109,6 +118,7 @@ function promptFor(state: GameState, seat: number): Prompt | null {
               victim: state.night.victim,
               vie: state.potions.vie,
               mort: state.potions.mort,
+              peutSeSauver: state.options.sorciereSeSauve || state.night.victim !== seat,
             }
           : null;
       }
@@ -140,7 +150,9 @@ export function viewFor(state: GameState, seat: number | null): GameView {
   const me = seat === null ? undefined : state.players[seat];
   const omniscient =
     state.over || (me !== undefined && !me.alive && state.options.mortsVoientTout);
-  const isWolf = me?.role === 'loup';
+  // Un loup mort n'est plus de la meute : il ne reconnaît plus ses complices
+  // — sauf à voir tout, comme n'importe quel mort sous cette option.
+  const isLivingWolf = me?.role === 'loup' && me.alive;
   const lovers = state.lovers;
   const knowsLovers =
     omniscient ||
@@ -154,7 +166,7 @@ export function viewFor(state: GameState, seat: number | null): GameView {
       player.seat === seat ||
       player.revealed ||
       (!player.alive && state.options.revelerRoles) ||
-      (isWolf && player.role === 'loup');
+      (isLivingWolf && player.role === 'loup');
     return {
       seat: player.seat,
       alive: player.alive,
@@ -190,12 +202,12 @@ export function viewFor(state: GameState, seat: number | null): GameView {
     day: state.day,
     players,
     captain: state.captain,
-    prompt: seat === null || state.over ? null : pendingOrActed(state, seat),
+    prompt: seat === null || state.over ? null : promptFor(state, seat),
     acted,
     voted: votes ? Object.keys(votes).map(Number) : [],
     yourVote: votes && seat !== null ? (votes[seat] ?? null) : null,
     pack:
-      isWolf || (omniscient && !state.over)
+      isLivingWolf || (omniscient && !state.over)
         ? {
             seats: state.players.filter((p) => p.role === 'loup').map((p) => p.seat),
             votes: phase.kind === 'nuit' ? { ...state.night.wolfVotes } : {},
@@ -209,16 +221,4 @@ export function viewFor(state: GameState, seat: number | null): GameView {
     winner: state.winner,
     log: state.over ? state.log : null,
   };
-}
-
-/**
- * Le prompt reste affiché après avoir agi, pour qu'on puisse changer d'avis
- * tant que la phase court — sauf pour qui n'est plus attendu du tout.
- */
-function pendingOrActed(state: GameState, seat: number): Prompt | null {
-  const prompt = promptFor(state, seat);
-  if (prompt === null) return null;
-  // Le Chasseur et le capitaine n'agissent qu'une fois : leur phase se clôt aussitôt.
-  void pendingActors;
-  return prompt;
 }

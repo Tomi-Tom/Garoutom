@@ -10,6 +10,7 @@ import {
   SPECIAL_ROLES,
   type GameOptions,
   type RoleId,
+  type Rng,
   type SpecialRoleId,
 } from './types.js';
 
@@ -21,6 +22,9 @@ export const DEFAULT_OPTIONS: GameOptions = {
   loups: 2,
   roles: ['voyante', 'sorciere'],
   capitaine: true,
+  capitaineAvantNuit1: false,
+  chasseurEmpoisonne: false,
+  sorciereSeSauve: true,
   chat: true,
   revelerRoles: true,
   mortsVoientTout: true,
@@ -61,6 +65,9 @@ export function sanitizeOptions(raw: unknown): GameOptions {
     loups: clampInt(input.loups, 1, Math.floor((MAX_PLAYERS - 1) / 2), DEFAULT_OPTIONS.loups),
     roles,
     capitaine: bool(input.capitaine, DEFAULT_OPTIONS.capitaine),
+    capitaineAvantNuit1: bool(input.capitaineAvantNuit1, DEFAULT_OPTIONS.capitaineAvantNuit1),
+    chasseurEmpoisonne: bool(input.chasseurEmpoisonne, DEFAULT_OPTIONS.chasseurEmpoisonne),
+    sorciereSeSauve: bool(input.sorciereSeSauve, DEFAULT_OPTIONS.sorciereSeSauve),
     chat: bool(input.chat, DEFAULT_OPTIONS.chat),
     revelerRoles: bool(input.revelerRoles, DEFAULT_OPTIONS.revelerRoles),
     mortsVoientTout: bool(input.mortsVoientTout, DEFAULT_OPTIONS.mortsVoientTout),
@@ -71,20 +78,79 @@ export function sanitizeOptions(raw: unknown): GameOptions {
 }
 
 /**
- * La composition automatique, selon le nombre de joueurs.
+ * À combien de joueurs chaque rôle spécial entre dans la composition de
+ * référence (`docs/refs/roles.md`). Une seule table pour la référence, le
+ * générateur et les suggestions : un seuil déplacé ici se déplace partout.
+ */
+const SEUILS: Record<SpecialRoleId, number> = {
+  voyante: MIN_PLAYERS,
+  sorciere: MIN_PLAYERS,
+  chasseur: 8,
+  cupidon: 10,
+  salvateur: 11,
+  idiot: 12,
+};
+
+/**
+ * La composition de référence, selon le nombre de joueurs (R20).
  *
- * Provisoire : un loup pour trois à quatre joueurs, et les rôles d'information
- * d'abord, ceux qui compliquent la partie ensuite. À recaler sur
- * `docs/refs/roles.md` et sur les premières parties.
+ * Un loup pour trois à quatre joueurs ; les rôles d'information d'abord,
+ * ceux qui compliquent la partie ensuite. Cupidon n'entre qu'à dix joueurs,
+ * le Salvateur à onze : avant, il ne restait que deux villageois simples,
+ * et les nuits devenaient infranchissables pour les loups.
  */
 export function autoComposition(players: number): { loups: number; roles: SpecialRoleId[] } {
   const loups = players <= 8 ? 2 : players <= 12 ? 3 : players <= 16 ? 4 : 5;
+  return { loups, roles: SPECIAL_ROLES.filter((role) => players >= SEUILS[role]) };
+}
+
+/**
+ * La composition du générateur aléatoire (R22) : du hasard dans des bornes
+ * cohérentes, jamais une table jouée d'avance.
+ *
+ * Les loups restent à ±1 de la référence — et jamais moins de deux : un
+ * canal secret d'une personne n'est pas un canal. La Voyante et la Sorcière
+ * sont toujours là : sans information, le village vote au doigt mouillé. Le
+ * reste se tire au sort parmi les rôles éligibles, et il reste toujours au
+ * moins deux villageois simples.
+ */
+export function randomComposition(
+  players: number,
+  rng: Rng,
+): { loups: number; roles: SpecialRoleId[] } {
+  const reference = autoComposition(players);
+  const loupsMin = Math.max(2, reference.loups - 1);
+  const loupsMax = Math.min(reference.loups + 1, Math.floor((players - 1) / 2));
+  const loups = loupsMin + rng.nextInt(Math.max(1, loupsMax - loupsMin + 1));
+
   const roles: SpecialRoleId[] = ['voyante', 'sorciere'];
-  if (players >= 8) roles.push('chasseur');
-  if (players >= 9) roles.push('cupidon');
-  if (players >= 10) roles.push('salvateur');
-  if (players >= 12) roles.push('idiot');
+  const eligibles = SPECIAL_ROLES.filter(
+    (role) => role !== 'voyante' && role !== 'sorciere' && players >= SEUILS[role],
+  );
+  for (const role of eligibles) {
+    if (loups + roles.length + 1 > players - 2) break;
+    if (rng.nextInt(2) === 0) roles.push(role);
+  }
   return { loups, roles };
+}
+
+/**
+ * Les compositions suggérées à l'hôte (R23), du nombre de joueurs à la
+ * table : la référence, une chasse, un village outillé.
+ *
+ * Le moteur fournit les compositions ; le skin les nomme et les raconte.
+ */
+export function suggestionsFor(players: number): { loups: number; roles: SpecialRoleId[] }[] {
+  const reference = autoComposition(players);
+  const chasse = Math.min(reference.loups + 1, Math.floor((players - 1) / 2));
+  const outille = SPECIAL_ROLES.filter((role) => players >= SEUILS[role]);
+  const suggestions = [
+    reference,
+    { loups: chasse, roles: reference.roles },
+    { loups: reference.loups, roles: outille },
+  ];
+  // Une suggestion injouable n'a pas à exister : les bornes de R13 tranchent.
+  return suggestions.filter((s) => s.loups + s.roles.length <= players - 1);
 }
 
 /** Les loups et rôles qui seront distribués, avant mélange. */

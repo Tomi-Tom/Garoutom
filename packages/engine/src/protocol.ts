@@ -75,16 +75,17 @@ export interface RoomView {
   players: PlayerInfo[];
   reconnectGraceMs: number;
   /**
-   * Échéance de la phase en cours pour chaque siège, dans l'horloge du
-   * serveur, ou `null` si ce siège n'a rien à jouer. À comparer à
+   * Échéance de la phase en cours **pour le destinataire seul**, dans
+   * l'horloge du serveur, ou `null` s'il n'a rien à jouer. À comparer à
    * `SyncPayload.serverNow`, jamais à l'horloge du navigateur.
    *
-   * Le serveur tient déjà cette minuterie pour clôturer la phase de lui-même :
-   * sans ce champ, il la tiendrait en secret et le village verrait son vote
-   * lui passer sous le nez sans le moindre avertissement.
+   * Jamais celle des autres sièges : la nuit, une échéance non nulle
+   * désignerait Cupidon, la Voyante, les loups — chacun n'a à connaître que
+   * son propre compte à rebours. Ce que fait le village sans lui ne le
+   * regarde pas ; le fil du vote, lui, se lit dans la vue (`voted`).
    */
-  deadlines: (number | null)[];
-  /** Durée pleine de la minuterie courante, pour dessiner une barre qui se vide. */
+  deadline: number | null;
+  /** Durée pleine de la minuterie du destinataire, pour dessiner une barre qui se vide. */
   deadlineDurationMs: number | null;
 }
 

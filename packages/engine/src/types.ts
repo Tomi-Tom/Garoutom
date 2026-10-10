@@ -82,6 +82,18 @@ export interface GameOptions {
   /** Élection d'un capitaine le premier jour, dont la voix compte double. */
   capitaine: boolean;
   /**
+   * Le capitaine est élu avant la première nuit au lieu du matin du jour 1 :
+   * tout le monde vote, même celui qui ne survivra pas à la nuit (D3).
+   */
+  capitaineAvantNuit1: boolean;
+  /**
+   * Le Chasseur empoisonné — ou mort de chagrin — peut tirer, contre la
+   * règle officielle où le poison l'étouffe (D1).
+   */
+  chasseurEmpoisonne: boolean;
+  /** La Sorcière peut se servir de sa potion de vie sur elle-même (D2). */
+  sorciereSeSauve: boolean;
+  /**
    * Discussion intégrée pour le village. Sans elle, on joue autour d'une vraie
    * table et chacun ne se sert de son téléphone que pour ses cartes et ses
    * votes. Le canal des loups, lui, existe toujours : ils n'ont pas d'autre
@@ -121,6 +133,10 @@ export interface PlayerState {
 export type ChatChannel = 'village' | 'loups' | 'amoureux' | 'morts';
 
 export interface ChatMessage {
+  /**
+   * Numéro du message, **compté par canal** : les trous d'une numérotation
+   * globale raconteraient à chacun l'activité des canaux qu'il ne lit pas.
+   */
   id: number;
   channel: ChatChannel;
   seat: number;
@@ -199,6 +215,8 @@ export interface GameState {
   triggers: Trigger[];
   night: NightChoices;
   captain: number | null;
+  /** L'élection du capitaine a eu lieu, électif ou non : elle ne revient pas. */
+  electionHeld: boolean;
   lovers: [number, number] | null;
   potions: { vie: boolean; mort: boolean };
   /** Le Salvateur ne protège pas deux nuits de suite la même personne. */
@@ -206,7 +224,8 @@ export interface GameState {
   /** Ce que la Voyante a appris, nuit après nuit. */
   inspections: { day: number; target: number; role: RoleId }[];
   chat: ChatMessage[];
-  nextMessageId: number;
+  /** Le prochain numéro de message, pour chaque canal. */
+  nextMessageId: Record<ChatChannel, number>;
   log: LogEntry[];
   winner: Winner | null;
   over: boolean;
@@ -252,7 +271,6 @@ export type GameEvent =
   | { type: 'vote'; tally: Record<number, number>; executed: number | null }
   | { type: 'capitaine'; seat: number; from: number | null }
   | { type: 'tir'; hunter: number; target: number | null }
-  | { type: 'message'; id: number }
   | { type: 'fin'; winner: Winner };
 
 export interface Step {

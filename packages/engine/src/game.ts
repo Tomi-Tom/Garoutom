@@ -96,12 +96,13 @@ export function createGame(setup: { players: number; options: GameOptions }, rng
     triggers: [],
     night: emptyNight(),
     captain: null,
+    electionHeld: false,
     lovers: null,
     potions: { vie: true, mort: true },
     lastProtected: null,
     inspections: [],
     chat: [],
-    nextMessageId: 1,
+    nextMessageId: { village: 1, loups: 1, amoureux: 1, morts: 1 },
     log: [],
     winner: null,
     over: false,
@@ -154,8 +155,11 @@ function voters(state: GameState): number[] {
 /**
  * Ceux qui doivent encore agir dans la phase en cours.
  *
- * Le serveur s'en sert pour faire jouer les robots. Le moteur, lui, clôt la
- * phase dès que la liste est vide.
+ * Le serveur s'en sert pour armer ses minuteries et faire jouer les robots.
+ * Le moteur, lui, ne clôt une phase qu'au fil des actions (`settle`) ou au
+ * temps écoulé (`timeoutPhase`) : une phase ouverte sans personne à attendre
+ * ne vit que pour être vue — c'est le pas fantôme de la Sorcière morte
+ * (R36), et le serveur le clôt quand son temps est passé.
  */
 export function pendingActors(state: GameState): number[] {
   const phase = state.phase;
@@ -233,8 +237,9 @@ function enter(turn: Turn, phase: GameState['phase']): void {
 function startNight(turn: Turn): void {
   const { state } = turn;
   // La nuit N précède le jour N : on n'avance le compteur qu'à partir de la
-  // deuxième nuit, la première suit la révélation des cartes.
-  if (state.phase.kind !== 'revelation') state.day += 1;
+  // deuxième nuit. La première suit la révélation des cartes — ou l'élection
+  // pré-nocturne du capitaine, qui ne fait pas avancer le jour non plus.
+  if (state.phase.kind !== 'revelation' && state.phase.kind !== 'election') state.day += 1;
   state.night = emptyNight();
   enter(turn, { kind: 'nuit', step: 'principale', acted: [] });
 }
@@ -337,7 +342,14 @@ function kill(state: GameState, seat: number, cause: DeathCause, out: Death[]): 
   out.push({ seat, cause, role: state.options.revelerRoles ? player.role : null });
   state.log.push({ day: state.day, type: 'mort', seat, cause });
 
-  if (player.role === 'chasseur') state.triggers.push({ kind: 'chasseur', seat });
+  if (player.role === 'chasseur') {
+    // Le poison étouffe le Chasseur, et le chagrin ne laisse pas de souffle
+    // pour viser : pas de tir. L'option de table rouvre la main pour toute
+    // mort (R48) — autour d'une table, c'est le meneur qui en décide.
+    const peutTirer =
+      cause === 'loups' || cause === 'vote' || cause === 'chasseur' || state.options.chasseurEmpoisonne;
+    if (peutTirer) state.triggers.push({ kind: 'chasseur', seat });
+  }
   if (state.captain === seat) state.triggers.push({ kind: 'succession', seat });
 
   const lovers = state.lovers;
@@ -374,7 +386,7 @@ export function winnerOf(state: GameState): Winner | null {
 
 /** Reprend le cours du jeu : déclencheurs d'abord, victoire ensuite, puis la suite. */
 function proceed(turn: Turn): void {
-  const { state, rng } = turn;
+  const { state } = turn;
 
   while (state.triggers.length > 0) {
     const trigger = state.triggers.shift();
@@ -403,14 +415,19 @@ function proceed(turn: Turn): void {
   }
 
   if (state.resume === 'nuit') {
+    // L'élection pré-nocturne se tient entre la révélation et la première
+    // nuit : tout le monde vote, même celui qui ne survivra pas à la nuit.
+    if (state.options.capitaine && state.options.capitaineAvantNuit1 && !state.electionHeld) {
+      enter(turn, { kind: 'election', votes: {} });
+      return;
+    }
     startNight(turn);
     return;
   }
-  if (state.options.capitaine && state.captain === null && state.day === 1) {
+  if (state.options.capitaine && state.captain === null && state.day === 1 && !state.electionHeld) {
     enter(turn, { kind: 'election', votes: {} });
     return;
   }
-  void rng;
   enter(turn, { kind: 'jour', votes: {} });
 }
 
@@ -427,7 +444,10 @@ function closeElection(turn: Turn): void {
     state.log.push({ day: state.day, type: 'capitaine', seat: elected });
     turn.events.push({ type: 'capitaine', seat: elected, from: null });
   }
-  enter(turn, { kind: 'jour', votes: {} });
+  // L'élection n'a qu'une vie, même sans élu : sans ce drapeau, une élection
+  // pré-nocturne sans voix donnerait une seconde chance au matin du jour 1.
+  state.electionHeld = true;
+  proceed(turn);
 }
 
 function closeDay(turn: Turn): void {
@@ -477,7 +497,9 @@ function closePhase(turn: Turn): void {
   const phase = state.phase;
   switch (phase.kind) {
     case 'revelation':
-      startNight(turn);
+      // La révélation close, la suite dépend des options : l'élection
+      // pré-nocturne, ou directement la nuit.
+      proceed(turn);
       return;
     case 'nuit':
       if (phase.step === 'principale') closePrincipal(turn);
@@ -567,11 +589,12 @@ function say(turn: Turn, seat: number, channel: ChatChannel, raw: string): void 
   if (!speakableChannels(state, seat).includes(channel)) {
     throw new IllegalActionError('Vous ne pouvez pas parler ici', 'channel');
   }
-  const id = state.nextMessageId;
-  state.nextMessageId += 1;
+  // Numérotation par canal : une numérotation globale raconterait à chacun,
+  // par ses trous, l'activité des canaux qu'il ne lit pas.
+  const id = state.nextMessageId[channel] ?? 1;
+  state.nextMessageId[channel] = id + 1;
   state.chat.push({ id, channel, seat, text, day: state.day });
   if (state.chat.length > MAX_CHAT_MESSAGES) state.chat.splice(0, state.chat.length - MAX_CHAT_MESSAGES);
-  turn.events.push({ type: 'message', id });
 }
 
 export function applyAction(state: GameState, action: Action, rng: Rng, seat: number): Step {
@@ -650,6 +673,11 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
       if (action.save && (!next.potions.vie || next.night.victim === null)) {
         throw new IllegalActionError('Rien à sauver', 'potion');
       }
+      // Certaines tables lui interdisent de se sauver elle-même : la règle
+      // officielle 2016, que l'option de table peut restaurer (R43).
+      if (action.save && next.night.victim === seat && !next.options.sorciereSeSauve) {
+        throw new IllegalActionError('La Sorcière ne peut pas se sauver', 'potion');
+      }
       if (action.kill !== null) {
         if (!next.potions.mort) throw new IllegalActionError('La potion de mort est vide', 'potion');
         requireLiving(next, action.kill, 'La cible');
@@ -720,9 +748,16 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
  *
  * Qui n'a pas agi n'agit pas. Un loup muet ne vote pour personne, une Voyante
  * endormie ne voit rien, un village qui n'a pas voté n'exécute personne.
+ *
+ * `armedSeq` est le numéro de la phase qui a armé la minuterie : une minuterie
+ * en retard arrive après que la phase a déjà été clôturée — par une action,
+ * ou par une autre minuterie — et ne doit alors rien clôturer du tout.
  */
-export function timeoutPhase(state: GameState, rng: Rng): Step {
+export function timeoutPhase(state: GameState, rng: Rng, armedSeq: number): Step {
   if (state.over) throw new IllegalActionError('La partie est terminée', 'over');
+  if (state.phaseSeq !== armedSeq) {
+    throw new IllegalActionError('Cette minuterie ne concerne plus la phase en cours', 'stale');
+  }
   const turn: Turn = { state: structuredClone(state), events: [], rng };
   closePhase(turn);
   return { state: turn.state, events: turn.events };
