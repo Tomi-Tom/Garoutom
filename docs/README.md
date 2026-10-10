@@ -9,6 +9,7 @@ recherches, puis les décisions qui en sortent.
 |---|---|
 | [`refs/conventions-collection.md`](refs/conventions-collection.md) | Ce que Garoutom hérite de la collection : stack, temps réel, déploiement, paquet `@tombp/arcade` |
 | [`refs/roles.md`](refs/roles.md) | Les huit rôles v1, le fil d'une nuit et d'un jour, les compositions, les écarts avec la règle officielle |
+| [`refs/design.md`](refs/design.md) | L'identité Thiercelieux, la cartographie des écrans, le chat, le contrat de skins |
 
 ## Les décisions
 
