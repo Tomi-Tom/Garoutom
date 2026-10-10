@@ -12,9 +12,11 @@ personnages de cet univers.
 
 ## Où on en est
 
-**Préproduction.** Pas une ligne de jeu pour l'instant : on fixe d'abord les
-références, la direction artistique, les écrans, les rôles et le système de
-skins. Tout vit dans [`docs/`](docs/README.md).
+**Le moteur est écrit, la préproduction continue.** Les règles pures, les
+vues secrètes et le contrat réseau vivent dans `packages/engine`. Les
+références, la direction artistique et le système de skins se fixent dans
+[`docs/`](docs/README.md) ; les décisions se prennent — et se gardent — dans
+[`DECISIONS.md`](docs/DECISIONS.md).
 
 ## Liens
 
