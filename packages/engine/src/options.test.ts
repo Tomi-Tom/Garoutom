@@ -246,6 +246,12 @@ describe('les bornes de la composition libre', () => {
     // mais R13 ne l’interdit pas : seulement « plus de rôles que de places ».
     expect(() => compositionFor(6, manuelle(2, [...quatre]))).not.toThrow();
   });
+
+  it('R4 — refuse un rôle spécial en deux exemplaires', () => {
+    // Le sanitizeur ne sait pas produire ce doublon ; un options fabriqué à la
+    // main, si. Corrigé le 11 octobre : le moteur distribue au plus une Voyante.
+    expect(() => compositionFor(9, manuelle(2, ['voyante', 'voyante']))).toThrow(IllegalActionError);
+  });
 });
 
 describe('le générateur aléatoire de composition', () => {

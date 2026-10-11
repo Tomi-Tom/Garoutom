@@ -180,6 +180,15 @@ export function compositionFor(players: number, options: GameOptions): RoleId[] 
   }
   const { loups, roles } = options.auto ? autoComposition(players) : options;
   if (loups < 1) throw new IllegalActionError('Il faut au moins un loup', 'composition');
+  // R4 : un rôle spécial n'existe qu'en un exemplaire. Le sanitizeur ne peut
+  // pas produire de doublon, mais un options fabriqué à la main peut : le
+  // moteur refuse de distribuer deux Voyantes plutôt que de le cacher.
+  if (new Set(roles).size !== roles.length) {
+    throw new IllegalActionError(
+      "Un rôle spécial n'existe qu'en un exemplaire",
+      'composition',
+    );
+  }
   // Autant de loups que d'autres, et le premier vote est déjà joué d'avance.
   if (loups * 2 >= players) {
     throw new IllegalActionError('Trop de loups pour cette table', 'composition');
