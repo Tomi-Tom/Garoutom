@@ -12,13 +12,16 @@ personnages de cet univers.
 
 ## Où on en est
 
-**Le moteur est écrit, la préproduction continue.** Les règles pures, les
-vues secrètes et le contrat réseau vivent dans `packages/engine`. Les
+**Le moteur est écrit et testé, le chantier se visite.** Les règles pures,
+les vues secrètes et le contrat réseau vivent dans `packages/engine`, couverts
+par leurs tests. Le client ouvre le bal : l'accueil existe, sur le dos de
+boîte commun de la collection, et la table viendra avec le serveur. Les
 références, la direction artistique et le système de skins se fixent dans
 [`docs/`](docs/README.md) ; les décisions se prennent — et se gardent — dans
 [`DECISIONS.md`](docs/DECISIONS.md).
 
 ## Liens
 
-- **En ligne :** bientôt, sur `garoutom.tombp.fr`
+- **En ligne :** l'accueil du chantier sur
+  [garoutom.tombp.fr](https://garoutom.tombp.fr) — la table ouvrira plus tard
 - **Collection :** [`hub-mini-games`](https://github.com/Tomi-Tom/hub-mini-games)

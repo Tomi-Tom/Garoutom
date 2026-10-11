@@ -100,7 +100,9 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   lui-même : le Chasseur, que son tir désigne (R65), et l'Idiot, que sa grâce
   désigne (R62).
 - **R47** — Quand un amoureux meurt, l'autre meurt de chagrin dans la
-  foulée ; le chagrin s'enchaîne de couple en couple.
+  foulée ; le chagrin s'enchaîne de couple en couple — clause qui ne se
+  déclenche qu'à partir de deux couples, et la v1 n'en connaît qu'un :
+  Cupidon ne joue qu'à la première nuit (R37), la paire est unique.
 - **R48** — Le Chasseur mort laisse un déclencheur de tir — sauf pour une
   mort par poison ou par chagrin. L'option `chasseurEmpoisonne: true` le
   laisse tirer pour **toute** mort (D1).
