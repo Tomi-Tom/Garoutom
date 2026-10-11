@@ -45,9 +45,16 @@ function bool(raw: unknown, fallback: boolean): boolean {
   return typeof raw === 'boolean' ? raw : fallback;
 }
 
-function clampInt(raw: unknown, min: number, max: number, fallback: number): number {
+/**
+ * Un entier dans la borne, ou le défaut — jamais la borne la plus proche
+ * (R10 : une valeur hors borne retombe sur le défaut, sans discussion).
+ * Ramener 500 s à 120 s ferait dire au sanitizeur un réglage que personne
+ * n'a choisi ; le défaut, lui, est un choix connu de la table.
+ */
+function fallbackInt(raw: unknown, min: number, max: number, fallback: number): number {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return fallback;
-  return Math.min(max, Math.max(min, Math.round(raw)));
+  const entier = Math.round(raw);
+  return entier >= min && entier <= max ? entier : fallback;
 }
 
 /** Un identifiant de skin plausible. Le client retombe sur le défaut s'il ne le connaît pas. */
@@ -62,7 +69,7 @@ export function sanitizeOptions(raw: unknown): GameOptions {
     : DEFAULT_OPTIONS.roles;
   return {
     auto: bool(input.auto, DEFAULT_OPTIONS.auto),
-    loups: clampInt(input.loups, 1, Math.floor((MAX_PLAYERS - 1) / 2), DEFAULT_OPTIONS.loups),
+    loups: fallbackInt(input.loups, 1, Math.floor((MAX_PLAYERS - 1) / 2), DEFAULT_OPTIONS.loups),
     roles,
     capitaine: bool(input.capitaine, DEFAULT_OPTIONS.capitaine),
     capitaineAvantNuit1: bool(input.capitaineAvantNuit1, DEFAULT_OPTIONS.capitaineAvantNuit1),
@@ -71,8 +78,18 @@ export function sanitizeOptions(raw: unknown): GameOptions {
     chat: bool(input.chat, DEFAULT_OPTIONS.chat),
     revelerRoles: bool(input.revelerRoles, DEFAULT_OPTIONS.revelerRoles),
     mortsVoientTout: bool(input.mortsVoientTout, DEFAULT_OPTIONS.mortsVoientTout),
-    tempsNuit: clampInt(input.tempsNuit, NIGHT_SECONDS.min, NIGHT_SECONDS.max, DEFAULT_OPTIONS.tempsNuit),
-    tempsJour: clampInt(input.tempsJour, DAY_SECONDS.min, DAY_SECONDS.max, DEFAULT_OPTIONS.tempsJour),
+    tempsNuit: fallbackInt(
+      input.tempsNuit,
+      NIGHT_SECONDS.min,
+      NIGHT_SECONDS.max,
+      DEFAULT_OPTIONS.tempsNuit,
+    ),
+    tempsJour: fallbackInt(
+      input.tempsJour,
+      DAY_SECONDS.min,
+      DAY_SECONDS.max,
+      DEFAULT_OPTIONS.tempsJour,
+    ),
     skin: skinId(input.skin),
   };
 }

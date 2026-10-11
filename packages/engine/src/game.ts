@@ -394,6 +394,10 @@ function proceed(turn: Turn): void {
     if (trigger.kind === 'chasseur') {
       // Un chasseur seul survivant n'a personne sur qui tirer.
       if (livingSeats(state).length === 0) continue;
+      // Ouvrir sa phase, c'est le désigner à toute la table : la carte se
+      // retourne même si l'option ne révèle pas les morts (R46). Qu'il tire
+      // ou emporte sa balle, le village a reconnu son Chasseur.
+      playerAt(state, trigger.seat).revealed = true;
       enter(turn, { kind: 'chasseur', seat: trigger.seat });
       return;
     }
