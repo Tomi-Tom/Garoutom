@@ -287,23 +287,93 @@ pour y entrer.
     Le Chasseur silencieux emporte sa balle, le capitaine muet lègue sa charge
     au hasard.
 
+## Les rôles de la v2
+
+Ouverts le 11 octobre 2026 (D12 à D16, règles R90 à R100). Tous
+**optionnels** : la composition de référence ne les tire jamais, l'hôte les
+coche, le générateur ne les propose que sur demande — rien sous dix joueurs,
+un jusqu'à treize, deux au-delà, le Loup Blanc dès douze.
+
+| Rôle | Camp | Quand il joue | En une phrase |
+|---|---|---|---|
+| `ancien` | village | jamais, il encaisse | Survit à la première attaque de la meute ; tué par le village, il emporte ses pouvoirs |
+| `corbeau` | village | la nuit, en parallèle | Marque un vivant, qui porte deux voix d'office au vote du jour |
+| `bouc` | village | au vote, à sa mort | Meurt à la place d'une égalité, et désigne qui votera le lendemain |
+| `petiteFille` | village | la nuit, sans agir | Voit combien de loups visent chaque cible, jamais lesquels |
+| `loupBlanc` | loups (gagne seul) | la nuit, avec la meute ; seul les nuits paires | Chasse avec la meute, dévore un loup une nuit sur deux, ne gagne que seul |
+
+### L'Ancien
+
+Il a deux vies contre la meute, une seule contre tout le reste. La première
+attaque qui l'aurait tué le laisse debout, et personne n'en sait rien : l'aube
+est paisible. Une attaque couverte par le bouclier ou rachetée par la potion
+de vie ne lui coûte rien — la potion, elle, part (R44). Le poison, le vote,
+la balle du Chasseur le tuent du premier coup.
+
+Tué **de la main du village** — vote, tir, poison —, il se venge : sa carte
+se retourne, et le village perd ses pouvoirs (R92), sous l'option de table
+`ancienRancunier` (défaut : oui, la règle officielle). Concrètement : plus de
+consigne de nuit pour la Voyante, le Salvateur, Cupidon, le Corbeau, la
+Sorcière (son étape se tient, fantôme) ; plus de regard pour la Petite
+Fille ; plus de balle pour un Chasseur qui n'a pas encore tiré, même tombé à
+la même aube ; plus de grâce pour l'Idiot ; plus de dernier mot pour le Bouc,
+qui paie toujours les égalités. Ce qui a été joué reste joué.
+
+### Le Corbeau
+
+Pendant l'étape principale, il marque un vivant — lui compris — ou personne.
+À l'aube, après les morts, l'annonce tombe : « le Corbeau a désigné X », sans
+jamais dire qui est le Corbeau. Au vote du jour, X porte deux voix d'office,
+qui s'ajoutent au décompte ; X vote comme les autres. Une marque sur un mort
+de la nuit s'éteint sans bruit.
+
+### Le Bouc émissaire
+
+Il est la seule exception à « une égalité n'exécute personne » (R61) : s'il
+vit, l'égalité — au moins une voix en tête, à plusieurs — le tue, même s'il
+n'en faisait pas partie. Sa carte se retourne. Son dernier mot, 30 s : il
+désigne au moins un vivant, et ceux-là seuls voteront au prochain vote du
+village. S'il se tait, tout le monde vote.
+
+### La Petite Fille
+
+Elle n'a pas de consigne — sa vue est celle d'un villageois, au rôle près.
+Pendant l'étape principale, elle voit pour chaque cible combien de loups la
+visent, jamais lesquels (`espionnage`). Elle ne risque pas d'être surprise :
+écart assumé avec la boîte (D15).
+
+### Le Loup Blanc
+
+Il chasse avec la meute, qui le prend pour un loup ordinaire : il vote, lit
+et écrit le canal des loups. Les nuits paires, s'il fait partie de la
+distribution, une étape à lui suit l'étape principale : il peut dévorer un
+autre loup, ou personne. Mort, son étape se tient quand même, d'une durée
+fantôme, comme celle de la Sorcière. Sa proie meurt de la cause `loups`. Il
+ne gagne que **seul** ; la meute ne gagne plus qu'entre loups ordinaires ; et
+si la meute reste seule avec lui, la partie continue — trois nuits au plus
+sans une mort, puis la meute l'emporte (R99).
+
+### Les écarts de la v2 avec la boîte
+
+| # | Sujet | Règle officielle | Garoutom | Où |
+|---|---|---|---|---|
+| 10 | Ancien et bouclier | non tranché | l'attaque arrêtée ne compte pas | R91, D13 |
+| 11 | Rancune de l'Ancien | toujours | option `ancienRancunier`, vraie par défaut | R92, D13 |
+| 12 | Chasseur et rancune simultanée | non tranché | le tir qui reste à jouer est perdu | R92, D13 |
+| 13 | Bouc sans pouvoirs | non tranché | meurt toujours de l'égalité, ne désigne plus | R94, D14 |
+| 14 | Petite Fille | risque d'être surprise | aucun risque, espionnage anonyme | R95, D15 |
+| 15 | Victime du Loup Blanc | annoncée comme un mort de la nuit | cause `loups`, la Sorcière ne la connaît pas | R97, D16 |
+| 16 | Loup Blanc qui ne mord pas | non tranché | trois nuits de huis clos sans mort, la meute gagne | R99, D16 |
+
 ## Les rôles envisagés pour plus tard
 
-Une ligne chacun, pour un jour où [`DECISIONS.md`](../DECISIONS.md) s'ouvrira
-aux autres cartons de la boîte. Classés du moins au plus coûteux à câbler.
+Ce qui reste de la boîte, du moins au plus coûteux à câbler.
 
 | Rôle | Ce qu'il apporterait | Coût |
 |---|---|---|
-| Bouc émissaire | Meurt à la place des ex aequo : rend le vote à majorité molle dangereux | Faible — une branche dans `closeDay`, mais il remet en cause l'« égalité = personne » |
-| Corbeau | Ajoute un vote secret contre un suspect chaque nuit : plus de pression sur les loups | Faible — un tour de nuit de plus, un décompte pondéré |
 | Voleur | Choisit sa carte parmi deux au début : le doute sur la distribution | Moyen — une phase avant la révélation, un choix caché |
-| Ancien | Survit à la première attaque des loups : un sursis qui se joue | Moyen — un état par joueur, des interactions avec le bouclier et le poison |
-| Petite Fille | Espionne le vote des loups, au risque de s'y faire prendre | Moyen — une fuite d'information dans l'étape de la meute, la plus délicate à projeter sans rien dire |
-| Loup Blanc | Un loup qui dévore aussi la meute et gagne seul | Moyen — une étape de nuit en plus, une victoire solitaire dans `Winner` |
 | Renard | Sonne un triplet de voisins d'un coup : la voyance devient pari | Moyen — une sonde à trois cibles et une contrainte de placement |
 | Joueur de flûte | Charme chaque nuit, gagne seul si tout le village est charmé | Élevé — une troisième condition de victoire et un état caché par joueur |
 
-Aucun n'est prévu pour la v1. Les trois premiers sont des variantes de
-comptage ; tout ce qui touche à une victoire solitaire ou à une information
-qui fuit mérite d'attendre que les huit rôles actuels aient fait leurs
-preuves.
+Le Bouc émissaire, le Corbeau, l'Ancien, la Petite Fille et le Loup Blanc,
+envisagés ici au temps de la v1, sont passés dans la section précédente.

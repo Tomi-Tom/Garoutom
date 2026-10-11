@@ -16,53 +16,55 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
   autoComposition,
+  compositionFor,
   DAY_SECONDS,
   MAX_PLAYERS,
   MIN_PLAYERS,
   NIGHT_SECONDS,
+  OPTIONAL_ROLE_MIN_PLAYERS,
+  OPTIONAL_ROLES,
   randomComposition,
   SPECIAL_ROLES,
   suggestionsFor,
+  wolvesIn,
   type GameOptions,
   type PlayerInfo,
   type RoomView,
   type Rng,
-  type SpecialRoleId,
+  type ChoosableRoleId,
+  type OptionalRoleId,
 } from '@garoutom/engine';
 
-import { RESSORT_CARTE, RESSORT_JETON, RESSORT_PANNEAU } from '../anim/tokens.js';
+import { RESSORT_CARTE, RESSORT_PANNEAU } from '../anim/tokens.js';
+import { Interrupteur } from '../components/Interrupteur.js';
+import { BoutonReglages } from '../components/Reglages.js';
+import { SymboleRole } from '../components/habit/Symbole.js';
+import { BoutonRegles } from '../components/Regles.js';
 import { lancerPartie, quitterTable, reglerOptions } from '../lib/actions.js';
 import { ARCADE_ID } from '../lib/identity.js';
+import { useVoix } from '../lib/partie.js';
 import { useStore } from '../lib/store.js';
+import { peauDuSkin, SKINS, type Voix } from '../skins/registre.js';
 
 /** Combien de temps la fenêtre d'une arrivée reste allumée. */
 const DUREE_ARRIVEE_MS = 8_000;
 
 /**
- * Les noms des rôles, dans la voix de Thiercelieux.
- *
- * Les identifiants du moteur « ne s'affichent jamais tels quels »
- * (`types.ts`) : c'est au skin de les traduire, et le registre des skins
- * n'existe pas encore. Cette table dit la voix du skin par défaut — le
- * registre la remplacera sans que le salon n'ait à changer.
+ * La composition dite comme la table la lira en cours de partie, dans la
+ * voix du skin : « 2 loups · la Voyante » ici, « 2 Titans · l'Éclaireuse »
+ * ailleurs. Les identifiants du moteur ne s'affichent jamais tels quels.
  */
-const NOM_ROLE: Record<SpecialRoleId, string> = {
-  voyante: 'la Voyante',
-  sorciere: 'la Sorcière',
-  chasseur: 'le Chasseur',
-  cupidon: 'Cupidon',
-  salvateur: 'le Salvateur',
-  idiot: 'l’Idiot du village',
-};
-
-/** La composition dite comme la table la lira en cours de partie. */
-function phraseComposition(loups: number, roles: readonly SpecialRoleId[]): string {
-  return [`${String(loups)} loup${loups > 1 ? 's' : ''}`, ...roles.map((role) => NOM_ROLE[role])].join(
-    ' · ',
-  );
+function phraseComposition(voix: Voix, loups: number, roles: readonly ChoosableRoleId[]): string {
+  // Le Loup Blanc chasse avec la meute et compte parmi les loups (R13, R96) :
+  // la phrase le dit, « 3 loups dont le Loup Blanc », au lieu de l'ajouter
+  // comme un rôle de plus.
+  const blanc = roles.includes('loupBlanc');
+  const meute = voix.compteLoups(wolvesIn(loups, roles)) + (blanc ? ` dont ${voix.nomRole('loupBlanc')}` : '');
+  const autres = roles.filter((role) => role !== 'loupBlanc').map((role) => voix.nomRole(role));
+  return [meute, ...autres].join(' · ');
 }
 
-function memeRoles(a: readonly SpecialRoleId[], b: readonly SpecialRoleId[]): boolean {
+function memeRoles(a: readonly ChoosableRoleId[], b: readonly ChoosableRoleId[]): boolean {
   return a.length === b.length && a.every((role) => b.includes(role));
 }
 
@@ -94,7 +96,20 @@ export function Salon({ room }: { room: RoomView }) {
   const moi = room.players.find((player) => player.id === playerId);
   const hote = moi?.isHost ?? false;
   const nombre = room.players.length;
-  const peutLancer = nombre >= MIN_PLAYERS;
+  const voix = useVoix();
+  const manque = Math.max(0, MIN_PLAYERS - nombre);
+  const assezDeMonde = manque === 0;
+  // La composition réglée doit être jouable pour ce nombre de joueurs : le
+  // moteur a le dernier mot (R13), et sa raison se dit au bouton grisé.
+  let erreurComposition: string | null = null;
+  if (assezDeMonde) {
+    try {
+      compositionFor(nombre, room.options);
+    } catch (erreur) {
+      erreurComposition = erreur instanceof Error ? erreur.message : 'Composition impossible';
+    }
+  }
+  const peutLancer = assezDeMonde && erreurComposition === null;
   const assis = [...room.players].sort((a, b) => a.seat - b.seat);
   const libres = MAX_PLAYERS - nombre;
 
@@ -145,6 +160,21 @@ export function Salon({ room }: { room: RoomView }) {
     }
   };
 
+  // Le lien d'invitation : l'adresse de la page, sans ce qui la suit, plus le
+  // code. L'accueil lit `?table=` et remplit le code d'avance.
+  const copierLien = async () => {
+    const lien = new URL(window.location.href);
+    lien.search = '';
+    lien.hash = '';
+    lien.searchParams.set('table', room.code);
+    try {
+      await navigator.clipboard.writeText(lien.toString());
+      pushNotice('Lien d’invitation copié — il ouvre l’accueil avec le code déjà rempli');
+    } catch {
+      pushNotice(`Partagez ce lien : ${lien.toString()}`);
+    }
+  };
+
   return (
     <div data-testid="salon" className="min-h-full overflow-auto p-4 sm:p-6">
       <motion.main
@@ -172,11 +202,16 @@ export function Salon({ room }: { room: RoomView }) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <BoutonRegles />
+            <BoutonReglages />
             <BoutonSon />
-            <button type="button" onClick={() => void copierCode()} className="btn-voisin">
+            <button type="button" onClick={() => void copierCode()} className="btn-voisin min-h-11 px-3">
               Copier le code
             </button>
-            <button type="button" onClick={() => void quitterTable()} className="btn-voisin">
+            <button type="button" onClick={() => void copierLien()} className="btn-voisin min-h-11 px-3">
+              Copier le lien d’invitation
+            </button>
+            <button type="button" onClick={() => void quitterTable()} className="btn-voisin min-h-11 px-3">
               Quitter
             </button>
           </div>
@@ -186,7 +221,11 @@ export function Salon({ room }: { room: RoomView }) {
         <section className="carte p-4 sm:p-5">
           <TitreSection
             title="Autour de la table"
-            aside={`${String(nombre)} joueur${nombre > 1 ? 's' : ''} · il en faut ${String(MIN_PLAYERS)} pour lancer`}
+            aside={
+              assezDeMonde
+                ? `${String(nombre)} joueur${nombre > 1 ? 's' : ''} · prêts à lancer`
+                : `${String(nombre)} joueur${nombre > 1 ? 's' : ''} · il en manque ${String(manque)} pour lancer`
+            }
           />
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {assis.map((joueur) => (
@@ -221,9 +260,10 @@ export function Salon({ room }: { room: RoomView }) {
             aside={hote ? 'vous décidez' : 'réglées par l’hôte'}
           />
           <div className="mt-4 flex flex-col gap-6">
-            <Composition options={room.options} nombre={nombre} editable={hote} />
+            <ChoixSkin options={room.options} editable={hote} />
+            <Composition options={room.options} nombre={nombre} editable={hote} voix={voix} />
             <Minuteries options={room.options} editable={hote} />
-            <Interrupteurs options={room.options} editable={hote} />
+            <Interrupteurs options={room.options} editable={hote} voix={voix} />
           </div>
           {!hote && (
             <p className="mt-4 text-xs leading-relaxed" style={{ color: 'var(--papier-doux)' }}>
@@ -244,21 +284,35 @@ export function Salon({ room }: { room: RoomView }) {
           style={{ borderColor: 'var(--arcade-trait)' }}
         >
           {hote ? (
-            <button
-              type="button"
-              onClick={() => void lancerPartie()}
-              disabled={!peutLancer}
-              className="btn-village px-4 py-4 text-lg"
-            >
-              {peutLancer
-                ? 'Lancer la partie'
-                : `Il faut ${String(MIN_PLAYERS)} joueurs pour lancer — ${String(nombre)} à la table`}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void lancerPartie()}
+                disabled={!peutLancer}
+                aria-describedby={peutLancer ? undefined : 'raison-lancement'}
+                className="btn-village px-4 py-4 text-lg"
+              >
+                Lancer la partie
+              </button>
+              {!peutLancer && (
+                <p
+                  id="raison-lancement"
+                  className="pt-2 text-center text-sm"
+                  style={{ color: assezDeMonde ? 'var(--sang)' : 'var(--papier-doux)' }}
+                >
+                  {assezDeMonde
+                    ? `La composition ne tient pas pour ${String(nombre)} joueurs : ${erreurComposition ?? ''}. Changez-la ci-dessus.`
+                    : `Il faut ${String(MIN_PLAYERS)} joueurs pour lancer — ${String(nombre)} à la table, il en manque ${String(manque)}. Partagez le code ou le lien d’invitation.`}
+                </p>
+              )}
+            </>
           ) : (
             <p className="py-3 text-center text-sm" style={{ color: 'var(--papier-doux)' }}>
               {peutLancer
                 ? 'Tout est prêt — l’hôte peut lancer la partie.'
-                : `En attente de joueurs : ${String(nombre)} à la table, ${String(MIN_PLAYERS)} au moins.`}
+                : assezDeMonde
+                  ? 'La composition de l’hôte ne tient pas encore : il doit la corriger avant de lancer.'
+                  : `En attente de joueurs : ${String(nombre)} à la table, ${String(MIN_PLAYERS)} au moins — il en manque ${String(manque)}.`}
             </p>
           )}
         </div>
@@ -362,11 +416,14 @@ function Composition({
   options,
   nombre,
   editable,
+  voix,
 }: {
   options: GameOptions;
   nombre: number;
   editable: boolean;
+  voix: Voix;
 }) {
+  const suggestionsDuSkin = peauDuSkin(options.skin).suggestions;
   /*
     Les suggestions du moteur, sans doublon : à six joueurs, la référence, la
     chasse et le village outillé du moteur coïncident — trois boutons identiques
@@ -392,8 +449,8 @@ function Composition({
 
       <Interrupteur
         id="auto"
-        label="Le moteur compose"
-        hint="Loups et rôles suivent la référence du moteur, au nombre de joueurs du lancement."
+        label="Composition automatique"
+        hint={`Les ${voix.motLoups()} et les rôles suivent la référence du moteur, au nombre de joueurs du lancement.`}
         checked={options.auto}
         editable={editable}
         onToggle={(auto) => void reglerOptions({ auto })}
@@ -402,13 +459,22 @@ function Composition({
       {options.auto ? (
         <p className="mt-2 rounded-lg px-3 py-2.5 text-sm" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
           Pour {String(nombre)} joueur{nombre > 1 ? 's' : ''} aujourd'hui :{' '}
-          <span className="font-semibold">{phraseComposition(reference.loups, reference.roles)}</span>
+          <span className="font-semibold">{phraseComposition(voix, reference.loups, reference.roles)}</span>
           <span className="block text-xs" style={{ color: 'var(--papier-doux)' }}>
             recalculée au nombre réel au lancement.
           </span>
         </p>
       ) : (
         <div className="mt-2 flex flex-col gap-4">
+          <p className="rounded-lg px-3 py-2.5 text-sm" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
+            Composition réglée :{' '}
+            <span className="font-semibold" data-testid="composition-reglee">
+              {phraseComposition(voix, options.loups, options.roles)}
+            </span>
+            <span className="block text-xs" style={{ color: 'var(--papier-doux)' }}>
+              les autres joueurs sont de simples {voix.nomRole('villageois')}.
+            </span>
+          </p>
           {/*
             Les suggestions du moteur : la référence, une chasse, un village
             outillé. Des boutons cochables plutôt que des cases : on choisit
@@ -416,15 +482,17 @@ function Composition({
           */}
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Compositions suggérées">
             {actives.map((suggestion) => {
+              const nomSuggestion = suggestionsDuSkin[brutes.indexOf(suggestion)];
               const active =
                 options.loups === suggestion.loups && memeRoles(options.roles, suggestion.roles);
               return (
                 <button
-                  key={phraseComposition(suggestion.loups, suggestion.roles)}
+                  key={phraseComposition(voix, suggestion.loups, suggestion.roles)}
                   type="button"
                   role="radio"
                   aria-checked={active}
                   disabled={!editable}
+                  title={nomSuggestion?.note}
                   onClick={() => {
                     if (!editable || active) return;
                     void reglerOptions({ auto: false, loups: suggestion.loups, roles: [...suggestion.roles] });
@@ -439,7 +507,12 @@ function Composition({
                     color: active ? 'var(--papier)' : 'var(--papier-doux)',
                   }}
                 >
-                  {phraseComposition(suggestion.loups, suggestion.roles)}
+                  {nomSuggestion !== undefined && (
+                    <span className="block text-[11px] font-bold tracking-[0.06em] uppercase">
+                      {nomSuggestion.nom}
+                    </span>
+                  )}
+                  {phraseComposition(voix, suggestion.loups, suggestion.roles)}
                 </button>
               );
             })}
@@ -455,6 +528,18 @@ function Composition({
             >
               Au hasard
             </button>
+            <button
+              type="button"
+              disabled={!editable}
+              onClick={() => {
+                if (!editable) return;
+                void reglerOptions({ auto: false, ...randomComposition(nombre, hasard, { optionnels: true }) });
+              }}
+              className="btn-voisin min-h-11 px-3 py-1.5 text-sm"
+              title={`Comme « Au hasard », mais le tirage peut aussi sortir des rôles optionnels (dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.ancien)} joueurs ; ${voix.nomRole('loupBlanc')} dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.loupBlanc)})`}
+            >
+              Au hasard, rôles optionnels compris
+            </button>
           </div>
 
           {/*
@@ -464,14 +549,14 @@ function Composition({
           <div className="grid gap-3 rounded-lg p-3" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span id="loups-hint" className="text-sm font-bold">
-                Loups
+                {voix.motLoups().replace(/^./, (lettre) => lettre.toUpperCase())}
                 <span className="pl-2 text-xs font-normal" style={{ color: 'var(--papier-doux)' }}>
                   jamais autant que les autres
                 </span>
               </span>
               <ChampNombre
                 id="loups"
-                label="Nombre de loups"
+                label={`Nombre de ${voix.motLoups()}`}
                 valeur={options.loups}
                 min={1}
                 max={Math.max(1, Math.floor((nombre - 1) / 2))}
@@ -505,15 +590,119 @@ function Composition({
                       color: retenu ? 'var(--papier)' : 'var(--papier-doux)',
                     }}
                   >
-                    {NOM_ROLE[role]}
+                    {voix.nomRole(role)}
                   </button>
                 );
               })}
             </div>
+            <RolesOptionnels options={options} nombre={nombre} editable={editable} voix={voix} />
           </div>
         </div>
       )}
     </fieldset>
+  );
+}
+
+/**
+ * La seconde rangée : les rôles optionnels de la v2 (R90). Hors de la
+ * référence et des suggestions, l'hôte les coche à toute table — le moteur
+ * n'en refuse que ce que R13 refuse, et le bouton de lancement dit pourquoi.
+ * Sous le seuil conseillé (R100), la carte avertit sans interdire.
+ */
+function RolesOptionnels({
+  options,
+  nombre,
+  editable,
+  voix,
+}: {
+  options: GameOptions;
+  nombre: number;
+  editable: boolean;
+  voix: Voix;
+}) {
+  return (
+    <div className="flex flex-col gap-2" data-testid="roles-optionnels">
+      <p className="text-sm font-bold">
+        Rôles optionnels
+        <span className="pl-2 text-xs font-normal" style={{ color: 'var(--papier-doux)' }}>
+          pour aller plus loin — jamais dans la composition automatique
+        </span>
+      </p>
+      <div className="grid gap-1.5 sm:grid-cols-2" role="group" aria-label="Rôles optionnels">
+        {OPTIONAL_ROLES.map((role) => (
+          <CaseRoleOptionnel
+            key={role}
+            role={role}
+            retenu={options.roles.includes(role)}
+            nombre={nombre}
+            editable={editable}
+            voix={voix}
+            onToggle={() => {
+              if (!editable) return;
+              const roles = options.roles.includes(role)
+                ? options.roles.filter((pris) => pris !== role)
+                : [...options.roles, role];
+              void reglerOptions({ roles });
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CaseRoleOptionnel({
+  role,
+  retenu,
+  nombre,
+  editable,
+  voix,
+  onToggle,
+}: {
+  role: OptionalRoleId;
+  retenu: boolean;
+  nombre: number;
+  editable: boolean;
+  voix: Voix;
+  onToggle: () => void;
+}) {
+  const seuil = OPTIONAL_ROLE_MIN_PLAYERS[role];
+  const sousSeuil = nombre < seuil;
+  return (
+    <button
+      type="button"
+      aria-pressed={retenu}
+      disabled={!editable}
+      onClick={onToggle}
+      className="flex min-h-11 gap-3 rounded-lg p-3 text-left transition"
+      style={{
+        cursor: editable ? 'pointer' : 'default',
+        background: retenu ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
+        boxShadow: retenu
+          ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
+          : 'inset 0 0 0 1px var(--arcade-trait)',
+        color: retenu ? 'var(--papier)' : 'var(--papier-doux)',
+      }}
+    >
+      <span className="shrink-0">
+        <SymboleRole role={role} taille={28} />
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-sm font-semibold">{majuscule(voix.nomRole(role))}</span>
+        <span className="text-xs leading-snug font-normal">{voix.descriptionRole(role)}</span>
+        {sousSeuil ? (
+          <span
+            className="text-[11px] font-semibold"
+            style={{ color: 'var(--lanterne)' }}
+            data-testid={`seuil-${role}`}
+          >
+            Conseillé dès {String(seuil)} joueurs — la table en compte {String(nombre)}.
+          </span>
+        ) : (
+          <span className="text-[11px] font-normal">Conseillé dès {String(seuil)} joueurs.</span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -677,49 +866,94 @@ function ChampNombre({
 
 type CleInterrupteur = Extract<
   keyof GameOptions,
-  'capitaine' | 'capitaineAvantNuit1' | 'chasseurEmpoisonne' | 'sorciereSeSauve' | 'chat' | 'revelerRoles' | 'mortsVoientTout'
+  'capitaine' | 'capitaineAvantNuit1' | 'chasseurEmpoisonne' | 'sorciereSeSauve' | 'ancienRancunier' | 'chat' | 'revelerRoles' | 'mortsVoientTout'
 >;
 
-/** Les interrupteurs de la table, chacun avec la phrase de ce qu'il change. */
-const REGLAGES: readonly { cle: CleInterrupteur; label: string; hint: string }[] = [
+/**
+ * Les interrupteurs de la table, chacun avec la phrase de ce qu'il change.
+ * Les noms de rôles viennent de la voix du skin : aucun n'est écrit en dur.
+ */
+const REGLAGES: readonly {
+  cle: CleInterrupteur;
+  label: (voix: Voix, charge: string) => string;
+  hint: (voix: Voix, charge: string) => string;
+}[] = [
   {
     cle: 'capitaine',
-    label: 'Un capitaine',
-    hint: 'La table élit un capitaine dont la voix compte double ; mort, il désigne son successeur.',
+    label: (_voix, charge) => `Élire ${charge}`,
+    hint: (_voix, charge) =>
+      `La table élit ${charge} : sa voix compte double au vote du village, et mort, il désigne son successeur.`,
   },
   {
     cle: 'capitaineAvantNuit1',
-    label: 'Capitaine avant la première nuit',
-    hint: 'L’élection a lieu avant la nuit 1 : celui qui ne survivra pas à la nuit vote quand même.',
+    label: () => 'Élection avant la première nuit',
+    hint: () =>
+      'Par défaut l’élection a lieu au matin du premier jour. Ici, avant la nuit 1 : celui qui ne survivra pas à la nuit vote quand même.',
   },
   {
     cle: 'chasseurEmpoisonne',
-    label: 'Le Chasseur empoisonné tire',
-    hint: 'Contre la règle officielle : le poison — ou le chagrin — ne lui interdit pas d’emporter quelqu’un.',
+    label: (voix) => `${majuscule(voix.nomRole('chasseur'))} empoisonné tire`,
+    hint: (voix) =>
+      `Par défaut, ${voix.nomRole('chasseur')} mort empoisonné ou de chagrin n’emporte personne. Ici, il tire quelle que soit sa mort.`,
   },
   {
     cle: 'sorciereSeSauve',
-    label: 'La Sorcière peut se sauver',
-    hint: 'Elle peut servir sa potion de vie à elle-même.',
+    label: (voix) => `${majuscule(voix.nomRole('sorciere'))} peut se sauver`,
+    hint: (voix) =>
+      `${majuscule(voix.nomRole('sorciere'))} peut servir sa potion de vie sur elle-même quand la meute l’attaque. Désactivé, elle ne le peut pas.`,
+  },
+  {
+    cle: 'ancienRancunier',
+    label: (voix) => `Rancune ${deNom(voix.nomRole('ancien'))}`,
+    hint: (voix) =>
+      `Si ${voix.nomRole('ancien')} meurt de la main du village — vote, tir ou poison —, tous les pouvoirs du village s’éteignent avec lui. Désactivé, il meurt sans se venger.`,
   },
   {
     cle: 'chat',
-    label: 'Le fil du village',
-    hint: 'Un fil de discussion le jour. Sans lui, on parle à voix haute autour de la table — le canal des loups, lui, existe toujours.',
+    label: () => 'Le fil du village',
+    hint: () =>
+      'Un fil de discussion écrit le jour. Sans lui, on parle à voix haute autour de la table — le canal secret de la meute, lui, existe toujours.',
   },
   {
     cle: 'revelerRoles',
-    label: 'Rôles révélés des morts',
-    hint: 'La carte d’un mort se retourne devant tous.',
+    label: () => 'Rôles révélés des morts',
+    hint: (voix) =>
+      `La carte d’un mort se retourne devant tous. Sans cela, elle reste cachée — sauf deux que le jeu retourne de lui-même : ${voix.nomRole('chasseur')} au moment de tirer, et ${voix.nomRole('idiot')} à sa grâce.`,
   },
   {
     cle: 'mortsVoientTout',
-    label: 'Les morts voient tout',
-    hint: 'Les morts connaissent les rôles de tous et lisent les canaux secrets : la partie est finie pour eux.',
+    label: () => 'Les morts voient tout',
+    hint: () =>
+      'Les morts connaissent les rôles de tous et lisent les canaux secrets : la partie est finie pour eux.',
   },
 ];
 
-function Interrupteurs({ options, editable }: { options: GameOptions; editable: boolean }) {
+/** « de l’Ancien », « du Corbeau », « de la Petite Fille » : le nom du skin porte déjà son article. */
+function deNom(nom: string): string {
+  if (/^le /i.test(nom)) return `du ${nom.slice(3)}`;
+  if (/^les /i.test(nom)) return `des ${nom.slice(4)}`;
+  return `de ${nom}`;
+}
+
+function majuscule(texte: string): string {
+  return texte.replace(/^./, (lettre) => lettre.toUpperCase());
+}
+
+function Interrupteurs({
+  options,
+  editable,
+  voix,
+}: {
+  options: GameOptions;
+  editable: boolean;
+  voix: Voix;
+}) {
+  // La Sorcière n'existe pas toujours : en composition automatique elle est
+  // toujours là (R20), en manuel l'hôte peut la retirer.
+  const charge = peauDuSkin(options.skin).charge;
+  const sorciereEnJeu = options.auto || options.roles.includes('sorciere');
+  // L'Ancien n'entre jamais dans la composition automatique (R90).
+  const ancienEnJeu = !options.auto && options.roles.includes('ancien');
   return (
     <fieldset className="border-0 p-0">
       <legend className="flex flex-wrap items-baseline gap-2 pb-2">
@@ -733,14 +967,23 @@ function Interrupteurs({ options, editable }: { options: GameOptions; editable: 
           <Interrupteur
             key={reglage.cle}
             id={reglage.cle}
-            label={reglage.label}
+            label={reglage.label(voix, charge)}
             hint={
               reglage.cle === 'capitaineAvantNuit1' && !options.capitaine
-                ? `${reglage.hint} Nécessite un capitaine.`
-                : reglage.hint
+                ? `${reglage.hint(voix, charge)} Nécessite un capitaine.`
+                : reglage.cle === 'sorciereSeSauve' && !sorciereEnJeu
+                  ? `${reglage.hint(voix, charge)} Sans effet : aucune ${voix.nomRole('sorciere')} dans la composition.`
+                  : reglage.cle === 'ancienRancunier' && !ancienEnJeu
+                    ? `${reglage.hint(voix, charge)} Sans effet : ${voix.nomRole('ancien')} n’est pas dans la composition — cochez-le parmi les rôles optionnels.`
+                    : reglage.hint(voix, charge)
             }
             checked={options[reglage.cle]}
-            editable={editable && !(reglage.cle === 'capitaineAvantNuit1' && !options.capitaine)}
+            editable={
+              editable &&
+              !(reglage.cle === 'capitaineAvantNuit1' && !options.capitaine) &&
+              !(reglage.cle === 'sorciereSeSauve' && !sorciereEnJeu) &&
+              !(reglage.cle === 'ancienRancunier' && !ancienEnJeu)
+            }
             onToggle={(valeur) => void reglerOptions(bascule(reglage.cle, valeur))}
           />
         ))}
@@ -749,76 +992,58 @@ function Interrupteurs({ options, editable }: { options: GameOptions; editable: 
   );
 }
 
-/**
- * Un interrupteur : une glissière creusée dans la nuit, un jeton qui coulisse.
- *
- * La case à cocher est le vrai contrôle — le reste est décor, `aria-hidden`.
- * Grisé, il l'est par la seule vraie raison : « vous n'êtes pas l'hôte »,
- * dite en toutes lettres au bas de la section plutôt que répétée huit fois.
- */
-function Interrupteur({
-  id,
-  label,
-  hint,
-  checked,
-  editable,
-  onToggle,
-}: {
-  id: string;
-  label: string;
-  hint: string;
-  checked: boolean;
-  editable: boolean;
-  onToggle: (valeur: boolean) => void;
-}) {
-  return (
-    <label
-      className="flex gap-3 rounded-lg p-3"
-      style={{
-        cursor: editable ? 'pointer' : 'default',
-        background: checked ? 'color-mix(in srgb, var(--lanterne) 9%, transparent)' : 'transparent',
-        boxShadow: `inset 0 0 0 1px ${checked ? 'color-mix(in srgb, var(--lanterne) 45%, transparent)' : 'var(--arcade-trait)'}`,
-        opacity: editable ? 1 : 0.75,
-      }}
-    >
-      <input
-        type="checkbox"
-        className="sr-only"
-        checked={checked}
-        disabled={!editable}
-        onChange={() => {
-          if (editable) onToggle(!checked);
-        }}
-        aria-describedby={`${id}-hint`}
-      />
-      <Glissiere actif={checked} />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-bold">{label}</span>
-        <span id={`${id}-hint`} className="text-xs leading-snug" style={{ color: 'var(--papier-doux)' }}>
-          {hint}
-        </span>
-      </span>
-    </label>
-  );
-}
+/* ------------------------------------------------------------------ */
+/* Le skin                                                             */
+/* ------------------------------------------------------------------ */
 
-function Glissiere({ actif }: { actif: boolean }) {
+/**
+ * L'univers de la table : l'hôte choisit, les autres lisent.
+ *
+ * Le skin ne change rien à la mécanique (D6) : seulement les noms, les
+ * phrases et l'habit. Chaque univers se présente par son nom et par ce qu'on
+ * y croisera — ses rôles, dans sa propre voix.
+ */
+function ChoixSkin({ options, editable }: { options: GameOptions; editable: boolean }) {
   return (
-    <span
-      aria-hidden="true"
-      className="relative mt-0.5 block h-6 w-11 shrink-0 rounded-full"
-      style={{
-        background: actif ? 'var(--lanterne)' : 'var(--nuit-creux)',
-        boxShadow: 'inset 0 0 0 1px var(--arcade-trait)',
-      }}
-    >
-      <motion.span
-        className="absolute top-0.5 size-5 rounded-full"
-        style={{ background: 'var(--papier)' }}
-        animate={{ left: actif ? 22 : 2 }}
-        transition={RESSORT_JETON}
-      />
-    </span>
+    <fieldset className="border-0 p-0">
+      <legend className="flex flex-wrap items-baseline gap-2 pb-2">
+        <span className="text-sm font-bold">L’univers</span>
+        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
+          change les noms et l’ambiance, jamais les règles
+        </span>
+      </legend>
+      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Univers de la table">
+        {SKINS.map((skin) => {
+          const actif = options.skin === skin.id || (!SKINS.some((autre) => autre.id === options.skin) && skin === SKINS[0]);
+          const apercu = [skin.roles.loup.nom, skin.roles.voyante.nom, skin.roles.sorciere.nom, skin.roles.chasseur.nom];
+          return (
+            <button
+              key={skin.id}
+              type="button"
+              role="radio"
+              aria-checked={actif}
+              disabled={!editable}
+              onClick={() => {
+                if (!editable || actif) return;
+                void reglerOptions({ skin: skin.id });
+              }}
+              className="flex min-h-11 flex-col gap-0.5 rounded-lg p-3 text-left transition"
+              style={{
+                cursor: editable ? 'pointer' : 'default',
+                background: actif ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
+                boxShadow: actif
+                  ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
+                  : 'inset 0 0 0 1px var(--arcade-trait)',
+                color: actif ? 'var(--papier)' : 'var(--papier-doux)',
+              }}
+            >
+              <span className="font-identite text-lg leading-tight font-bold">{skin.univers}</span>
+              <span className="text-xs leading-snug">{apercu.join(' · ')}…</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

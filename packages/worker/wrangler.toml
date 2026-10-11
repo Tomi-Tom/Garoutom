@@ -1,0 +1,42 @@
+# Le déploiement Cloudflare du canal Garoutom.
+#
+# Rien ici ne déploie quoi que ce soit tant qu'il n'y a pas d'identifiants :
+# cette file est la config prête. Le jour venu (voir docs/DECISIONS.md, D5 —
+# le canal vit dans le Worker) :
+#
+#   npx wrangler login
+#   npx wrangler deploy
+#   npx wrangler tail garoutom        # suivre les journaux
+#
+# Wrangler n'est pas une dépendance du paquet : c'est un outil de bureau,
+# appelé par son nom quand on en a besoin — le typecheck passe avec les
+# @cloudflare/workers-types seuls.
+
+name = "garoutom"
+main = "src/index.ts"
+
+# Une date récente ; elle fige les comportements du runtime qui évoluent.
+compatibility_date = "2026-09-01"
+
+# Toutes les tables vivent dans UN Durable Object, atteint par un nom fixe
+# (`idFromName('tables')` dans index.ts) : l'attribution des codes de salon
+# reste globale, comme au serveur Node. Le pourquoi est documenté dans
+# src/tables.ts ; l'escalade éventuelle (un DO par table, ou du sharding)
+# appartiendra à docs/DECISIONS.md.
+[[durable_objects.bindings]]
+name = "TABLES"
+class_name = "TablesDO"
+
+# Migration initiale : la classe TablesDO naît sur le stockage SQLite du DO —
+# le format courant, requis sur le plan gratuit. Une migration ne se retire
+# jamais après déploiement ; les suivantes s'ajoutent avec un tag neuf.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TablesDO"]
+
+# Les pages admises à ouvrir le canal (voir src/index.ts). Sans cette
+# variable, toute origine passe — c'est le réglage le plus simple pour
+# commencer. Décommenter une fois le domaine du client fixé :
+#
+# [vars]
+# ORIGINES = "https://garoutom.tombp.fr,http://localhost:5177"

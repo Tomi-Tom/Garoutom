@@ -21,12 +21,11 @@ const CLE_NOM = 'garoutom.nom';
 const CLE_JETONS = 'garoutom.jetons';
 
 /**
- * Longueur maximale d'un pseudo, bornée côté client.
- *
- * Le serveur n'existe pas encore : cette borne est la nôtre, en attendant que
- * les siennes soient écrites. Elle sera alignée le jour où il tranchera.
+ * Longueur maximale d’un pseudo, alignée sur la borne du serveur
+ * (`MAX_NAME_LENGTH` de `packages/server/src/rooms.ts`) : au-delà, le serveur
+ * couperait en silence ce que le champ aurait laissé taper.
  */
-export const MAX_NAME_LENGTH = 20;
+export const MAX_NAME_LENGTH = 16;
 
 function lire<T>(cle: string, repli: T): T {
   try {

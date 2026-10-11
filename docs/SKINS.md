@@ -40,16 +40,16 @@ contrat »).
 
 | Le moteur rend | Le skin fournit |
 |---|---|
-| `RoleId` — les 8 rôles | un nom affiché et une description de carte pour chacun |
-| `GameEvent` — les 9 types d'évènements | les phrases du narrateur, avec leurs variables (siège, cause, rôle révélé ou non) |
+| `RoleId` — les 13 rôles (8 de la v1, 5 optionnels de la v2) | un nom affiché et une description de carte pour chacun |
+| `GameEvent` — les 13 types d'évènements | les phrases du narrateur, avec leurs variables (siège, cause, rôle révélé ou non) |
 | `DeathCause` — les 5 causes | la phrase de mort de chaque cause |
-| `Prompt` — les 9 consignes | le texte d'action montré au siège concerné |
+| `Prompt` — les 12 consignes | le texte d'action montré au siège concerné |
 | `ChatChannel` — les 4 canaux | le libellé de chaque canal (sa teinte est design) |
-| `Winner` — les 4 issues | le verdict de fin de partie |
+| `Winner` — les 5 issues | le verdict de fin de partie |
 | `PhaseKind` et `NightStep` | les phrases de changement de phase et d'étape |
 | `suggestionsFor` — les compositions | le nom et une ligne d'ambiance pour chacune (R23 : le moteur rend des compositions, le skin les nomme) |
 | la charge de capitaine | son nom — « le capitaine » n'est pas un `RoleId`, mais c'est un mot que l'écran affiche |
-| `LogEntry` — les 11 types de lignes | la nuit racontée : la voix qui récite le récapitulatif final, secrets compris (R88) |
+| `LogEntry` — les 17 types de lignes | la nuit racontée : la voix qui récite le récapitulatif final, secrets compris (R88) |
 | — | l'habit : palette, polices, symboles, art, atelier sonore (voir plus bas) |
 
 Les `Action`, elles, n'ont rien à traduire : ce sont des entrées, pas des
@@ -140,6 +140,7 @@ session, les noms de rôles du skin lui-même :
 | `{ancien}` | le joueur que le contexte désigne en second : celui que le Salvateur protégeait hier, le capitaine défunt, ou le second amoureux du récit |
 | `{role}` | le nom **traduit** du rôle — jamais l'identifiant (R2) |
 | `{n}` | un numéro de bloc dans la nuit racontée |
+| `{noms}` | une liste de pseudos, mise en forme par le client : les votants désignés par le Bouc émissaire (R94) |
 
 ### Les rôles
 
@@ -153,6 +154,15 @@ session, les noms de rôles du skin lui-même :
 | `cupidon` | Cupidon | La première nuit seulement, liez deux vivants d'un même destin : si l'un meurt, l'autre le suit. |
 | `salvateur` | le Salvateur | Chaque nuit, votre bouclier protège un habitant des loups — jamais le même deux nuits de suite, et le poison passe toujours. |
 | `idiot` | l'Idiot du village | Condamné par le vote, vous êtes gracié au dernier moment : votre rôle est montré, mais vous ne votez plus jamais. |
+| `ancien` | l'Ancien | Vous avez la peau dure : la première attaque de la meute ne vous tue pas, la seconde si. Et si le village vous tue de sa main, il peut perdre ses pouvoirs avec vous. *(« peut » : la rancune est une option de table — R92, D13.)* |
+| `corbeau` | le Corbeau | Chaque nuit, désignez un vivant : au vote du jour, deux voix pèseront d'office contre ce vivant. La marque est annoncée, jamais sa main. |
+| `bouc` | le Bouc émissaire | Si le vote du village finit à égalité, c'est vous qui payez pour tous. Votre dernier mot : désigner qui votera le lendemain. |
+| `petiteFille` | la Petite Fille | Pendant que la meute choisit sa proie, vous entrouvrez les yeux : vous voyez combien de loups visent chaque habitant — jamais lesquels. |
+| `loupBlanc` | le Loup Blanc | Vous chassez avec la meute, qui vous prend pour l'un des siens. Une nuit sur deux, vous pouvez dévorer un loup. Vous ne gagnez que seul. |
+
+Le Loup Blanc n'a ce nom que sur sa propre carte : ses complices le voient
+en `loup` (R96) — le skin n'a rien à cacher, la vue l'a déjà fait. Sa carte
+porte la teinte de la meute, son camp d'origine.
 
 La carte du Chasseur est le seul texte qui marche sur des œufs : promettre le
 tir « à votre mort » serait mentir quand le poison étouffe (D1, défaut). La
@@ -177,9 +187,11 @@ mort, dans l'ordre du tableau `deaths`.
 |---|---|
 | `revelation` | Les cartes sont distribuées, face contre table. À vous de les retourner. |
 | `nuit` (étape `principale`) | La nuit tombe sur Thiercelieux. Le village s'endort. |
+| `nuit` (étape `loupBlanc`) | La nuit se poursuit. |
 | `nuit` (étape `sorciere`) | La nuit se poursuit. |
 | `chasseur` | Le Chasseur rend l'âme, la main sur la gâchette. La partie attend son dernier geste. |
 | `succession` | Le capitaine est tombé : le brassard attend une main. |
+| `bouc` | Le Bouc émissaire rend l'âme. Son dernier mot peut désigner qui votera demain. |
 | `election` | Le village se choisit un capitaine. |
 | `jour` | Le jour se lève sur Thiercelieux. Le village délibère. |
 | `fin` | La dernière carte est posée sur la place. |
@@ -188,7 +200,9 @@ Deux mots d'explication sur l'étape `sorciere`. L'évènement `phase` la porte 
 tous, et la composition de la partie est publique : dire « la Sorcière consulte
 ses potions » ne trahirait donc rien. Le narrateur s'en abstient quand même —
 l'étape est un fait d'architecture, pas un fait de récit, et le village qui
-dort n'a pas à savoir où en est la nuit. Phrase plate, par choix.
+dort n'a pas à savoir où en est la nuit. Phrase plate, par choix. Même
+chose pour l'étape `loupBlanc` (R97) : elle se tient les nuits paires, Loup
+Blanc mort compris, et le narrateur ne la souligne pas davantage.
 
 **`morts`** — une phrase par cause, un suffixe si le rôle est révélé :
 
@@ -242,6 +256,32 @@ n'est pas un mensonge.
 La seconde phrase est celle du moteur, reprise telle quelle — « il emporte sa
 balle » (`game.ts`) était déjà la bonne formule.
 
+**`rancune`** — l'Ancien tué de la main du village (R92), dit après les morts :
+
+> Le village a tué son propre Ancien, {nom} : tous les pouvoirs du village
+> s'éteignent.
+
+**`corbeau`** — la marque, à l'aube, après les morts (R93). L'évènement ne
+porte que la cible : la phrase ne peut pas nommer la main, et ne le fait pas.
+
+> Le Corbeau a désigné {nom} : au vote du jour, deux voix sont déjà comptées.
+
+**`bouc`** — l'égalité retombe sur le Bouc émissaire (R94), dit entre le
+dépouillement (« personne ne montera à la potence ») et la mort :
+
+> Les voix se partagent, la place ne tranche pas : c'est {nom}, le Bouc
+> émissaire, qui paie pour tous.
+
+**`votants`** — le dernier mot du Bouc :
+
+| Cas | Phrase |
+|---|---|
+| `seats` désignés | Dernier mot du Bouc émissaire : demain, seuls voteront {noms}. |
+| `seats` nul (il s'est tu) | Le Bouc émissaire s'est tu : demain, tout le village votera. |
+
+L'Ancien qui encaisse la meute (R91) n'a pas de phrase : aucun évènement ne
+le dit, l'aube est paisible — il n'apparaît qu'au récit final.
+
 **`fin`** — les verdicts, un par `Winner` :
 
 | `Winner` | Verdict |
@@ -249,6 +289,7 @@ balle » (`game.ts`) était déjà la bonne formule.
 | `village` | Le village a triomphé : plus un loup ne rôde autour de Thiercelieux. |
 | `loups` | La meute a pris Thiercelieux. Le village ne répond plus. |
 | `amoureux` | Les deux amoureux restent seuls au monde : la partie est à eux. |
+| `loupBlanc` | Le Loup Blanc se tient seul sur la place déserte : il a dévoré jusqu'à sa propre meute. |
 | `personne` | Il ne reste personne pour raconter cette histoire. |
 
 ### Les prompts
@@ -272,6 +313,12 @@ pas par goût :
 | `successeur` | Dernier ordre : désignez qui portera le brassard. |
 | `voter`, `election` vraie | Élisez votre capitaine — un vivant, vous compris — ou abstenez-vous. |
 | `voter`, `election` fausse | Désignez qui montera à la potence — un autre vivant que vous. L'abstention est permise, et votre vote peut changer tant que la phase court. |
+| `marquer` | Désignez un vivant, vous compris : au vote du jour, deux voix pèseront d'office contre ce vivant — ou ne marquez personne. La marque sera annoncée, jamais votre main. |
+| `trahir` | La meute dort. Dévorez l'un de ses loups — ou épargnez-la cette nuit. |
+| `designerVotants` | Votre dernier mot : désignez qui votera demain — au moins un vivant. Les autres se tairont au vote. |
+
+La Petite Fille n'a pas de prompt (R95) : son espionnage est un champ de
+vue, pas une consigne — l'écran le montre, aucun texte ne l'appelle.
 
 Chaque texte est calé sur ce que le moteur permet, au mot près : l'élection
 autorise le vote pour soi (R56), le vote du jour l'interdit (R60) ; seul le
@@ -336,6 +383,14 @@ Puis une phrase par ligne de log, dans la voix du narrateur :
 | `tir`, cible nulle | Le Chasseur a emporté sa balle. |
 | `vote`, condamné | Le village a condamné {nom} à la potence. |
 | `vote`, personne | Le village n'a condamné personne. |
+| `resistance` | La meute a attaqué {nom} : l'Ancien a tenu bon. |
+| `rancune` | En tuant {nom}, son Ancien, le village a perdu ses pouvoirs. |
+| `corbeau` | Le Corbeau a marqué {nom}. |
+| `bouc` | L'égalité est retombée sur {nom}, le Bouc émissaire. |
+| `votants`, désignés | Le Bouc émissaire a désigné les votants du lendemain : {noms}. |
+| `votants`, nul | Le Bouc émissaire n'a désigné personne. |
+| `loupBlanc`, cible | Le Loup Blanc a dévoré {nom}, un loup de sa propre meute. |
+| `loupBlanc`, nulle | Le Loup Blanc a épargné la meute. |
 
 La ligne `amoureux` lie deux sièges : le modèle utilise `{nom}` pour le
 premier et `{ancien}` pour le second — le récit étant le seul endroit où deux
@@ -390,6 +445,17 @@ suivent — la lune de Thiercelieux n'a rien à faire sur les remparts.
 | `cupidon` | Ymir | lie deux destins d'un pacte |
 | `salvateur` | la Sentinelle | veille chaque nuit sur l'un des siens |
 | `idiot` | la Goinfre | graciée, la bouche pleine, muette au vote |
+| `ancien` | le Vétéran | le vieux de la Garnison, qui a survécu à tant d'assauts |
+| `corbeau` | le Brigadier | la Brigade spéciale désigne ses suspects sans signer |
+| `bouc` | l'Eldien | le monde entier fait porter la faute aux Eldiens |
+| `petiteFille` | la Recrue | tapie sur le chemin de ronde, elle compte les Titans |
+| `loupBlanc` | le Titan Mâchoire | le Titan qui dévore les autres Titans (son gravé : deux mâchoires) |
+
+Les phrases de la v2 suivent les mêmes miroirs : « Le district a abattu son
+propre Vétéran, {nom} : tous les régiments perdent leurs pouvoirs. » ; « La
+Brigade a désigné {nom} : à l'assemblée, deux voix sont déjà comptées. » ;
+« Le Titan Mâchoire se tient seul sur les remparts : il a dévoré jusqu'aux
+siens. » Le détail vit dans `packages/client/src/skins/shiganshina.ts`.
 
 ### Les canaux
 

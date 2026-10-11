@@ -10,3 +10,7 @@ dist/
 
 .vercel
 .env*
+
+# Explorations générées (lourdes) : elles vivent sur le canevas Claude Design
+docs/design/explorations/
+.garoutom-data/

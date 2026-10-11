@@ -8,9 +8,15 @@
  * depuis l'origine de la page, et un `WebSocket` de navigateur adapté à ce que
  * le canal attend.
  *
- * En développement, la même origine passe par le proxy Vite (`/ws` vers le
- * serveur local) ; en production, le Worker sert le canal lui-même. Le client
- * n'a donc jamais d'adresse à configurer : il frappe là où la page a été servie.
+ * Deux façons de trouver le canal :
+ *
+ * - **par défaut, l'origine de la page.** En développement, le proxy Vite
+ *   relaie `/ws` vers le serveur local ; entre amis (`npm run serve`), le
+ *   serveur Node sert la page et le canal sur le même port. Rien à régler.
+ * - **`VITE_CHANNEL_URL`, lue au build.** En ligne, la page vient de Vercel et
+ *   le canal du Worker Cloudflare, sur une autre origine : l'adresse complète
+ *   du Worker (`wss://garoutom.<compte>.workers.dev/ws`) se pose alors dans
+ *   les variables d'environnement du build.
  *
  * Le singleton est **paresseux** : rien n'est ouvert à l'import du module, ni
  * dans un test de rendu, ni avant le premier effet de montage de `App`. C'est
@@ -21,16 +27,34 @@
 import { Channel, CHANNEL_PATH, type SocketLike } from '@garoutom/engine';
 
 /**
- * L'adresse du canal, en absolu, depuis une origine.
+ * L'adresse du canal, en absolu.
  *
- * Le navigateur exige un schéma WebSocket : `https` devient `wss`, tout le
- * reste `ws`. Une page servie en `https` ne pourrait de toute façon pas ouvrir
+ * Sans adresse configurée, le canal est sur l'origine de la page, au chemin
+ * `/ws`. Avec une adresse configurée (`VITE_CHANNEL_URL`), c'est elle qui
+ * gagne ; on la tolère un peu incomplète — un `https://` au lieu de `wss://`,
+ * un chemin oublié, voire un chemin seul résolu contre la page — parce qu'une
+ * faute de frappe dans un tableau de bord Vercel ne doit pas coûter un
+ * déploiement de plus.
+ *
+ * Le navigateur exige un schéma WebSocket : `https` devient `wss`, `http`
+ * devient `ws`. Une page servie en `https` ne pourrait de toute façon pas ouvrir
  * un canal en clair — le refus tombe à la construction, avant le premier rendu.
  */
-export function canalUrl(origin: string): string {
-  const url = new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = CHANNEL_PATH;
+export function canalUrl(origin: string, configuree?: string | null): string {
+  const adresse = configuree?.trim() ?? '';
+  if (adresse.length === 0) {
+    const url = new URL(origin);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = CHANNEL_PATH;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  }
+
+  const url = new URL(adresse, origin);
+  if (url.protocol === 'https:') url.protocol = 'wss:';
+  else if (url.protocol === 'http:') url.protocol = 'ws:';
+  if (url.pathname === '/' || url.pathname === '') url.pathname = CHANNEL_PATH;
   return url.toString();
 }
 
@@ -64,9 +88,10 @@ function socketNavigateur(url: string): SocketLike {
   return like;
 }
 
-/** La fabrique par défaut : un canal sur l'origine de la page. */
+/** La fabrique par défaut : le canal configuré au build, ou l'origine de la page. */
 function canalNavigateur(): Channel {
-  return new Channel(() => socketNavigateur(canalUrl(globalThis.location.origin)));
+  const adresse = canalUrl(globalThis.location.origin, import.meta.env.VITE_CHANNEL_URL);
+  return new Channel(() => socketNavigateur(adresse));
 }
 
 let instance: Channel | null = null;

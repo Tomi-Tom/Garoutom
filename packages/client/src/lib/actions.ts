@@ -30,6 +30,38 @@ export function normaliseCode(brut: string): string {
     .join('');
 }
 
+/** Le paramètre d'adresse qui porte le code d'une table : `?table=ABCD`. */
+export const PARAM_TABLE = 'table';
+
+/**
+ * Le code de table que porte l'adresse de la page, s'il est complet.
+ *
+ * C'est le lien d'invitation (le salon le copie), et c'est aussi ce qui
+ * permet de reprendre sa place après un rechargement : `App` garde
+ * l'adresse au code de la table en cours.
+ */
+export function codeDeLUrl(): string | null {
+  try {
+    const brut = new URL(globalThis.location.href).searchParams.get(PARAM_TABLE);
+    const code = normaliseCode(brut ?? '');
+    return code.length === CODE_LENGTH ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Écrit (ou efface) le code de table dans l'adresse, sans recharger ni empiler l'historique. */
+export function inscrireCodeDansLUrl(code: string | null): void {
+  try {
+    const url = new URL(globalThis.location.href);
+    if (code === null) url.searchParams.delete(PARAM_TABLE);
+    else url.searchParams.set(PARAM_TABLE, code);
+    if (url.href !== globalThis.location.href) globalThis.history.replaceState(null, '', url.href);
+  } catch {
+    // Adresse illisible (bac à sable, test) : le jeu se passe très bien du rappel.
+  }
+}
+
 function notify(error: unknown): void {
   const message = error instanceof Error ? error.message : 'Action impossible';
   useStore.getState().pushNotice(message, 'error');
@@ -138,6 +170,10 @@ export async function reglerOptions(retouche: Partial<GameOptions>): Promise<voi
 
 export const lancerPartie = (): Promise<null | undefined> =>
   run(() => canal().request<null>('room:start', {}));
+
+/** La revanche : l'hôte ramène la table au salon, mêmes options, présents seulement. */
+export const revanche = (): Promise<null | undefined> =>
+  run(() => canal().request<null>('room:rematch', {}));
 
 export async function quitterTable(): Promise<void> {
   const code = useStore.getState().room?.code;

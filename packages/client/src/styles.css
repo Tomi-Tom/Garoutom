@@ -69,6 +69,14 @@
   --arcade-fond-sur-accent: var(--nuit);
 }
 
+/* La table occupe tout l'écran : l'écran de partie se dresse en `h-full`,
+   et une hauteur ne se transmet que si chaque ancêtre en a une. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--nuit);
@@ -156,9 +164,109 @@ body {
   }
 }
 
+/* Un bouton qui n'est plus qu'une icône sous 640 px (son libellé passe aux
+   lecteurs d'écran par `max-sm:sr-only`) : le rembourrage de `.btn-voisin`
+   se resserre en un carré de 44 px. Écrit ici, hors des couches, parce
+   qu'un utilitaire de Tailwind ne l'emporterait pas sur `.btn-voisin`. */
+@media (width < 40rem) {
+  .btn-icone-etroit {
+    width: 44px;
+    padding: 0;
+  }
+}
+
 /* Un panneau de la place : la margelle sur laquelle on s'appuie. */
 .carte {
   background: var(--nuit-relief);
   border: 1px solid var(--arcade-trait);
   border-radius: 14px;
+}
+
+/* Le halo du puits, au centre de la place en rond : il respire, lentement,
+   comme une flamme à l'abri du vent — et se tient immobile pour qui a
+   demandé moins de mouvement. */
+@keyframes place-halo {
+  from {
+    opacity: 0.78;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-calme]) .place-halo {
+    animation: place-halo 3.6s ease-in-out infinite alternate;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Réglages                                                            */
+/* ------------------------------------------------------------------ */
+
+/* Le texte agrandi : tout est en rem, un seul curseur suffit. */
+html[data-grand-texte] {
+  font-size: 120%;
+}
+
+/* Le calme : moins de mouvement, que le système le demande ou les réglages
+   (`data-calme`, posé par lib/reglages.ts). Motion s'en charge pour ses
+   ressorts (`MotionConfig`) ; ceci couvre les transitions et animations CSS
+   — les barres qui se vident sautent d'un cran au lieu de glisser. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-calme] *,
+html[data-calme] *::before,
+html[data-calme] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* -- L'habit des autres skins ------------------------------------------
+   Tailwind 4 écrit les couleurs du @theme en variables (`--color-nuit`,
+   résolues à l'usage : `bg-nuit` devient `var(--color-nuit)`). Redéfinir ces
+   variables sous `[data-skin]` repeint donc les utilitaires ; les variables
+   nues (`--nuit`…) servent au CSS maison. Les deux jeux sont posés ensemble.
+   `App.tsx` pose `data-skin` sur sa racine : le `body`, hors de celle-ci,
+   est suivi par `:has`. Les valeurs et leurs contrastes mesurés sont dans
+   skins/habits.ts (qui en est la source, un test les compare). */
+[data-skin='shiganshina'] {
+  --papier: #ebe4d0;
+  --papier-doux: #aea995;
+  --nuit: #161a1a;
+  --nuit-creux: #0e1111;
+  --nuit-relief: #212727;
+  --lune: #a8b2aa;
+  --lanterne: #86b45e;
+  --sang: #e9715b;
+  --sang-creux: #8f2e22;
+  --serment: #d1a574;
+
+  --color-papier: #ebe4d0;
+  --color-papier-doux: #aea995;
+  --color-nuit: #161a1a;
+  --color-nuit-creux: #0e1111;
+  --color-nuit-relief: #212727;
+  --color-lune: #a8b2aa;
+  --color-lanterne: #86b45e;
+  --color-sang: #e9715b;
+  --color-sang-creux: #8f2e22;
+  --color-serment: #d1a574;
+
+  --arcade-trait: rgb(235 228 208 / 0.22);
+}
+
+body:has([data-skin='shiganshina']) {
+  background: #161a1a;
 }

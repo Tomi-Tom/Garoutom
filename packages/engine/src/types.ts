@@ -17,10 +17,12 @@ export interface Rng {
 }
 
 /**
- * Les rôles mécaniques de la première version.
+ * Les rôles mécaniques.
  *
  * Les identifiants sont ceux du jeu d'origine, en français et sans accent : ils
- * ne s'affichent jamais tels quels, le skin les traduit.
+ * ne s'affichent jamais tels quels, le skin les traduit. Les huit premiers sont
+ * ceux de la première version ; les cinq suivants, ouverts en v2 (R90+), ne
+ * viennent qu'à la demande de l'hôte.
  */
 export const ROLES = [
   'villageois',
@@ -31,6 +33,11 @@ export const ROLES = [
   'cupidon',
   'salvateur',
   'idiot',
+  'ancien',
+  'corbeau',
+  'bouc',
+  'petiteFille',
+  'loupBlanc',
 ] as const;
 
 export type RoleId = (typeof ROLES)[number];
@@ -47,20 +54,66 @@ export const SPECIAL_ROLES = [
 
 export type SpecialRoleId = (typeof SPECIAL_ROLES)[number];
 
+/**
+ * Les rôles optionnels de la v2 (R90) : l'Ancien, le Corbeau, le Bouc
+ * émissaire, la Petite Fille et le Loup Blanc.
+ *
+ * Ils se choisissent comme les rôles spéciaux — un exemplaire au plus (R4) —
+ * mais n'entrent **jamais** dans la composition de référence (R20) : celle-ci
+ * garde l'équilibrage éprouvé des huit premiers rôles. Ils vivent dans une
+ * liste à part pour que `SPECIAL_ROLES`, et tout ce qui s'en dérive — la
+ * référence, les suggestions, le générateur par défaut —, ne bouge pas d'un
+ * rôle (D12).
+ */
+export const OPTIONAL_ROLES = [
+  'ancien',
+  'corbeau',
+  'bouc',
+  'petiteFille',
+  'loupBlanc',
+] as const satisfies readonly RoleId[];
+
+export type OptionalRoleId = (typeof OPTIONAL_ROLES)[number];
+
+/** Tout ce que l'hôte peut cocher : les rôles spéciaux, puis les optionnels. */
+export const CHOOSABLE_ROLES = [...SPECIAL_ROLES, ...OPTIONAL_ROLES] as const;
+
+export type ChoosableRoleId = (typeof CHOOSABLE_ROLES)[number];
+
 /** Le camp d'origine d'un rôle. Les amoureux peuvent en changer en cours de route. */
 export type Camp = 'village' | 'loups';
 
+/**
+ * Le camp d'origine — celui de la carte, celui que la meute reconnaît.
+ *
+ * Le Loup Blanc est de la meute (R96) : il chasse avec elle, il en lit le
+ * canal, il en porte la teinte. Son but, lui, est ailleurs — c'est `factionOf`.
+ */
 export function campOf(role: RoleId): Camp {
-  return role === 'loup' ? 'loups' : 'village';
+  return role === 'loup' || role === 'loupBlanc' ? 'loups' : 'village';
+}
+
+/**
+ * Pour qui joue un rôle, au moment de compter les survivants.
+ *
+ * Le camp dit avec qui l'on chasse ; la faction dit avec qui l'on gagne. Les
+ * deux ne divergent que pour le Loup Blanc, qui chasse avec la meute mais ne
+ * gagne que seul (R98).
+ */
+export type Faction = Camp | 'loupBlanc';
+
+export function factionOf(role: RoleId): Faction {
+  return role === 'loupBlanc' ? 'loupBlanc' : campOf(role);
 }
 
 /**
  * Qui gagne.
  *
- * `amoureux` : un couple formé par Cupidon entre les deux camps, seul survivant.
+ * `amoureux` : un couple formé par Cupidon entre deux factions, seul survivant.
+ * `loupBlanc` : le Loup Blanc, dernier survivant de la table (R98).
  * `personne` : tout le monde est mort en même temps.
  */
-export type Winner = 'village' | 'loups' | 'amoureux' | 'personne';
+export type Winner = 'village' | 'loups' | 'amoureux' | 'loupBlanc' | 'personne';
 
 /** Pourquoi quelqu'un meurt. Le skin en tire sa phrase d'annonce. */
 export type DeathCause = 'loups' | 'poison' | 'vote' | 'chasseur' | 'chagrin';
@@ -77,8 +130,11 @@ export interface GameOptions {
   auto: boolean;
   /** Nombre de loups quand la composition est manuelle. */
   loups: number;
-  /** Rôles spéciaux retenus quand la composition est manuelle, un de chaque au plus. */
-  roles: SpecialRoleId[];
+  /**
+   * Rôles retenus quand la composition est manuelle, un de chaque au plus :
+   * les spéciaux comme les optionnels (R90).
+   */
+  roles: ChoosableRoleId[];
   /** Élection d'un capitaine le premier jour, dont la voix compte double. */
   capitaine: boolean;
   /**
@@ -93,6 +149,11 @@ export interface GameOptions {
   chasseurEmpoisonne: boolean;
   /** La Sorcière peut se servir de sa potion de vie sur elle-même (D2). */
   sorciereSeSauve: boolean;
+  /**
+   * L'Ancien tué de la main du village — vote, tir, poison — emporte les
+   * pouvoirs du village avec lui (R92, D13). Sans effet sans Ancien.
+   */
+  ancienRancunier: boolean;
   /**
    * Discussion intégrée pour le village. Sans elle, on joue autour d'une vraie
    * table et chacun ne se sert de son téléphone que pour ses cartes et ses
@@ -125,7 +186,10 @@ export interface PlayerState {
   alive: boolean;
   /** Faux pour l'Idiot une fois gracié : il reste en vie mais ne vote plus. */
   canVote: boolean;
-  /** Rôle montré à tous de son vivant (l'Idiot gracié). */
+  /**
+   * Rôle montré à tous, de son vivant ou à la mort quand le jeu l'impose :
+   * l'Idiot gracié, le Chasseur qui tire, l'Ancien rancunier, le Bouc émissaire.
+   */
   revealed: boolean;
 }
 
@@ -148,13 +212,16 @@ export interface ChatMessage {
 /**
  * Une étape de la nuit.
  *
- * - `principale` : Cupidon (première nuit), Salvateur, Voyante et loups jouent
- *   **en même temps**. Aucun n'a besoin de connaître le choix des autres, et
- *   appeler les rôles un à un ferait attendre douze personnes pour rien.
+ * - `principale` : Cupidon (première nuit), Salvateur, Voyante, Corbeau et
+ *   loups jouent **en même temps**. Aucun n'a besoin de connaître le choix des
+ *   autres, et appeler les rôles un à un ferait attendre douze personnes pour
+ *   rien.
+ * - `loupBlanc` : les nuits paires, le Loup Blanc seul peut dévorer un loup
+ *   (R97) — étape tenue mort compris, comme celle de la Sorcière.
  * - `sorciere` : seule à jouer, parce qu'elle doit savoir qui les loups ont
  *   désigné.
  */
-export type NightStep = 'principale' | 'sorciere';
+export type NightStep = 'principale' | 'loupBlanc' | 'sorciere';
 
 /** Ce qui se décide pendant une nuit, et qui ne sera résolu qu'à l'aube. */
 export interface NightChoices {
@@ -167,10 +234,18 @@ export interface NightChoices {
   victim: number | null;
   witchSave: boolean;
   witchKill: number | null;
+  /** La marque du Corbeau, posée la nuit, annoncée à l'aube (R93). */
+  raven: number | null;
+  /** Le loup que le Loup Blanc dévore, une nuit paire (R97). */
+  whiteKill: number | null;
 }
 
 /** Ce qui doit se passer avant de reprendre le cours normal. */
-export type Trigger = { kind: 'chasseur'; seat: number } | { kind: 'succession'; seat: number };
+export type Trigger =
+  | { kind: 'chasseur'; seat: number }
+  | { kind: 'succession'; seat: number }
+  /** Le Bouc émissaire mort d'une égalité désigne les votants du lendemain (R94). */
+  | { kind: 'bouc'; seat: number };
 
 export type Phase =
   /** Chacun découvre sa carte et confirme. */
@@ -179,6 +254,8 @@ export type Phase =
   /** Le Chasseur mort tire, ou le capitaine mort désigne son successeur. */
   | { kind: 'chasseur'; seat: number }
   | { kind: 'succession'; seat: number }
+  /** Le Bouc émissaire mort désigne qui votera au prochain jour (R94). */
+  | { kind: 'bouc'; seat: number }
   | { kind: 'election'; votes: Record<number, number | null> }
   | { kind: 'jour'; votes: Record<number, number | null> }
   | { kind: 'fin' };
@@ -197,7 +274,19 @@ export type LogEntry =
   | { day: number; type: 'grace'; seat: number }
   | { day: number; type: 'capitaine'; seat: number }
   | { day: number; type: 'tir'; target: number | null }
-  | { day: number; type: 'vote'; tally: Record<number, number>; executed: number | null };
+  | { day: number; type: 'vote'; tally: Record<number, number>; executed: number | null }
+  /** L'Ancien a encaissé la première attaque de la meute (R91). */
+  | { day: number; type: 'resistance'; seat: number }
+  /** L'Ancien tué de la main du village : le village perd ses pouvoirs (R92). */
+  | { day: number; type: 'rancune'; seat: number }
+  /** La marque du Corbeau, posée la nuit (R93). */
+  | { day: number; type: 'corbeau'; target: number }
+  /** Le Bouc émissaire paie l'égalité du vote (R94). */
+  | { day: number; type: 'bouc'; seat: number }
+  /** Les votants désignés par le Bouc, ou `null` s'il s'est tu (R94). */
+  | { day: number; type: 'votants'; seats: number[] | null }
+  /** Le choix du Loup Blanc, une nuit paire : un loup, ou personne (R97). */
+  | { day: number; type: 'loupBlanc'; target: number | null };
 
 export interface GameState {
   options: GameOptions;
@@ -223,6 +312,19 @@ export interface GameState {
   lastProtected: number | null;
   /** Ce que la Voyante a appris, nuit après nuit. */
   inspections: { day: number; target: number; role: RoleId }[];
+  /** L'Ancien a déjà encaissé une attaque de la meute : la suivante le tue (R91). */
+  ancienBlesse: boolean;
+  /** Le village a perdu ses pouvoirs, l'Ancien mort de sa main (R92). */
+  pouvoirsPerdus: boolean;
+  /** Le siège marqué par le Corbeau, annoncé à l'aube, pour le vote du jour (R93). */
+  corbeau: number | null;
+  /** Les seuls votants du prochain vote du village, désignés par le Bouc (R94). */
+  votants: number[] | null;
+  /**
+   * Nuits de huis clos — il ne reste que la meute, Loup Blanc compris —
+   * ouvertes depuis la dernière mort. Garde-fou de terminaison (R99).
+   */
+  huisClos: number;
   chat: ChatMessage[];
   /** Le prochain numéro de message, pour chaque canal. */
   nextMessageId: Record<ChatChannel, number>;
@@ -249,7 +351,39 @@ export type Action =
   | { type: 'tirer'; target: number | null }
   | { type: 'successeur'; target: number }
   | { type: 'voter'; target: number | null }
+  /** Le Corbeau marque un vivant, ou personne (R93). */
+  | { type: 'marquer'; target: number | null }
+  /** Le Loup Blanc dévore un autre loup, ou personne (R97). */
+  | { type: 'trahir'; target: number | null }
+  /** Le Bouc émissaire mort désigne les votants du lendemain (R94). */
+  | { type: 'designerVotants'; seats: number[] }
   | { type: 'dire'; channel: ChatChannel; text: string };
+
+/**
+ * Les verbes du jeu, pour qui doit filtrer une action venue du réseau : un
+ * verbe inconnu ne doit jamais atteindre `applyAction`.
+ */
+export const ACTION_TYPES = [
+  'pret',
+  'cupidon',
+  'proteger',
+  'sonder',
+  'devorer',
+  'sorciere',
+  'tirer',
+  'successeur',
+  'voter',
+  'marquer',
+  'trahir',
+  'designerVotants',
+  'dire',
+] as const satisfies readonly Action['type'][];
+
+// Et réciproquement : un verbe ajouté à `Action` sans entrer dans la liste
+// casse la compilation ici, pas une partie en cours.
+const verbesCouverts: [Exclude<Action['type'], (typeof ACTION_TYPES)[number]>] extends [never] ? true : never =
+  true;
+void verbesCouverts;
 
 export interface Death {
   seat: number;
@@ -271,6 +405,17 @@ export type GameEvent =
   | { type: 'vote'; tally: Record<number, number>; executed: number | null }
   | { type: 'capitaine'; seat: number; from: number | null }
   | { type: 'tir'; hunter: number; target: number | null }
+  /**
+   * L'Ancien est mort de la main du village : sa carte se retourne, et le
+   * village perd ses pouvoirs (R92).
+   */
+  | { type: 'rancune'; seat: number }
+  /** À l'aube, le siège marqué par le Corbeau — jamais le Corbeau lui-même (R93). */
+  | { type: 'corbeau'; target: number }
+  /** L'égalité du vote retombe sur le Bouc émissaire, carte retournée (R94). */
+  | { type: 'bouc'; seat: number }
+  /** Les votants désignés par le Bouc ; `null` : il s'est tu, tout le monde vote (R94). */
+  | { type: 'votants'; bouc: number; seats: number[] | null }
   | { type: 'fin'; winner: Winner };
 
 export interface Step {

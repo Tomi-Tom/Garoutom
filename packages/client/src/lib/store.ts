@@ -6,12 +6,24 @@
  * pas au magasin — le `sync` qui suit fait foi, et c'est lui, déjà, qui a été
  * taillé pour le siège de ce joueur. Ce que le client ajoute par-dessus est
  * à lui : le fil des avis éphémères, la connexion, le souvenir de son propre
- * identifiant.
+ * identifiant, et la chronique des évènements reçus.
  */
 
 import { create } from 'zustand';
 
-import type { GameView, NoticePayload, RoomView, SyncPayload } from '@garoutom/engine';
+import type { GameEvent, GameView, NoticePayload, RoomView, SyncPayload } from '@garoutom/engine';
+
+/**
+ * Un évènement du moteur tel que le client le garde : numéroté à l'arrivée,
+ * daté du jour de la partie où il est tombé. La chronique est ce que le
+ * narrateur raconte et ce que l'atelier sonore écoute — le `sync` ne fait
+ * que la remplir, il ne la rejoue jamais.
+ */
+export interface EvenementRecu {
+  id: number;
+  event: GameEvent;
+  day: number;
+}
 
 /** Un avis éphémère : le message du serveur ou d'une action refusée. */
 export interface Notice {
@@ -35,6 +47,12 @@ interface StoreState {
    * `Date.now() + decalageHorloge`, qui est l'heure du serveur vue d'ici.
    */
   decalageHorloge: number | null;
+  /**
+   * Les évènements reçus depuis l'entrée à la table, du plus ancien au plus
+   * récent, bornés à `MAX_CHRONIQUE`. Remise à zéro par un `debut` (nouvelle
+   * partie), par le retour au salon et au départ de la table.
+   */
+  chronique: EvenementRecu[];
   notices: Notice[];
   /** Le texte de l'unique région `role="status"` de l'application. */
   live: { id: number; text: string } | null;
@@ -43,12 +61,17 @@ interface StoreState {
   setPlayerId: (playerId: string | null) => void;
   applySync: (payload: SyncPayload) => void;
   pushNotice: (message: string, tone?: NoticePayload['tone']) => void;
+  /** Annonce à la région vocale sans afficher d'avis — pour le narrateur. */
+  annoncer: (text: string) => void;
   dismissNotice: (id: number) => void;
   reset: () => void;
 }
 
 /** Au-delà, les avis se recouvrent au lieu d'informer. */
 const MAX_NOTICES = 3;
+
+/** Ce que la chronique garde : assez pour une partie entière racontée au fil de l'eau. */
+export const MAX_CHRONIQUE = 200;
 
 let sequence = 0;
 const nextId = (): number => (sequence += 1);
@@ -59,6 +82,7 @@ export const useStore = create<StoreState>((set) => ({
   room: null,
   game: null,
   decalageHorloge: null,
+  chronique: [],
   notices: [],
   live: null,
 
@@ -67,10 +91,26 @@ export const useStore = create<StoreState>((set) => ({
   setPlayerId: (playerId) => set({ playerId }),
 
   applySync: (payload) =>
-    set({
-      room: payload.room,
-      game: payload.game,
-      decalageHorloge: payload.serverNow - Date.now(),
+    set((state) => {
+      const day = payload.game?.day ?? 0;
+      let chronique = state.chronique;
+      if (payload.events.length > 0) {
+        // Une partie qui commence repart d'une page blanche : la revanche ne
+        // doit pas raconter les morts de la manche d'avant.
+        const base = payload.events.some((event) => event.type === 'debut') ? [] : chronique;
+        chronique = [...base, ...payload.events.map((event) => ({ id: nextId(), event, day }))].slice(
+          -MAX_CHRONIQUE,
+        );
+      } else if (payload.game === null && chronique.length > 0) {
+        // Retour au salon : la partie est rangée, sa chronique aussi.
+        chronique = [];
+      }
+      return {
+        room: payload.room,
+        game: payload.game,
+        decalageHorloge: payload.serverNow - Date.now(),
+        chronique,
+      };
     }),
 
   // Un serveur qui répète son refus ne doit pas noyer l'écran : on ignore la
@@ -86,6 +126,8 @@ export const useStore = create<StoreState>((set) => ({
       };
     }),
 
+  annoncer: (text) => set({ live: { id: nextId(), text } }),
+
   dismissNotice: (id) =>
     set((state) => ({ notices: state.notices.filter((notice) => notice.id !== id) })),
 
@@ -97,6 +139,7 @@ export const useStore = create<StoreState>((set) => ({
       game: null,
       playerId: null,
       decalageHorloge: null,
+      chronique: [],
       live: null,
     }),
 }));

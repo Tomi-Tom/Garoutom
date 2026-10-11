@@ -13,12 +13,15 @@ import { motion } from 'motion/react';
 import { useState } from 'react';
 
 import { RESSORT_PANNEAU } from '../anim/tokens.js';
-import { CODE_LENGTH, normaliseCode, ouvrirTable, rejoindreTable } from '../lib/actions.js';
+import { CODE_LENGTH, codeDeLUrl, normaliseCode, ouvrirTable, rejoindreTable } from '../lib/actions.js';
 import { ARCADE_ID, loadName, MAX_NAME_LENGTH } from '../lib/identity.js';
 
 export function Home() {
   const [nom, setNom] = useState(loadName);
-  const [code, setCode] = useState('');
+  // Un lien d’invitation (`?table=ABCD`) remplit le code d’avance : il ne
+  // reste qu’à dire son nom.
+  const [code, setCode] = useState(() => codeDeLUrl() ?? '');
+  const invite = code.length === CODE_LENGTH && codeDeLUrl() === code;
   const [occupe, setOccupe] = useState(false);
 
   const nomPropre = nom.trim();
@@ -56,6 +59,7 @@ export function Home() {
           onChange={setNom}
           maxLength={MAX_NAME_LENGTH}
           placeholder="Jean-Mi"
+          onEntree={() => void (invite ? rejoindre() : ouvrir())}
           autoFocus
         />
 
@@ -63,7 +67,7 @@ export function Home() {
           type="button"
           onClick={() => void ouvrir()}
           disabled={!pret}
-          className="btn-village px-5 text-base"
+          className={invite ? 'btn-voisin px-5 text-base' : 'btn-village px-5 text-base'}
         >
           Ouvrir une table
         </button>
@@ -77,6 +81,7 @@ export function Home() {
               onChange={(valeur) => setCode(normaliseCode(valeur))}
               placeholder="ABCD"
               mono
+              onEntree={() => void rejoindre()}
               autoComplete="off"
               spellCheck={false}
             />
@@ -85,7 +90,7 @@ export function Home() {
             type="button"
             onClick={() => void rejoindre()}
             disabled={!rejoignable}
-            className="btn-voisin shrink-0"
+            className={invite ? 'btn-village shrink-0' : 'btn-voisin shrink-0'}
           >
             Rejoindre
           </button>
@@ -112,6 +117,7 @@ function Champ({
   autoFocus = false,
   autoComplete,
   spellCheck,
+  onEntree,
 }: {
   id: string;
   label: string;
@@ -124,6 +130,8 @@ function Champ({
   autoFocus?: boolean;
   autoComplete?: string;
   spellCheck?: boolean;
+  /** La touche Entrée valide le formulaire sans aller chercher le bouton. */
+  onEntree?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -138,6 +146,9 @@ function Champ({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && onEntree) onEntree();
+        }}
         placeholder={placeholder}
         maxLength={maxLength}
         autoFocus={autoFocus}

@@ -6,9 +6,13 @@
  */
 
 import {
+  CHOOSABLE_ROLES,
   IllegalActionError,
+  OPTIONAL_ROLES,
   SPECIAL_ROLES,
+  type ChoosableRoleId,
   type GameOptions,
+  type OptionalRoleId,
   type RoleId,
   type Rng,
   type SpecialRoleId,
@@ -25,6 +29,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   capitaineAvantNuit1: false,
   chasseurEmpoisonne: false,
   sorciereSeSauve: true,
+  ancienRancunier: true,
   chat: true,
   revelerRoles: true,
   mortsVoientTout: true,
@@ -64,8 +69,10 @@ function skinId(raw: unknown): string {
 
 export function sanitizeOptions(raw: unknown): GameOptions {
   const input = isRecord(raw) ? raw : {};
+  // Les rôles connus, dans l'ordre du moteur, un de chaque : les spéciaux
+  // d'abord, les optionnels ensuite (R90) — le reste est jeté sans bruit.
   const roles = Array.isArray(input.roles)
-    ? SPECIAL_ROLES.filter((role) => (input.roles as unknown[]).includes(role))
+    ? CHOOSABLE_ROLES.filter((role) => (input.roles as unknown[]).includes(role))
     : DEFAULT_OPTIONS.roles;
   return {
     auto: bool(input.auto, DEFAULT_OPTIONS.auto),
@@ -75,6 +82,7 @@ export function sanitizeOptions(raw: unknown): GameOptions {
     capitaineAvantNuit1: bool(input.capitaineAvantNuit1, DEFAULT_OPTIONS.capitaineAvantNuit1),
     chasseurEmpoisonne: bool(input.chasseurEmpoisonne, DEFAULT_OPTIONS.chasseurEmpoisonne),
     sorciereSeSauve: bool(input.sorciereSeSauve, DEFAULT_OPTIONS.sorciereSeSauve),
+    ancienRancunier: bool(input.ancienRancunier, DEFAULT_OPTIONS.ancienRancunier),
     chat: bool(input.chat, DEFAULT_OPTIONS.chat),
     revelerRoles: bool(input.revelerRoles, DEFAULT_OPTIONS.revelerRoles),
     mortsVoientTout: bool(input.mortsVoientTout, DEFAULT_OPTIONS.mortsVoientTout),
@@ -109,6 +117,29 @@ const SEUILS: Record<SpecialRoleId, number> = {
 };
 
 /**
+ * À combien de joueurs chaque rôle optionnel peut sortir du générateur
+ * aléatoire (R100). La référence ne les tire jamais (R90) ; l'hôte, lui, les
+ * coche à toute table, dans les seules bornes de R13.
+ *
+ * Dix joueurs pour les rôles de village : en dessous, chaque carte spéciale
+ * de plus retire un des derniers villageois simples. Douze pour le Loup
+ * Blanc : il lui faut une meute à trahir — trois loups à la référence — et
+ * assez de monde pour que sa solitude soit un vrai chemin.
+ */
+export const OPTIONAL_ROLE_MIN_PLAYERS: Readonly<Record<OptionalRoleId, number>> = {
+  ancien: 10,
+  corbeau: 10,
+  bouc: 10,
+  petiteFille: 10,
+  loupBlanc: 12,
+};
+
+/** Combien de loups porte une composition : la meute, Loup Blanc compris (R13, R96). */
+export function wolvesIn(loups: number, roles: readonly ChoosableRoleId[]): number {
+  return loups + (roles.includes('loupBlanc') ? 1 : 0);
+}
+
+/**
  * La composition de référence, selon le nombre de joueurs (R20).
  *
  * Un loup pour trois à quatre joueurs ; les rôles d'information d'abord,
@@ -130,11 +161,51 @@ export function autoComposition(players: number): { loups: number; roles: Specia
  * sont toujours là : sans information, le village vote au doigt mouillé. Le
  * reste se tire au sort parmi les rôles éligibles, et il reste toujours au
  * moins deux villageois simples.
+ *
+ * Avec `{ optionnels: true }`, le tirage continue sur les rôles de la v2
+ * (R100) : rien sous dix joueurs, un au plus jusqu'à treize, deux au plus
+ * ensuite — toujours deux villageois simples, toujours dans la borne de R13,
+ * Loup Blanc compté parmi les loups. Les premiers tirages sont exactement
+ * ceux du générateur par défaut : la même graine rend la même base.
  */
 export function randomComposition(
   players: number,
   rng: Rng,
-): { loups: number; roles: SpecialRoleId[] } {
+): { loups: number; roles: SpecialRoleId[] };
+export function randomComposition(
+  players: number,
+  rng: Rng,
+  reglages: { optionnels: boolean },
+): { loups: number; roles: ChoosableRoleId[] };
+export function randomComposition(
+  players: number,
+  rng: Rng,
+  reglages: { optionnels: boolean } = { optionnels: false },
+): { loups: number; roles: ChoosableRoleId[] } {
+  const base = baseComposition(players, rng);
+  if (!reglages.optionnels || players < 10) return base;
+
+  const roles: ChoosableRoleId[] = [...base.roles];
+  const plafond = players >= 14 ? 2 : 1;
+  const voulus = rng.nextInt(plafond + 1);
+  const urne: OptionalRoleId[] = OPTIONAL_ROLES.filter(
+    (role) => players >= OPTIONAL_ROLE_MIN_PLAYERS[role],
+  );
+  for (let tire = 0; tire < voulus && urne.length > 0; tire += 1) {
+    const [role] = urne.splice(rng.nextInt(urne.length), 1);
+    if (role === undefined) break;
+    const candidats = [...roles, role];
+    // Deux villageois simples, toujours ; et jamais autant de loups que
+    // d'autres joueurs, le Loup Blanc compté dans la meute (R13).
+    if (base.loups + candidats.length > players - 2) break;
+    if (wolvesIn(base.loups, candidats) * 2 >= players) continue;
+    roles.push(role);
+  }
+  return { loups: base.loups, roles };
+}
+
+/** Le tirage de R22, tel quel : les loups, puis les rôles spéciaux éligibles. */
+function baseComposition(players: number, rng: Rng): { loups: number; roles: SpecialRoleId[] } {
   const reference = autoComposition(players);
   const loupsMin = Math.max(2, reference.loups - 1);
   const loupsMax = Math.min(reference.loups + 1, Math.floor((players - 1) / 2));
@@ -190,7 +261,8 @@ export function compositionFor(players: number, options: GameOptions): RoleId[] 
     );
   }
   // Autant de loups que d'autres, et le premier vote est déjà joué d'avance.
-  if (loups * 2 >= players) {
+  // Le Loup Blanc chasse avec la meute : il compte parmi les loups (R96).
+  if (wolvesIn(loups, roles) * 2 >= players) {
     throw new IllegalActionError('Trop de loups pour cette table', 'composition');
   }
   if (loups + roles.length > players) {

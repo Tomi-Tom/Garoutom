@@ -39,6 +39,7 @@
  */
 
 import {
+  ACTION_TYPES,
   applyAction,
   compositionFor,
   createGame,
@@ -174,19 +175,12 @@ const MAX_NAME_LENGTH = 16;
 export const EMPTY_ROOM_TTL_MS = 15 * 60_000;
 const MAX_ROOMS = 500;
 
-/** Les dix verbes du moteur — la seule liste qui fait foi côté réseau. */
-const ACTION_TYPES = new Set([
-  'pret',
-  'cupidon',
-  'proteger',
-  'sonder',
-  'devorer',
-  'sorciere',
-  'tirer',
-  'successeur',
-  'voter',
-  'dire',
-]);
+/**
+ * Les verbes du moteur — la seule liste qui fait foi côté réseau. Elle vient
+ * du moteur lui-même (`ACTION_TYPES`) : un verbe ajouté là-bas, Corbeau ou
+ * Loup Blanc compris, est accepté ici sans qu'on ait à s'en souvenir.
+ */
+const VERBES: ReadonlySet<string> = new Set(ACTION_TYPES);
 
 /* ------------------------------------------------------------------ */
 /* Le carnet de minuteries                                             */
@@ -246,7 +240,7 @@ function sanitizeAction(raw: unknown): Action {
     throw new RoomError('Action illisible', 'action');
   }
   const type = (raw as { type?: unknown }).type;
-  if (typeof type !== 'string' || !ACTION_TYPES.has(type)) {
+  if (typeof type !== 'string' || !VERBES.has(type)) {
     throw new RoomError('Action inconnue', 'action');
   }
   return raw as Action;

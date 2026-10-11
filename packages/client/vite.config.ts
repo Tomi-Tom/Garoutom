@@ -7,6 +7,19 @@ import { defineConfig } from 'vitest/config';
 
 const resolve = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
+/**
+ * Le serveur Node local : le canal et la santé y vivent, la page ici.
+ *
+ * Le même relais sert à `vite` et à `vite preview` : un client buildé se
+ * prévisualise ainsi contre le serveur local, sans rien régler. En ligne, ce
+ * relais n'existe pas — le client lit `VITE_CHANNEL_URL` (voir
+ * `src/lib/socket.ts`).
+ */
+const relais = {
+  '/ws': { target: 'http://localhost:3004', ws: true },
+  '/health': { target: 'http://localhost:3004' },
+};
+
 export default defineConfig(
   // Le socle de test de rendu de la collection : jsdom, les doublures de
   // `matchMedia` et d'`AudioContext`, le nettoyage entre deux tests. Les tests
@@ -25,14 +38,14 @@ export default defineConfig(
       // ouvrir le village depuis un téléphone du même réseau.
       host: true,
       port: 5177,
-      proxy: {
-        // Le canal est un WebSocket natif sur /ws : en développement il
-        // rejoindra le serveur local ; en production, le Worker Cloudflare.
-        '/ws': {
-          target: 'http://localhost:3004',
-          ws: true,
-        },
-      },
+      // Le canal est un WebSocket natif sur /ws : en développement il
+      // rejoint le serveur local ; en production, le Worker Cloudflare.
+      proxy: relais,
+    },
+    preview: {
+      host: true,
+      port: 4177,
+      proxy: relais,
     },
   }),
 );

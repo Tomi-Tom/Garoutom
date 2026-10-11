@@ -6,23 +6,21 @@
  * faire attendre, et le salon n'a rien à mettre en scène. Le `sync` est la
  * seule vérité d'état ; les avis sont la seule voix du serveur.
  *
- * Le choix d'écran se lit en une ligne : pas de table → l'accueil ; salon →
- * la table qui se remplit ; partie lancée → l'écran de jeu, qui n'existe pas
- * encore et dit honnêtement sa place en attendant.
+ * Le choix d’écran se lit en une ligne : pas de table → l’accueil ; salon →
+ * la table qui se remplit ; partie lancée ou finie → l’écran de partie.
  */
 
-import { LienArcade } from '@tombp/arcade';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import type { NoticePayload, RoomView, SyncPayload } from '@garoutom/engine';
+import type { NoticePayload, SyncPayload } from '@garoutom/engine';
 
 import { DUREE_AVIS_MS, RESSORT_CARTE, RESSORT_PANNEAU } from './anim/tokens.js';
-import { quitterTable, reprendrePlace } from './lib/actions.js';
-import { ARCADE_ID } from './lib/identity.js';
+import { codeDeLUrl, inscrireCodeDansLUrl, reprendrePlace } from './lib/actions.js';
 import { canal } from './lib/socket.js';
 import { useStore, type Notice } from './lib/store.js';
 import { Home } from './screens/Home.js';
+import { Partie } from './screens/Partie.js';
 import { Salon } from './screens/Salon.js';
 
 export function App() {
@@ -62,12 +60,28 @@ export function App() {
   // on ne rentrera tout seul que si cette machine tient encore un jeton pour
   // cette table. L'entrée volontaire (ouverture, code tapé) passe par les
   // actions des écrans, pas par ici.
+  //
+  // Après un rechargement, le magasin est vide : c'est l'adresse qui se
+  // souvient de la table (`?table=ABCD`, tenue à jour juste en dessous), et
+  // le jeton rangé sur cette machine qui prouve que la place est la nôtre.
   useEffect(() => {
     if (!connected) return;
-    const code = useStore.getState().room?.code;
-    if (code === undefined) return;
+    const code = useStore.getState().room?.code ?? codeDeLUrl();
+    if (code === null) return;
     void reprendrePlace(code);
   }, [connected, epoque]);
+
+  // L'adresse suit la table : un rechargement y retrouve son chemin, et le
+  // lien de la barre d'adresse est déjà un lien d'invitation. On n'efface le
+  // code qu'en quittant une table — pas au premier rendu, où le magasin est
+  // vide le temps que la reprise aboutisse.
+  const codeTable = room?.code ?? null;
+  const codePrecedent = useRef<string | null>(null);
+  useEffect(() => {
+    if (codeTable !== null) inscrireCodeDansLUrl(codeTable);
+    else if (codePrecedent.current !== null) inscrireCodeDansLUrl(null);
+    codePrecedent.current = codeTable;
+  }, [codeTable]);
 
   const ecran =
     room === null ? (
@@ -75,11 +89,11 @@ export function App() {
     ) : room.status === 'lobby' ? (
       <Salon room={room} />
     ) : (
-      <TableAttente room={room} />
+      <Partie room={room} />
     );
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full" data-skin={room?.options.skin ?? 'thiercelieux'}>
       {ecran}
 
       <RegionVivante />
@@ -100,40 +114,6 @@ export function App() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-/**
- * L'écran de table, pour l'heure honnête : une phrase, pas un faux jeu.
- *
- * L'écran réel — cartes, votes, fil du village — s'assemble sur un chantier
- * voisin ; ce socle ne dessine rien qui ressemble à une partie, pour que la
- * suite le remplace sans qu'aucune habitude n'ait été prise. Il ne retient
- * qu'une chose qui ne trompe pas : la sortie.
- */
-function TableAttente({ room }: { room: RoomView }) {
-  return (
-    <div className="grid min-h-full place-items-center overflow-auto p-5">
-      <motion.main
-        initial={{ y: 16, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={RESSORT_PANNEAU}
-        className="carte flex w-[min(30rem,100%)] flex-col items-center gap-4 p-7 text-center"
-      >
-        <p className="m-0 font-identite text-3xl leading-tight">La partie est lancée</p>
-        <p className="m-0 text-sm leading-relaxed" style={{ color: 'var(--papier-doux)' }}>
-          L'écran de la table — cartes, votes, fil du village — s'assemble encore. Ce
-          socle lui cède sa place sans rien casser d'autre.
-        </p>
-        <LienArcade id={ARCADE_ID} className="mt-1" />
-        <button type="button" onClick={() => void quitterTable()} className="btn-voisin">
-          Quitter la table
-        </button>
-        <p className="m-0 font-mono text-xs" style={{ color: 'var(--lune)' }}>
-          table {room.code}
-        </p>
-      </motion.main>
     </div>
   );
 }

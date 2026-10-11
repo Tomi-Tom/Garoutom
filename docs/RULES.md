@@ -15,12 +15,15 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   à `n-1` : le siège est l'identité du joueur pour le moteur.
 - **R2** — Le moteur ne connaît que des mécaniques. Les identifiants de rôles
   (`villageois`, `loup`, `voyante`, `sorciere`, `chasseur`, `cupidon`,
-  `salvateur`, `idiot`) ne s'affichent jamais tels quels : le skin les
+  `salvateur`, `idiot`, et ceux de la v2 : `ancien`, `corbeau`, `bouc`,
+  `petiteFille`, `loupBlanc`) ne s'affichent jamais tels quels : le skin les
   traduit.
-- **R3** — Camp d'origine : le loup appartient aux loups, tous les autres au
-  village. Seuls les amoureux peuvent changer de camp.
+- **R3** — Camp d'origine : le loup — et le Loup Blanc — appartiennent aux
+  loups, tous les autres au village. Seuls les amoureux peuvent changer de
+  camp ; seul le Loup Blanc gagne contre son camp (R98).
 - **R4** — Les rôles spéciaux — voyante, sorciere, chasseur, cupidon,
-  salvateur, idiot — existent au plus en un exemplaire par partie.
+  salvateur, idiot — et les rôles optionnels de la v2 (R90) existent au plus
+  en un exemplaire par partie.
 
 ## 2. La table et les options
 
@@ -33,8 +36,8 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   de loups que d'autres joueurs, jamais plus de rôles que de places libres.
 - **R14** — Options de table : `capitaine` (élection ou pas), `chat` (fil du
   village), `revelerRoles` (rôle d'un mort montré), `mortsVoientTout`,
-  `chasseurEmpoisonne`, `sorciereSeSauve`, `capitaineAvantNuit1` —
-  toutes booléennes, toutes filtrées par R10.
+  `chasseurEmpoisonne`, `sorciereSeSauve`, `capitaineAvantNuit1`,
+  `ancienRancunier` (R92) — toutes booléennes, toutes filtrées par R10.
 
 ## 3. La composition
 
@@ -98,7 +101,8 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
 - **R46** — Le rôle d'un mort est montré si `revelerRoles` — avec deux
   révélations que l'option ne retient pas, parce que le jeu les impose de
   lui-même : le Chasseur, que son tir désigne (R65), et l'Idiot, que sa grâce
-  désigne (R62).
+  désigne (R62). La v2 en ajoute deux : l'Ancien dont la rancune frappe
+  (R92), le Bouc émissaire qui paie l'égalité (R94).
 - **R47** — Quand un amoureux meurt, l'autre meurt de chagrin dans la
   foulée ; le chagrin s'enchaîne de couple en couple — clause qui ne se
   déclenche qu'à partir de deux couples, et la v1 n'en connaît qu'un :
@@ -150,8 +154,9 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   n'est à personne.
 - **R71** — Le village gagne quand il ne reste plus un loup ; les loups
   gagnent quand il ne reste qu'eux.
-- **R72** — Les quatre issues — `village`, `loups`, `amoureux`, `personne` —
-  ne s'évaluent que déclencheurs vidés (R50).
+- **R72** — Les issues — `village`, `loups`, `amoureux`, `personne`, et
+  `loupBlanc` quand il est de la partie (R98) — ne s'évaluent que
+  déclencheurs vidés (R50).
 
 ## 11. Le fil de discussion
 
@@ -195,3 +200,79 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   filtre : silence par défaut, un champ ne s'ajoute qu'avec une raison. Le
   récapitulatif complet — la nuit racontée — n'apparaît qu'une fois la
   partie finie.
+
+## 14. Les rôles optionnels (v2)
+
+Cinq cartons de la boîte, ouverts le 11 octobre 2026 (D12 à D16). Aucun
+n'entre dans la composition de référence : une table qui ne les coche pas
+joue exactement la partie de la v1, état pour état.
+
+- **R90** — Les rôles optionnels — `ancien`, `corbeau`, `bouc`,
+  `petiteFille`, `loupBlanc` (`OPTIONAL_ROLES`) — se cochent comme les rôles
+  spéciaux, un exemplaire au plus (R4), et n'entrent **jamais** dans la
+  référence (R20) ni dans les suggestions (R23). Pour la borne de R13, le
+  Loup Blanc compte parmi les loups.
+- **R91** — L'**Ancien** survit à la première attaque de la meute qui l'aurait
+  tué ; la seconde le tue. Une attaque arrêtée par le bouclier du Salvateur
+  ou par la potion de vie ne compte pas — la potion part quand même (R44).
+  Le sursis est un secret : l'aube est paisible, aucun évènement ne le dit.
+  Le poison, le vote, le tir le tuent du premier coup.
+- **R92** — L'Ancien tué **de la main du village** — vote, tir du Chasseur,
+  poison — emporte les pouvoirs du village, si l'option `ancienRancunier`
+  le veut (défaut : oui). Sa carte se retourne quelle que soit l'option
+  (R46) et l'évènement `rancune` l'annonce, après les morts. Dès cet
+  instant : la Voyante, le Salvateur, Cupidon, le Corbeau, la Sorcière
+  n'ont plus de consigne — l'étape de la Sorcière se tient, fantôme
+  (R36) ; la Petite Fille ne voit plus rien ; un Chasseur dont le tir n'est
+  pas encore parti n'en a plus ; l'Idiot condamné n'est plus gracié ; le
+  Bouc émissaire meurt toujours de l'égalité, mais ne désigne plus. Ce qui a
+  été joué reste joué : sondages, bouclier, marque, potions de la nuit
+  même, grâce déjà accordée, amoureux déjà liés. La meute, le Loup Blanc et
+  le capitaine ne perdent rien. Mort sous les crocs ou de chagrin, l'Ancien
+  ne se venge pas.
+- **R93** — Le **Corbeau** joue pendant l'étape principale : il marque un
+  vivant, lui compris, ou personne. À l'aube, après les morts, l'évènement
+  `corbeau` annonce le siège marqué — jamais le Corbeau. Au vote du jour, ce
+  siège porte **deux voix d'office**, ajoutées au décompte ; il vote comme
+  les autres. Une marque sur un mort de la nuit ne s'annonce pas et ne
+  compte pas ; toute marque s'éteint à la clôture du vote.
+- **R94** — Le **Bouc émissaire** : quand le vote du village finit sur une
+  égalité — au moins deux sièges en tête, avec au moins une voix — et qu'il
+  vit, c'est lui qui meurt, de la main du village, carte retournée
+  (évènement `bouc`, puis `morts`) ; le vote, lui, n'a condamné personne.
+  Sans Bouc vivant, R61 tient. Son déclencheur passe avant les autres : 30 s
+  (`TRIGGER_MS`) pour désigner **au moins un vivant** — ceux-là seuls
+  voteront au prochain vote du village (évènement `votants`, public). Au
+  temps écoulé, il s'est tu : tout le monde votera. La désignation s'éteint
+  à la clôture de ce vote.
+- **R95** — La **Petite Fille** n'a pas de consigne : son silence est celui
+  d'un villageois. Pendant l'étape principale, et seulement elle, sa vue
+  porte `espionnage` : pour chaque cible, le nombre de loups vivants qui la
+  visent — jamais lesquels. Elle ne risque pas d'être surprise.
+- **R96** — Le **Loup Blanc** est de la meute : il vote la nuit avec elle
+  (sa voix compte, R41), lit et écrit son canal, figure dans `pack`. Ses
+  complices le voient en loup ordinaire ; lui seul — et la Voyante qui le
+  sonde, et les morts qui voient tout — le connaît pour ce qu'il est. La
+  meute ne peut pas le viser.
+- **R97** — Les **nuits paires**, si le Loup Blanc fait partie de la
+  distribution — mort compris —, une étape `loupBlanc` suit l'étape
+  principale et précède la Sorcière. Vivant, il peut dévorer un autre loup
+  vivant, ou personne ; mort, l'étape dure un temps fantôme, comme celle de
+  la Sorcière (R36). Sa proie meurt à l'aube, cause `loups` ; le bouclier du
+  Salvateur l'arrête, la Sorcière n'en sait rien.
+- **R98** — Les victoires se comptent par **faction** : le village gagne
+  quand ni loup ni Loup Blanc ne vivent plus ; la meute, quand il ne reste
+  que des loups ordinaires ; le Loup Blanc, quand il reste seul. S'il ne
+  reste que la meute, Loup Blanc compris, la partie continue. Un couple
+  d'amoureux de deux factions différentes — Loup Blanc et loup compris —,
+  derniers survivants, gagne à deux (R70).
+- **R99** — Le **huis clos** — il ne reste que la meute, Loup Blanc vivant
+  compris — a une borne : au bout de trois nuits (`HUIS_CLOS_NUITS`)
+  ouvertes sans une mort, au moment d'en ouvrir une quatrième, la partie se
+  clôt sur la victoire de la meute. Toute mort remet le compte à zéro.
+- **R100** — Le générateur aléatoire tire les rôles optionnels **sur
+  demande** (`randomComposition(n, rng, { optionnels: true })`) : rien sous
+  dix joueurs, un au plus jusqu'à treize, deux au plus ensuite ; l'Ancien,
+  le Corbeau, le Bouc et la Petite Fille dès dix joueurs, le Loup Blanc dès
+  douze ; toujours deux villageois simples, toujours dans la borne de R13.
+  Sans la demande, R22 tient à l'identique, graine pour graine.

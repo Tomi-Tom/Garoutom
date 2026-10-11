@@ -19,6 +19,8 @@
 import { compositionFor } from './options.js';
 import {
   IllegalActionError,
+  campOf,
+  factionOf,
   type Action,
   type ChatChannel,
   type Death,
@@ -27,6 +29,7 @@ import {
   type GameOptions,
   type GameState,
   type NightChoices,
+  type NightStep,
   type PlayerState,
   type RoleId,
   type Rng,
@@ -52,6 +55,14 @@ export const ELECTION_MS = 90_000;
  */
 export const GHOST_STEP_MS = { min: 5_000, spread: 5_000 } as const;
 
+/**
+ * Le huis clos — il ne reste en vie que la meute, Loup Blanc compris — ne
+ * dure pas toujours : passé ce nombre de nuits sans une mort, la partie se
+ * clôt sur la victoire de la meute (R99). Trois nuits consécutives en
+ * comptent toujours au moins une paire : le Loup Blanc a eu sa chance.
+ */
+export const HUIS_CLOS_NUITS = 3;
+
 /* ------------------------------------------------------------------ */
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
@@ -65,6 +76,8 @@ function emptyNight(): NightChoices {
     victim: null,
     witchSave: false,
     witchKill: null,
+    raven: null,
+    whiteKill: null,
   };
 }
 
@@ -101,6 +114,11 @@ export function createGame(setup: { players: number; options: GameOptions }, rng
     potions: { vie: true, mort: true },
     lastProtected: null,
     inspections: [],
+    ancienBlesse: false,
+    pouvoirsPerdus: false,
+    corbeau: null,
+    votants: null,
+    huisClos: 0,
     chat: [],
     nextMessageId: { village: 1, loups: 1, amoureux: 1, morts: 1 },
     log: [],
@@ -137,19 +155,63 @@ function inGame(state: GameState, role: RoleId): boolean {
   return state.players.some((player) => player.role === role);
 }
 
+/**
+ * Les vivants qui portent ce pouvoir du village — et qui l'ont encore.
+ *
+ * L'Ancien tué de la main du village emporte les pouvoirs avec lui (R92) :
+ * la carte reste, le pouvoir s'en va. Tant que la table n'a pas perdu ses
+ * pouvoirs, c'est exactement `livingWith`.
+ */
+function livingPowered(state: GameState, role: RoleId): number[] {
+  return state.pouvoirsPerdus ? [] : livingWith(state, role);
+}
+
+/** La meute vivante : les loups, Loup Blanc compris (R96). */
+export function livingPack(state: GameState): number[] {
+  return state.players.filter((p) => p.alive && campOf(p.role) === 'loups').map((p) => p.seat);
+}
+
+/**
+ * La nuit en cours est une nuit du Loup Blanc : une nuit paire, dans une
+ * partie qui le compte — mort ou vif (R97). Sauter l'étape d'un Loup Blanc
+ * mort dirait à tous qu'il n'est plus là.
+ */
+function whiteWolfNight(state: GameState): boolean {
+  return state.day % 2 === 0 && inGame(state, 'loupBlanc');
+}
+
+/**
+ * Le huis clos : il ne reste en vie que la meute, et le Loup Blanc en est
+ * (R99). La partie continue — lui seul peut encore la finir.
+ */
+function inHuisClos(state: GameState): boolean {
+  const alive = state.players.filter((p) => p.alive);
+  return (
+    alive.some((p) => p.role === 'loupBlanc') && alive.every((p) => campOf(p.role) === 'loups')
+  );
+}
+
 /** Qui joue pendant l'étape principale de la nuit. */
 function principalActors(state: GameState): number[] {
   const seats = [
-    ...(state.day === 1 ? livingWith(state, 'cupidon') : []),
-    ...livingWith(state, 'salvateur'),
-    ...livingWith(state, 'voyante'),
-    ...livingWith(state, 'loup'),
+    ...(state.day === 1 ? livingPowered(state, 'cupidon') : []),
+    ...livingPowered(state, 'salvateur'),
+    ...livingPowered(state, 'voyante'),
+    ...livingPowered(state, 'corbeau'),
+    ...livingPack(state),
   ];
   return seats.sort((a, b) => a - b);
 }
 
+/**
+ * Qui vote au village : les vivants qui le peuvent — et, le lendemain de la
+ * mort du Bouc émissaire, ceux-là seuls qu'il a désignés (R94).
+ */
 function voters(state: GameState): number[] {
-  return state.players.filter((p) => p.alive && p.canVote).map((p) => p.seat);
+  const designes = state.votants;
+  return state.players
+    .filter((p) => p.alive && p.canVote && (designes === null || designes.includes(p.seat)))
+    .map((p) => p.seat);
 }
 
 /**
@@ -170,9 +232,13 @@ export function pendingActors(state: GameState): number[] {
       if (phase.step === 'principale') {
         return principalActors(state).filter((seat) => !phase.acted.includes(seat));
       }
-      return livingWith(state, 'sorciere').filter((seat) => !phase.acted.includes(seat));
+      if (phase.step === 'loupBlanc') {
+        return livingWith(state, 'loupBlanc').filter((seat) => !phase.acted.includes(seat));
+      }
+      return livingPowered(state, 'sorciere').filter((seat) => !phase.acted.includes(seat));
     case 'chasseur':
     case 'succession':
+    case 'bouc':
       return [phase.seat];
     case 'election':
       return livingSeats(state).filter((seat) => !(seat in phase.votes));
@@ -194,13 +260,18 @@ export function phaseBudgetMs(state: GameState, rng: Rng): number {
   switch (phase.kind) {
     case 'revelation':
       return REVEAL_MS;
-    case 'nuit':
-      if (phase.step === 'sorciere' && livingWith(state, 'sorciere').length === 0) {
-        return GHOST_STEP_MS.min + rng.nextInt(GHOST_STEP_MS.spread);
-      }
+    case 'nuit': {
+      // Une étape sans personne pour la jouer — Sorcière morte ou sans
+      // pouvoir (R36, R92), Loup Blanc mort (R97) — dure un temps fantôme.
+      const ghost =
+        (phase.step === 'sorciere' && livingPowered(state, 'sorciere').length === 0) ||
+        (phase.step === 'loupBlanc' && livingWith(state, 'loupBlanc').length === 0);
+      if (ghost) return GHOST_STEP_MS.min + rng.nextInt(GHOST_STEP_MS.spread);
       return state.options.tempsNuit * 1000;
+    }
     case 'chasseur':
     case 'succession':
+    case 'bouc':
       return TRIGGER_MS;
     case 'election':
       return ELECTION_MS;
@@ -241,7 +312,18 @@ function startNight(turn: Turn): void {
   // pré-nocturne du capitaine, qui ne fait pas avancer le jour non plus.
   if (state.phase.kind !== 'revelation' && state.phase.kind !== 'election') state.day += 1;
   state.night = emptyNight();
+  // Le huis clos se compte en nuits ouvertes depuis la dernière mort (R99).
+  if (inHuisClos(state)) state.huisClos += 1;
   enter(turn, { kind: 'nuit', step: 'principale', acted: [] });
+}
+
+/** Après l'étape principale ou celle du Loup Blanc : la Sorcière, ou l'aube. */
+function afterWolves(turn: Turn): void {
+  if (inGame(turn.state, 'sorciere')) {
+    enter(turn, { kind: 'nuit', step: 'sorciere', acted: [] });
+  } else {
+    resolveNight(turn);
+  }
 }
 
 /** Le plus grand nombre de voix, et ceux qui l'atteignent. */
@@ -282,10 +364,14 @@ function closePrincipal(turn: Turn): void {
     state.inspections.push({ day: state.day, target: night.inspect, role });
     state.log.push({ day: state.day, type: 'voyance', target: night.inspect, role });
   }
+  if (night.raven !== null) {
+    state.log.push({ day: state.day, type: 'corbeau', target: night.raven });
+  }
 
-  // Seules comptent les voix des loups encore en vie.
+  // Seules comptent les voix des loups encore en vie — Loup Blanc compris :
+  // il chasse avec la meute (R96).
   const tally: Record<number, number> = {};
-  for (const wolf of livingWith(state, 'loup')) {
+  for (const wolf of livingPack(state)) {
     const target = night.wolfVotes[wolf];
     if (target === undefined || target === null) continue;
     tally[target] = (tally[target] ?? 0) + 1;
@@ -295,11 +381,22 @@ function closePrincipal(turn: Turn): void {
   night.victim = pick(leaders(tally).seats, rng);
   state.log.push({ day: state.day, type: 'loups', target: night.victim });
 
-  if (inGame(state, 'sorciere')) {
-    enter(turn, { kind: 'nuit', step: 'sorciere', acted: [] });
+  if (whiteWolfNight(state)) {
+    enter(turn, { kind: 'nuit', step: 'loupBlanc', acted: [] });
   } else {
-    resolveNight(turn);
+    afterWolves(turn);
   }
+}
+
+/** L'étape du Loup Blanc se clôt : son choix est noté, la nuit continue (R97). */
+function closeWhiteWolf(turn: Turn): void {
+  const { state } = turn;
+  // Un Loup Blanc mort n'a rien choisi : son étape fantôme ne laisse aucune
+  // ligne au récit.
+  if (livingWith(state, 'loupBlanc').length > 0) {
+    state.log.push({ day: state.day, type: 'loupBlanc', target: state.night.whiteKill });
+  }
+  afterWolves(turn);
 }
 
 function resolveNight(turn: Turn): void {
@@ -313,7 +410,21 @@ function resolveNight(turn: Turn): void {
       state.potions.vie = false;
       state.log.push({ day: state.day, type: 'sauvetage', target: night.victim });
     }
-    if (!shielded && !night.witchSave) victims.push({ seat: night.victim, cause: 'loups' });
+    if (!shielded && !night.witchSave) {
+      const prey = playerAt(state, night.victim);
+      if (prey.role === 'ancien' && prey.alive && !state.ancienBlesse) {
+        // L'Ancien encaisse la première attaque qui l'aurait tué : il reste
+        // debout, et le village n'en saura rien — une aube paisible (R91).
+        state.ancienBlesse = true;
+        state.log.push({ day: state.day, type: 'resistance', seat: night.victim });
+      } else {
+        victims.push({ seat: night.victim, cause: 'loups' });
+      }
+    }
+  }
+  // Le Loup Blanc dévore comme la meute : même cause, même bouclier (R97).
+  if (night.whiteKill !== null && night.protect !== night.whiteKill) {
+    victims.push({ seat: night.whiteKill, cause: 'loups' });
   }
   if (night.witchKill !== null) {
     state.potions.mort = false;
@@ -321,26 +432,71 @@ function resolveNight(turn: Turn): void {
     victims.push({ seat: night.witchKill, cause: 'poison' });
   }
 
-  const deaths: Death[] = [];
-  for (const victim of victims) kill(state, victim.seat, victim.cause, deaths);
+  const { deaths, suites } = killAll(state, victims);
   turn.events.push(deaths.length > 0 ? { type: 'morts', deaths } : { type: 'aube-paisible' });
+  turn.events.push(...suites);
+
+  // La marque du Corbeau tombe à l'aube, après les morts : sur un mort, elle
+  // n'a plus de sens et ne s'annonce pas (R93).
+  if (night.raven !== null && isAlive(state, night.raven)) {
+    state.corbeau = night.raven;
+    turn.events.push({ type: 'corbeau', target: night.raven });
+  }
 
   state.resume = 'jour';
   proceed(turn);
 }
+
+/** Tue chacun, dans l'ordre : les morts d'un bloc, puis ce qu'ils ont déclenché d'annonces. */
+function killAll(
+  state: GameState,
+  victims: { seat: number; cause: DeathCause }[],
+): { deaths: Death[]; suites: GameEvent[] } {
+  const deaths: Death[] = [];
+  const suites: GameEvent[] = [];
+  for (const victim of victims) kill(state, victim.seat, victim.cause, deaths, suites);
+  return { deaths, suites };
+}
+
+/** Les morts qui viennent de la main du village : le vote, le tir, le poison (R92). */
+const VILLAGE_HAND: readonly DeathCause[] = ['vote', 'chasseur', 'poison'];
 
 /**
  * Tue un joueur, et tout ce qui s'ensuit.
  *
  * L'amoureux survivant meurt de chagrin dans la foulée. Le Chasseur et le
  * capitaine laissent un déclencheur, traité avant de reprendre le jeu.
+ * L'Ancien tué de la main du village emporte les pouvoirs du village : sa
+ * carte se retourne, et l'annonce rejoint `suites`, à dire après les morts.
  */
-function kill(state: GameState, seat: number, cause: DeathCause, out: Death[]): void {
+function kill(
+  state: GameState,
+  seat: number,
+  cause: DeathCause,
+  out: Death[],
+  suites: GameEvent[],
+): void {
   const player = state.players[seat];
   if (!player?.alive) return;
   player.alive = false;
   out.push({ seat, cause, role: state.options.revelerRoles ? player.role : null });
   state.log.push({ day: state.day, type: 'mort', seat, cause });
+  // Une mort rouvre le compte du huis clos (R99).
+  state.huisClos = 0;
+
+  if (
+    player.role === 'ancien' &&
+    state.options.ancienRancunier &&
+    !state.pouvoirsPerdus &&
+    VILLAGE_HAND.includes(cause)
+  ) {
+    // Le village a tué son Ancien : les pouvoirs s'en vont avec lui, et le
+    // jeu l'annonce — sa carte se retourne, quelle que soit l'option (R92).
+    state.pouvoirsPerdus = true;
+    player.revealed = true;
+    state.log.push({ day: state.day, type: 'rancune', seat });
+    suites.push({ type: 'rancune', seat });
+  }
 
   if (player.role === 'chasseur') {
     // Le poison étouffe le Chasseur, et le chagrin ne laisse pas de souffle
@@ -355,7 +511,7 @@ function kill(state: GameState, seat: number, cause: DeathCause, out: Death[]): 
   const lovers = state.lovers;
   if (lovers?.includes(seat)) {
     const other = lovers[0] === seat ? lovers[1] : lovers[0];
-    kill(state, other, 'chagrin', out);
+    kill(state, other, 'chagrin', out, suites);
   }
 }
 
@@ -364,6 +520,11 @@ function kill(state: GameState, seat: number, cause: DeathCause, out: Death[]): 
  *
  * Évalué seulement quand plus aucun déclencheur n'attend : le Chasseur tire
  * toujours, même quand son camp a déjà perdu, et son tir peut tout changer.
+ *
+ * On compte par faction (R98) : le village gagne quand ni loup ni Loup Blanc
+ * ne vivent plus ; la meute, quand il ne reste que des loups ordinaires ; le
+ * Loup Blanc, quand il reste seul. Un couple d'amoureux de deux factions
+ * différentes, derniers survivants, l'emporte avant tout le monde.
  */
 export function winnerOf(state: GameState): Winner | null {
   const alive = state.players.filter((player) => player.alive);
@@ -372,16 +533,27 @@ export function winnerOf(state: GameState): Winner | null {
   const lovers = state.lovers;
   if (lovers) {
     const [a, b] = lovers.map((seat) => playerAt(state, seat));
-    const mixed = a && b && (a.role === 'loup') !== (b.role === 'loup');
+    const mixed = a && b && factionOf(a.role) !== factionOf(b.role);
     if (mixed && alive.length === 2 && alive.every((p) => lovers.includes(p.seat))) {
       return 'amoureux';
     }
   }
 
   const wolves = alive.filter((player) => player.role === 'loup').length;
-  if (wolves === 0) return 'village';
-  if (wolves === alive.length) return 'loups';
+  const white = alive.filter((player) => player.role === 'loupBlanc').length;
+  if (wolves === 0 && white === 0) return 'village';
+  if (white > 0 && white === alive.length) return 'loupBlanc';
+  if (white === 0 && wolves === alive.length) return 'loups';
   return null;
+}
+
+/** La partie se clôt sur une issue. */
+function finish(turn: Turn, winner: Winner): void {
+  const { state } = turn;
+  state.winner = winner;
+  state.over = true;
+  enter(turn, { kind: 'fin' });
+  turn.events.push({ type: 'fin', winner });
 }
 
 /** Reprend le cours du jeu : déclencheurs d'abord, victoire ensuite, puis la suite. */
@@ -394,11 +566,21 @@ function proceed(turn: Turn): void {
     if (trigger.kind === 'chasseur') {
       // Un chasseur seul survivant n'a personne sur qui tirer.
       if (livingSeats(state).length === 0) continue;
+      // Le village a perdu ses pouvoirs (R92) : la balle qui n'est pas encore
+      // partie ne partira plus. Rien ne s'ouvre, rien ne se retourne.
+      if (state.pouvoirsPerdus) continue;
       // Ouvrir sa phase, c'est le désigner à toute la table : la carte se
       // retourne même si l'option ne révèle pas les morts (R46). Qu'il tire
       // ou emporte sa balle, le village a reconnu son Chasseur.
       playerAt(state, trigger.seat).revealed = true;
       enter(turn, { kind: 'chasseur', seat: trigger.seat });
+      return;
+    }
+    if (trigger.kind === 'bouc') {
+      // Le dernier mot du Bouc est un pouvoir : perdu avec ceux du village
+      // (R92), et sans objet sur une table vide.
+      if (state.pouvoirsPerdus || livingSeats(state).length === 0) continue;
+      enter(turn, { kind: 'bouc', seat: trigger.seat });
       return;
     }
     if (!state.options.capitaine || livingSeats(state).length === 0) {
@@ -411,14 +593,17 @@ function proceed(turn: Turn): void {
 
   const winner = winnerOf(state);
   if (winner) {
-    state.winner = winner;
-    state.over = true;
-    enter(turn, { kind: 'fin' });
-    turn.events.push({ type: 'fin', winner });
+    finish(turn, winner);
     return;
   }
 
   if (state.resume === 'nuit') {
+    // Le huis clos qui s'éternise : le Loup Blanc a laissé passer ses nuits,
+    // la meute l'emporte (R99). Sans Loup Blanc, le compteur reste à zéro.
+    if (state.huisClos >= HUIS_CLOS_NUITS && inHuisClos(state)) {
+      finish(turn, 'loups');
+      return;
+    }
     // L'élection pré-nocturne se tient entre la révélation et la première
     // nuit : tout le monde vote, même celui qui ne survivra pas à la nuit.
     if (state.options.capitaine && state.options.capitaineAvantNuit1 && !state.electionHeld) {
@@ -464,29 +649,58 @@ function closeDay(turn: Turn): void {
     const weight = Number(key) === state.captain ? 2 : 1;
     tally[target] = (tally[target] ?? 0) + weight;
   }
-  // Une égalité ne condamne personne : le village n'exécute pas au hasard.
+  // La marque du Corbeau : deux voix d'office contre le siège désigné, tant
+  // qu'il vit (R93).
+  if (state.corbeau !== null && isAlive(state, state.corbeau)) {
+    tally[state.corbeau] = (tally[state.corbeau] ?? 0) + 2;
+  }
+  // Une égalité ne condamne personne : le village n'exécute pas au hasard —
+  // sauf qu'un Bouc émissaire vivant paie pour tous (R94).
   const { seats } = leaders(tally);
   const executed = seats.length === 1 ? (seats[0] ?? null) : null;
+  const scapegoat = seats.length > 1 ? (livingWith(state, 'bouc')[0] ?? null) : null;
 
   state.log.push({ day: state.day, type: 'vote', tally, executed });
   turn.events.push({ type: 'vote', tally, executed });
 
+  // La marque et la désignation ne valent que pour ce vote-ci.
+  state.corbeau = null;
+  state.votants = null;
+
   if (executed !== null) {
     const condemned = playerAt(state, executed);
-    if (condemned.role === 'idiot' && !condemned.revealed) {
+    if (condemned.role === 'idiot' && !condemned.revealed && !state.pouvoirsPerdus) {
       // L'Idiot du village est reconnu et gracié, mais ne votera plus.
       condemned.revealed = true;
       condemned.canVote = false;
       state.log.push({ day: state.day, type: 'grace', seat: executed });
       turn.events.push({ type: 'grace', seat: executed });
     } else {
-      const deaths: Death[] = [];
-      kill(state, executed, 'vote', deaths);
-      turn.events.push({ type: 'morts', deaths });
+      const { deaths, suites } = killAll(state, [{ seat: executed, cause: 'vote' }]);
+      turn.events.push({ type: 'morts', deaths }, ...suites);
     }
+  } else if (scapegoat !== null) {
+    // Le Bouc émissaire paie l'égalité : sa carte se retourne, il meurt de
+    // la main du village, et son dernier mot passe avant tout autre
+    // déclencheur (R94).
+    playerAt(state, scapegoat).revealed = true;
+    state.log.push({ day: state.day, type: 'bouc', seat: scapegoat });
+    turn.events.push({ type: 'bouc', seat: scapegoat });
+    state.triggers.push({ kind: 'bouc', seat: scapegoat });
+    const { deaths, suites } = killAll(state, [{ seat: scapegoat, cause: 'vote' }]);
+    turn.events.push({ type: 'morts', deaths }, ...suites);
   }
 
   state.resume = 'nuit';
+  proceed(turn);
+}
+
+/** Le Bouc émissaire a parlé — ou s'est tu : la désignation est publique (R94). */
+function designate(turn: Turn, bouc: number, seats: number[] | null): void {
+  const { state } = turn;
+  state.votants = seats;
+  state.log.push({ day: state.day, type: 'votants', seats });
+  turn.events.push({ type: 'votants', bouc, seats });
   proceed(turn);
 }
 
@@ -507,6 +721,7 @@ function closePhase(turn: Turn): void {
       return;
     case 'nuit':
       if (phase.step === 'principale') closePrincipal(turn);
+      else if (phase.step === 'loupBlanc') closeWhiteWolf(turn);
       else resolveNight(turn);
       return;
     case 'chasseur': {
@@ -521,6 +736,10 @@ function closePhase(turn: Turn): void {
       passCaptaincy(turn, phase.seat, heir);
       return;
     }
+    case 'bouc':
+      // Le Bouc s'est tu : demain, tout le monde vote (R94).
+      designate(turn, phase.seat, null);
+      return;
     case 'election':
       closeElection(turn);
       return;
@@ -557,9 +776,24 @@ function requireRole(state: GameState, seat: number, role: RoleId): void {
   }
 }
 
-function requireStep(state: GameState, step: 'principale' | 'sorciere'): void {
+function requireStep(state: GameState, step: NightStep): void {
   if (state.phase.kind !== 'nuit' || state.phase.step !== step) {
     throw new IllegalActionError('Ce n’est pas le moment', 'wrong-phase');
+  }
+}
+
+/** Un pouvoir du village ne se joue plus une fois l'Ancien tué de sa main (R92). */
+function requirePowers(state: GameState): void {
+  if (state.pouvoirsPerdus) {
+    throw new IllegalActionError('Le village a perdu ses pouvoirs', 'powers');
+  }
+}
+
+/** Un loup vivant de la meute, Loup Blanc compris (R96). */
+function requirePack(state: GameState, seat: number): void {
+  const player = playerAt(state, seat);
+  if (!player.alive || campOf(player.role) !== 'loups') {
+    throw new IllegalActionError('Ce n’est pas à vous de jouer', 'not-your-turn');
   }
 }
 
@@ -578,9 +812,10 @@ export function speakableChannels(state: GameState, seat: number): ChatChannel[]
   if (!player.alive) return ['morts'];
 
   const channels: ChatChannel[] = [];
-  const daytime = kind === 'jour' || kind === 'election' || kind === 'chasseur' || kind === 'succession';
+  const daytime =
+    kind === 'jour' || kind === 'election' || kind === 'chasseur' || kind === 'succession' || kind === 'bouc';
   if (state.options.chat && daytime) channels.push('village');
-  if (player.role === 'loup' && kind === 'nuit') channels.push('loups');
+  if (campOf(player.role) === 'loups' && kind === 'nuit') channels.push('loups');
   const lovers = state.lovers;
   if (lovers?.includes(seat) && lovers.every((s) => isAlive(state, s))) channels.push('amoureux');
   return channels;
@@ -625,6 +860,7 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
     case 'cupidon': {
       requireStep(next, 'principale');
       requireRole(next, seat, 'cupidon');
+      requirePowers(next);
       if (next.day !== 1) throw new IllegalActionError('Cupidon ne tire qu’une fois', 'wrong-phase');
       if (action.a === action.b) throw new IllegalActionError('Il faut deux personnes', 'target');
       requireLiving(next, action.a, 'Le premier amoureux');
@@ -637,6 +873,7 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
     case 'proteger': {
       requireStep(next, 'principale');
       requireRole(next, seat, 'salvateur');
+      requirePowers(next);
       requireLiving(next, action.target, 'La personne protégée');
       if (action.target === next.lastProtected) {
         throw new IllegalActionError('Pas deux nuits de suite la même personne', 'target');
@@ -649,6 +886,7 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
     case 'sonder': {
       requireStep(next, 'principale');
       requireRole(next, seat, 'voyante');
+      requirePowers(next);
       requireLiving(next, action.target, 'La personne sondée');
       if (action.target === seat) throw new IllegalActionError('Vous vous connaissez déjà', 'target');
       next.night.inspect = action.target;
@@ -658,10 +896,12 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
 
     case 'devorer': {
       requireStep(next, 'principale');
-      requireRole(next, seat, 'loup');
+      requirePack(next, seat);
       if (action.target !== null) {
         requireLiving(next, action.target, 'La proie');
-        if (playerAt(next, action.target).role === 'loup') {
+        // Le Loup Blanc est de la meute : on ne le vise pas plus qu'un autre
+        // loup — ce serait le désigner (R96).
+        if (campOf(playerAt(next, action.target).role) === 'loups') {
           throw new IllegalActionError('Les loups ne se mangent pas entre eux', 'target');
         }
       }
@@ -674,6 +914,7 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
     case 'sorciere': {
       requireStep(next, 'sorciere');
       requireRole(next, seat, 'sorciere');
+      requirePowers(next);
       if (action.save && (!next.potions.vie || next.night.victim === null)) {
         throw new IllegalActionError('Rien à sauver', 'potion');
       }
@@ -703,11 +944,60 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
       next.log.push({ day: next.day, type: 'tir', target: action.target });
       turn.events.push({ type: 'tir', hunter: seat, target: action.target });
       if (action.target !== null) {
-        const deaths: Death[] = [];
-        kill(next, action.target, 'chasseur', deaths);
-        turn.events.push({ type: 'morts', deaths });
+        const { deaths, suites } = killAll(next, [{ seat: action.target, cause: 'chasseur' }]);
+        turn.events.push({ type: 'morts', deaths }, ...suites);
       }
       proceed(turn);
+      return { state: next, events: turn.events };
+    }
+
+    case 'marquer': {
+      requireStep(next, 'principale');
+      requireRole(next, seat, 'corbeau');
+      requirePowers(next);
+      // Un vivant, lui compris — ou personne : la marque ne dit jamais qui
+      // l'a posée (R93).
+      if (action.target !== null) requireLiving(next, action.target, 'La personne marquée');
+      next.night.raven = action.target;
+      markActed(next, seat);
+      break;
+    }
+
+    case 'trahir': {
+      requireStep(next, 'loupBlanc');
+      requireRole(next, seat, 'loupBlanc');
+      if (action.target !== null) {
+        requireLiving(next, action.target, 'La proie');
+        if (action.target === seat || playerAt(next, action.target).role !== 'loup') {
+          throw new IllegalActionError('Le Loup Blanc ne dévore qu’un autre loup', 'target');
+        }
+      }
+      next.night.whiteKill = action.target;
+      markActed(next, seat);
+      break;
+    }
+
+    case 'designerVotants': {
+      if (next.phase.kind !== 'bouc' || next.phase.seat !== seat) {
+        throw new IllegalActionError('Ce n’est pas à vous de désigner', 'not-your-turn');
+      }
+      // La charge utile vient du réseau : un tableau d'entiers, rien d'autre.
+      const brut: unknown = action.seats;
+      if (!Array.isArray(brut) || brut.length === 0) {
+        throw new IllegalActionError('Désignez au moins un votant', 'target');
+      }
+      const seats = [...new Set(brut as unknown[])];
+      for (const designe of seats) {
+        if (typeof designe !== 'number' || !Number.isInteger(designe)) {
+          throw new IllegalActionError('Un votant est un siège', 'target');
+        }
+        requireLiving(next, designe, 'Le votant');
+      }
+      designate(
+        turn,
+        seat,
+        (seats as number[]).sort((a, b) => a - b),
+      );
       return { state: next, events: turn.events };
     }
 
@@ -730,6 +1020,10 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
         const voter = playerAt(next, seat);
         if (!voter.alive || !voter.canVote) {
           throw new IllegalActionError('Vous ne votez pas', 'cannot-vote');
+        }
+        // Le lendemain du Bouc, seuls ses désignés votent (R94).
+        if (next.votants !== null && !next.votants.includes(seat)) {
+          throw new IllegalActionError('Le Bouc émissaire ne vous a pas désigné', 'cannot-vote');
         }
         if (action.target !== null) {
           requireLiving(next, action.target, 'L’accusé');

@@ -137,6 +137,94 @@ qu'un changement de nom — mais l'information doit survivre au changement :
 le village doit se voir village, les loups loups, quel que soit l'habit.
 La liberté porte l'ambiance ; le contrat porte la lisibilité.
 
+### D12 — Cinq rôles de plus, tous optionnels, hors de la référence
+
+**11 octobre 2026.** La v2 ouvre l'Ancien, le Corbeau, le Bouc émissaire, la
+Petite Fille et le Loup Blanc (R90–R100). Ils vivent dans une liste à part,
+`OPTIONAL_ROLES` ; `SPECIAL_ROLES` reste celle des six rôles de la v1, et tout
+ce qui s'en dérive — la référence, les suggestions, le générateur par
+défaut — ne bouge pas d'un rôle. L'hôte les coche (`CHOOSABLE_ROLES`) ; le
+générateur ne les tire que si on le lui demande, avec parcimonie : rien sous
+dix joueurs, un jusqu'à treize, deux au-delà, le Loup Blanc dès douze.
+
+**Pourquoi.** L'équilibrage de référence a été recalé avec soin
+([`refs/roles.md`](refs/roles.md)) ; un rôle optionnel qui s'y glisserait le
+défairait sans bruit. Une table qui ne coche rien rejoue la v1 état pour
+état — vérifié sur trois mille parties rejouées contre le moteur d'avant.
+Sous dix joueurs, chaque carte spéciale de plus mange un des derniers
+villageois simples ; le Loup Blanc veut une meute à trahir.
+
+### D13 — L'Ancien : le sursis ne compte que s'il sauve, la rancune est une option
+
+**11 octobre 2026.** L'attaque qui « compte » est celle qui l'aurait tué :
+couverte par le bouclier ou rachetée par la potion de vie, elle ne lui
+coûte pas son sursis (R91). Tué de la main du village — vote, tir, poison —,
+il emporte les pouvoirs du village (R92), sous l'option `ancienRancunier`
+(défaut : la règle officielle). « Perdre ses pouvoirs » est tranché au cas
+par cas : plus de consigne de nuit pour le village (l'étape de la Sorcière
+reste, fantôme), plus de tir pour un Chasseur qui n'a pas encore tiré —
+même tombé la même aube —, plus de grâce pour l'Idiot, plus de dernier mot
+pour le Bouc, plus d'espionnage pour la Petite Fille. Ce qui est joué reste
+joué. La carte de l'Ancien se retourne quand sa rancune frappe, comme le
+tir désigne le Chasseur.
+
+**Pourquoi.** La règle officielle parle d'« attaque » sans trancher le
+bouclier ; la lecture la plus lisible est celle du sursis comme seconde vie,
+qui ne se perd que si l'on meurt. La perte des pouvoirs, elle, doit se dire :
+sans révélation, une table sans `revelerRoles` verrait ses rôles se taire
+sans comprendre pourquoi — et chacun l'apprendrait à son absence de
+consigne. Enfin, une règle aussi punitive mérite son interrupteur : certaines
+tables la trouvent injouable en ligne, où l'Ancien ne peut pas protester.
+
+### D14 — Le Corbeau et le Bouc : des comptes publics
+
+**11 octobre 2026.** La marque du Corbeau s'annonce à l'aube sans dire qui
+l'a posée, et pèse deux voix ajoutées au décompte — le marqué vote toujours,
+le Corbeau peut se marquer lui-même (R93). Le Bouc émissaire paie toute
+égalité qui a au moins une voix, même s'il n'en faisait pas partie, et même
+sans pouvoirs (c'est un sort, pas un pouvoir) ; son dernier mot désigne au
+moins un votant, et son silence laisse voter tout le monde (R94).
+
+**Pourquoi.** Le Corbeau de la boîte agit en secret mais sa marque est
+publique ; la seule chose à cacher est sa main. Pour le Bouc, l'« égalité =
+personne » de R61 reste la règle de toutes les tables sans lui : il n'amende
+le vote que vivant. Une désignation vide aurait offert au Bouc mourant le
+pouvoir d'annuler un jour entier ; au moins un votant, le pouvoir reste un
+pouvoir, pas un veto.
+
+### D15 — La Petite Fille ne se fait pas surprendre
+
+**11 octobre 2026.** La Petite Fille voit, pendant l'étape principale, le
+nombre de loups qui visent chaque cible — jamais lesquels (R95). La règle
+officielle la laisse espionner au risque d'être vue ; Garoutom ne simule
+pas ce risque en v2, écart assumé.
+
+**Pourquoi.** Autour d'une table, le risque est un regard croisé ; en ligne,
+il faudrait inventer une mécanique de « surprise » — une probabilité, une
+action — qui ne serait plus la Petite Fille. L'espionnage anonyme garde le
+goût du rôle sans offrir aux loups un détecteur. Son absence de consigne est
+celle d'un villageois : rien dans la vue, hors de sa propre carte et de son
+espionnage, ne la distingue (testé).
+
+### D16 — Le Loup Blanc : un loup comme les autres, jusqu'aux nuits paires
+
+**11 octobre 2026.** Le Loup Blanc vote avec la meute, qui le voit en loup
+ordinaire ; les nuits paires, une étape à lui suit la principale — tenue
+mort compris, d'une durée fantôme, pour ne rien trahir (R96, R97). Sa proie
+meurt de la cause `loups` : une cause à part désignerait le loup tué aux
+yeux d'une table qui ne révèle pas les rôles. Le bouclier du Salvateur
+l'arrête ; la Sorcière ne connaît que la victime de la meute. Il ne gagne
+que seul ; la meute ne gagne qu'entre loups ordinaires ; un huis clos de la
+meute avec lui s'éteint au bout de trois nuits sans mort, sur la victoire
+de la meute (R98, R99).
+
+**Pourquoi.** La règle officielle veut le Loup Blanc seul survivant, sans
+dire ce qui arrive s'il ne mord pas : un Loup Blanc et un loup qui se
+renvoient l'égalité chaque jour feraient tourner la partie à l'infini. Trois
+nuits consécutives en comptent toujours une paire : le Loup Blanc a eu sa
+chance, et la meute, qui a fait tomber le village, l'emporte. Un couple
+d'amoureux Loup Blanc et loup est « mixte » : leurs factions diffèrent.
+
 ## Questions ouvertes
 
 | Sujet | La question |
@@ -144,4 +232,5 @@ La liberté porte l'ambiance ; le contrat porte la lisibilité.
 | Robots et rôles cachés | Que faire d'un joueur qui ne revient pas après le délai de grâce, quand son rôle est secret ? Un robot de loup qui dévore est un aveu ; le pattern collection (`reprise-et-robots.md`) ne s'applique pas tel quel. |
 | Le fil sur mobile | Tiroir qui pousse la place, ou colonne permanente compacte sous la place ? À décider devant le client réel. |
 | Les minuteries | Barre toujours visible, ou mention discrète qui ne s'agite que dans les trente dernières secondes ? À décider devant le client réel. |
-| Rôles suivants | La boîte en a d'autres (`refs/roles.md`, « Rôles envisagés pour plus tard ») : lesquels méritent la v2 ? |
+| Rôles suivants | Cinq sont ouverts en v2 (D12–D16). Restent le Voleur, le Renard, le Joueur de flûte (`refs/roles.md`) : lesquels, et quand ? |
+| La Petite Fille surprise | Faut-il un jour un risque pour la Petite Fille (D15) — et sous quelle forme, en ligne ? |

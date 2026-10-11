@@ -20,6 +20,99 @@ références, la direction artistique et le système de skins se fixent dans
 [`docs/`](docs/README.md) ; les décisions se prennent — et se gardent — dans
 [`DECISIONS.md`](docs/DECISIONS.md).
 
+## Jouer
+
+Node ≥ 20, puis `npm install` une fois à la racine. Trois façons d'ouvrir la
+table, de la plus intime à la plus large.
+
+### En local, pour développer
+
+```sh
+npm run dev
+```
+
+Le serveur tient le canal sur le port 3004, Vite sert la page sur
+[localhost:5177](http://localhost:5177) et relaie `/ws` jusqu'au serveur. Vite
+écoute aussi sur le réseau : un téléphone du même Wi-Fi ouvre l'adresse
+« Network » qu'il affiche.
+
+#### Tester seul : les robots
+
+Il faut six joueurs pour lancer une partie. Ouvrez une table dans le
+navigateur, notez son code, puis faites asseoir des robots — de simples
+clients WebSocket qui jouent des coups légaux au hasard depuis leur propre
+vue, sans aucun privilège :
+
+```sh
+npm run robots -- ABCD 5              # 5 robots rejoignent la table ABCD
+npm run robots -- ABCD 7 --bavards    # …et papotent dans les canaux
+npm run robots -- --creer 8 --lancer --vitesse rapide   # une partie entre robots
+```
+
+Options : `--vitesse lent|normal|rapide`, `--delai-max-ms N`, `--bavards`,
+`--rejouer` (l'hôte robot relance une revanche), `--sortir` (partir à la
+fin), `--url ws://hote:port/ws`. Ctrl+C fait quitter la table proprement.
+
+### Entre amis, sur le même réseau
+
+```sh
+npm run serve
+```
+
+Construit le client, puis lance le serveur, qui sert **tout sur un seul
+port** : la page, ses fichiers et le canal. Au démarrage, il annonce ses
+adresses :
+
+```
+Garoutom est ouvert. Jouez sur :
+  http://localhost:3004
+Et pour les amis du même réseau :
+  http://192.168.1.107:3004
+```
+
+Les amis ouvrent la seconde adresse dans leur navigateur, et c'est tout. Au
+premier lancement, Windows demande s'il faut laisser Node accepter les
+connexions : autoriser les **réseaux privés**. Réglages par l'environnement :
+`PORT` (3004), `HOST` (`0.0.0.0` ; `127.0.0.1` ferme la porte aux voisins).
+Une fois le client construit, `npm start` suffit pour relancer. Les tables
+vivent dans la mémoire du serveur : l'arrêter les efface.
+
+### En ligne
+
+La page vit sur Vercel, le canal dans un Worker Cloudflare (un Durable Object
+qui porte toutes les tables, sans plafond de durée — voir
+[`DECISIONS.md`](docs/DECISIONS.md), D5, et `packages/worker/src/tables.ts`).
+Rien n'est déployé tant que Tom ne le fait pas :
+
+1. **Le Worker.** `npx wrangler login` une fois, puis `npm run worker:deploy`.
+   Wrangler affiche l'adresse du Worker, par exemple
+   `https://garoutom.<compte>.workers.dev` ; `…/health` doit répondre
+   `{"ok":true,…}`.
+2. **Le client.** Dans le projet Vercel, poser la variable d'environnement
+   `VITE_CHANNEL_URL=wss://garoutom.<compte>.workers.dev/ws`, puis redéployer :
+   elle est lue au build. Sans elle, le client chercherait le canal sur
+   Vercel, qui ne l'a pas.
+3. **Facultatif.** Restreindre les pages admises à ouvrir le canal :
+   décommenter `ORIGINES` dans `packages/worker/wrangler.toml` et redéployer
+   le Worker.
+
+Pour éprouver le Worker avant de le déployer : `npm run worker:dev` (Wrangler
+en local, port 8787), et dans un autre terminal
+`VITE_CHANNEL_URL=ws://localhost:8787/ws npm run dev:client`.
+
+### Les scripts
+
+| Script | Ce qu'il fait |
+|---|---|
+| `npm run dev` | Serveur de canal (3004) + Vite (5177) avec relais `/ws` |
+| `npm run build` | Construit le moteur puis le client (`packages/client/dist`) |
+| `npm start` | Serveur Node : client construit + canal `/ws` + `/health`, un seul port |
+| `npm run serve` | `build` puis `start` — la soirée entre amis en une commande |
+| `npm test` | Tous les tests : moteur, serveur, client, Worker |
+| `npm run typecheck` | Le typage des quatre paquets |
+| `npm run worker:dev` | Le Worker Cloudflare en local (Wrangler) |
+| `npm run worker:deploy` | Déploie le Worker (après `wrangler login`) |
+
 ## Liens
 
 - **En ligne :** l'accueil du chantier sur

@@ -10,7 +10,8 @@
  * siège a une raison explicite de la connaître.
  */
 
-import { speakableChannels } from './game.js';
+import { livingPack, speakableChannels } from './game.js';
+import { campOf } from './types.js';
 import type {
   ChatChannel,
   ChatMessage,
@@ -51,7 +52,13 @@ export type Prompt =
     }
   | { kind: 'tirer' }
   | { kind: 'successeur' }
-  | { kind: 'voter'; election: boolean };
+  | { kind: 'voter'; election: boolean }
+  /** Le Corbeau marque un vivant — lui compris — ou personne (R93). */
+  | { kind: 'marquer' }
+  /** Le Loup Blanc, une nuit paire : un autre loup vivant, ou personne (R97). */
+  | { kind: 'trahir' }
+  /** Le Bouc émissaire mort : au moins un vivant qui votera demain (R94). */
+  | { kind: 'designerVotants' };
 
 export interface GameView {
   /** `null` pour un spectateur : aucune carte, aucun secret. */
@@ -78,6 +85,18 @@ export interface GameView {
   lover: number | null;
   /** Ce que la Voyante a appris. */
   inspections: { day: number; target: number; role: RoleId }[];
+  /**
+   * Ce que la Petite Fille entrevoit, pendant l'étape principale seulement :
+   * pour chaque cible, combien de loups la visent — jamais lesquels (R95).
+   * `null` pour tout autre siège, à tout autre moment.
+   */
+  espionnage: Record<number, number> | null;
+  /** Le village a perdu ses pouvoirs — c'est public, l'annonce l'a dit (R92). */
+  pouvoirsPerdus: boolean;
+  /** Le siège marqué par le Corbeau pour le vote du jour, annoncé à l'aube (R93). */
+  marque: number | null;
+  /** Les seuls votants du prochain vote, désignés par le Bouc ; `null` : tout le monde (R94). */
+  votants: number[] | null;
   chat: ChatMessage[];
   /** Où vous pouvez écrire en ce moment. */
   channels: ChatChannel[];
@@ -96,7 +115,7 @@ function readableChannels(state: GameState, seat: number | null, omniscient: boo
   if (!player) return readable;
   // La meute ne compte ses morts : un loup mort ne lit plus le canal des
   // loups — sauf à voir tout, comme les autres morts.
-  if (player.alive && player.role === 'loup') readable.add('loups');
+  if (player.alive && campOf(player.role) === 'loups') readable.add('loups');
   if (state.lovers?.includes(seat)) readable.add('amoureux');
   if (!player.alive) readable.add('morts');
   return readable;
@@ -109,10 +128,13 @@ function promptFor(state: GameState, seat: number): Prompt | null {
   switch (phase.kind) {
     case 'revelation':
       return player.alive ? { kind: 'pret' } : null;
-    case 'nuit':
+    case 'nuit': {
       if (!player.alive) return null;
+      // Le village sans pouvoirs n'a plus de consigne la nuit (R92) ; la
+      // meute, elle, chasse toujours.
+      const powered = !state.pouvoirsPerdus;
       if (phase.step === 'sorciere') {
-        return player.role === 'sorciere'
+        return player.role === 'sorciere' && powered
           ? {
               kind: 'sorciere',
               victim: state.night.victim,
@@ -122,19 +144,29 @@ function promptFor(state: GameState, seat: number): Prompt | null {
             }
           : null;
       }
-      if (player.role === 'loup') return { kind: 'devorer' };
+      if (phase.step === 'loupBlanc') return player.role === 'loupBlanc' ? { kind: 'trahir' } : null;
+      if (campOf(player.role) === 'loups') return { kind: 'devorer' };
+      if (!powered) return null;
       if (player.role === 'voyante') return { kind: 'sonder' };
       if (player.role === 'salvateur') return { kind: 'proteger', forbidden: state.lastProtected };
       if (player.role === 'cupidon' && state.day === 1) return { kind: 'cupidon' };
+      if (player.role === 'corbeau') return { kind: 'marquer' };
+      // La Petite Fille n'a pas de consigne : elle regarde, elle n'agit pas —
+      // son silence est celui d'un villageois (R95).
       return null;
+    }
     case 'chasseur':
       return phase.seat === seat ? { kind: 'tirer' } : null;
     case 'succession':
       return phase.seat === seat ? { kind: 'successeur' } : null;
+    case 'bouc':
+      return phase.seat === seat ? { kind: 'designerVotants' } : null;
     case 'election':
       return player.alive ? { kind: 'voter', election: true } : null;
     case 'jour':
-      return player.alive && player.canVote ? { kind: 'voter', election: false } : null;
+      return player.alive && player.canVote && (state.votants === null || state.votants.includes(seat))
+        ? { kind: 'voter', election: false }
+        : null;
     case 'fin':
       return null;
   }
@@ -151,8 +183,9 @@ export function viewFor(state: GameState, seat: number | null): GameView {
   const omniscient =
     state.over || (me !== undefined && !me.alive && state.options.mortsVoientTout);
   // Un loup mort n'est plus de la meute : il ne reconnaît plus ses complices
-  // — sauf à voir tout, comme n'importe quel mort sous cette option.
-  const isLivingWolf = me?.role === 'loup' && me.alive;
+  // — sauf à voir tout, comme n'importe quel mort sous cette option. Le Loup
+  // Blanc vivant est de la meute comme les autres (R95).
+  const isLivingWolf = me !== undefined && me.alive && campOf(me.role) === 'loups';
   const lovers = state.lovers;
   const knowsLovers =
     omniscient ||
@@ -165,12 +198,14 @@ export function viewFor(state: GameState, seat: number | null): GameView {
       omniscient ||
       player.seat === seat ||
       player.revealed ||
-      (!player.alive && state.options.revelerRoles) ||
-      (isLivingWolf && player.role === 'loup');
+      (!player.alive && state.options.revelerRoles);
+    // La meute reconnaît les siens, mais pas le Loup Blanc pour ce qu'il est :
+    // à ses complices, il se montre en loup ordinaire (R95).
+    const packMate = isLivingWolf && campOf(player.role) === 'loups';
     return {
       seat: player.seat,
       alive: player.alive,
-      role: known ? player.role : (inspected.get(player.seat) ?? null),
+      role: known ? player.role : packMate ? 'loup' : (inspected.get(player.seat) ?? null),
       canVote: player.canVote,
       isCaptain: state.captain === player.seat,
       isLover: knowsLovers && lovers?.includes(player.seat) === true,
@@ -194,6 +229,26 @@ export function viewFor(state: GameState, seat: number | null): GameView {
   const partner =
     me !== undefined && lovers?.includes(me.seat) ? (lovers[0] === me.seat ? lovers[1] : lovers[0]) : null;
 
+  // La Petite Fille entrouvre la porte pendant que la meute vote : des
+  // nombres de voix par cible, jamais un loup (R96). Une fois l'étape close,
+  // la porte se referme.
+  let espionnage: Record<number, number> | null = null;
+  if (
+    me?.role === 'petiteFille' &&
+    me.alive &&
+    !state.pouvoirsPerdus &&
+    !state.over &&
+    phase.kind === 'nuit' &&
+    phase.step === 'principale'
+  ) {
+    espionnage = {};
+    for (const wolf of livingPack(state)) {
+      const target = state.night.wolfVotes[wolf];
+      if (target === undefined || target === null) continue;
+      espionnage[target] = (espionnage[target] ?? 0) + 1;
+    }
+  }
+
   return {
     you: me ? { seat: me.seat, role: me.role, alive: me.alive, canVote: me.canVote } : null,
     options: state.options,
@@ -209,12 +264,16 @@ export function viewFor(state: GameState, seat: number | null): GameView {
     pack:
       isLivingWolf || (omniscient && !state.over)
         ? {
-            seats: state.players.filter((p) => p.role === 'loup').map((p) => p.seat),
+            seats: state.players.filter((p) => campOf(p.role) === 'loups').map((p) => p.seat),
             votes: phase.kind === 'nuit' ? { ...state.night.wolfVotes } : {},
           }
         : null,
     lover: partner,
     inspections: me?.role === 'voyante' || omniscient ? state.inspections : [],
+    espionnage,
+    pouvoirsPerdus: state.pouvoirsPerdus,
+    marque: state.corbeau,
+    votants: state.votants,
     chat: state.chat.filter((message) => readable.has(message.channel)),
     channels: seat === null ? [] : speakableChannels(state, seat),
     over: state.over,

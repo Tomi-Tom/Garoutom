@@ -1,0 +1,22 @@
+{
+  "name": "@garoutom/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hébergement production du canal Garoutom — un Durable Object « Tables » unique porte toutes les tables, joint en WebSocket natif",
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@garoutom/engine": "*",
+    "@garoutom/server": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261011.1",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
