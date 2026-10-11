@@ -124,6 +124,19 @@ synthétisés en WebAudio sur `bus()`, zéro fichier, comme le cadre.
 synthétisées ne retardent rien ; en skin Shiganshina, le hurlement devient
 un cri de Titan sans toucher au moteur.
 
+### D11 — L'habit appartient au skin, l'architecture est contrat
+
+**11 octobre 2026.** Palette, polices et sons appartiennent au skin : chaque
+univers choisit ses couleurs, ses lettres et ses voix. Mais l'architecture
+sémantique est un contrat que tout skin signe : un accent par camp, une encre
+neutre pour le narrateur, une teinte par canal de discussion, un fond
+constant, des contrastes AA. Le détail vit dans [`SKINS.md`](SKINS.md).
+
+**Pourquoi.** Le skin doit pouvoir tout changer — sinon Shiganshina n'est
+qu'un changement de nom — mais l'information doit survivre au changement :
+le village doit se voir village, les loups loups, quel que soit l'habit.
+La liberté porte l'ambiance ; le contrat porte la lisibilité.
+
 ## Questions ouvertes
 
 | Sujet | La question |
