@@ -27,6 +27,8 @@
     "node": ">=20"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true
+    "esbuild@0.28.2": true,
+    "file:D:\\TomArcade\\Garoutom\\vendor\\tombp-arcade-0.1.2.tgz": true,
+    "esbuild@0.25.12": true
   }
 }

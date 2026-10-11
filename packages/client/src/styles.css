@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+/* Les sous-ensembles latins seuls : le village n'écrit qu'en français, et en
+   chiffres — les autres coupes des trois fontes ne seraient jamais servies. */
+@import '@fontsource/cormorant/latin-600.css';
+@import '@fontsource/cormorant/latin-700.css';
+@import '@fontsource/alegreya-sans/latin-400.css';
+@import '@fontsource/alegreya-sans/latin-500.css';
+@import '@fontsource/alegreya-sans/latin-700.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+
+/**
+ * Garoutom, direction artistique — « la place du village, entre chien et
+ * loup » (docs/refs/design.md, choisi le 10 octobre 2026).
+ *
+ * Le fond n'est jamais noir pur : c'est le bleu de l'heure où l'on ne se
+ * reconnaît plus. Le texte est papier — une carte à jouer dans la nuit —,
+ * la lanterne éclaire le village, le sang marque la meute, la lune parle
+ * sans juger, le serment lie les amoureux.
+ *
+ * Le jeu rejoint une collection : une belote sur tapis vert, un carnet de
+ * Yams, une vitrine de pâtissier. Aucune ne vit la nuit. Garoutom si, et
+ * c'est ce qui le rend reconnaissable en vignette.
+ */
+
+@theme {
+  --font-corps: 'Alegreya Sans', ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+  --font-identite: 'Cormorant', ui-serif, Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* La nuit, du creux au relief : tiroirs, panneaux, lignes de la table. */
+  --color-nuit-creux: #0c0f19;
+  --color-nuit: #131726;
+  --color-nuit-relief: #1b2133;
+
+  /* Le papier : le recto des cartes, le texte principal. */
+  --color-papier: #ece3cd;
+  --color-papier-doux: #b0a68f;
+
+  --color-lune: #aab4c8;
+  --color-lanterne: #e6a852;
+  --color-sang: #dd5f52;
+  --color-sang-creux: #8c2f28;
+  --color-serment: #cf8f96;
+}
+
+:root {
+  color-scheme: dark;
+
+  --papier: #ece3cd;
+  --papier-doux: #b0a68f;
+  --nuit: #131726;
+  --nuit-creux: #0c0f19;
+  --nuit-relief: #1b2133;
+  --lune: #aab4c8;
+  --lanterne: #e6a852;
+  --sang: #dd5f52;
+  --sang-creux: #8c2f28;
+  --serment: #cf8f96;
+
+  /* Le meuble commun de la collection, habillé aux couleurs du village :
+     le cadre ne connaît que ces quatre variables, le jeu les remplit. */
+  --arcade-encre: var(--papier);
+  --arcade-fond: var(--nuit-relief);
+  --arcade-trait: rgb(236 227 205 / 0.22);
+  --arcade-accent: var(--lanterne);
+  /* La lanterne est claire : ce qui s'écrit sur son aplat est de la nuit. */
+  --arcade-fond-sur-accent: var(--nuit);
+}
+
+body {
+  margin: 0;
+  background: var(--nuit);
+  color: var(--papier);
+  font-family: var(--font-corps);
+}

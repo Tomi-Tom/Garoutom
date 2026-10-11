@@ -1,0 +1,12 @@
+<!--
+  La lune de Garoutom : un disque plein sur la nuit, deux cratères discrets.
+  Le bleu-nocturne #131726 et la lune #aab4c8 sont les deux tokens posés dans
+  styles.css — le favicon ne dit rien que l'écran ne redise.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#131726" />
+  <circle cx="32" cy="32" r="17" fill="#aab4c8" />
+  <circle cx="26" cy="27" r="3.4" fill="#8f9aad" />
+  <circle cx="38" cy="37" r="2.4" fill="#8f9aad" />
+  <circle cx="35" cy="24.5" r="1.6" fill="#8f9aad" />
+</svg>
