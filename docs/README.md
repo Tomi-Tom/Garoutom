@@ -11,6 +11,13 @@ recherches, puis les décisions qui en sortent.
 | [`refs/roles.md`](refs/roles.md) | Les huit rôles v1, le fil d'une nuit et d'un jour, les compositions, les écarts avec la règle officielle |
 | [`refs/design.md`](refs/design.md) | L'identité Thiercelieux, la cartographie des écrans, le chat, le contrat de skins |
 
+## Les contrats
+
+| Document | Sujet |
+|---|---|
+| [`RULES.md`](RULES.md) | Les règles `Rn`, citables par les tests — en cas de désaccord, le code a tort |
+| [`SKINS.md`](SKINS.md) | Ce qu'un skin fournit, ce qu'il ne touche jamais ; `thiercelieux` écrit en entier, `shiganshina` en esquisse |
+
 ## Les décisions
 
 [`DECISIONS.md`](DECISIONS.md) liste les questions à trancher, et garde la
