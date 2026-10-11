@@ -75,3 +75,90 @@ body {
   color: var(--papier);
   font-family: var(--font-corps);
 }
+
+/* -- Les commandes du village ------------------------------------------
+   Le gabarit de la collection : 44 px au pouce, un contour net au clavier,
+   et rien qui ne se coupe à 320 px. L'accent de la maison est la lanterne —
+   ce qui s'écrit sur son aplat est de la nuit. */
+
+.champ {
+  box-sizing: border-box;
+  min-height: 44px;
+  width: 100%;
+  padding: 0 0.9rem;
+  background: var(--nuit-creux);
+  border: 1px solid var(--arcade-trait);
+  border-radius: 10px;
+  color: var(--papier);
+  font: inherit;
+}
+
+.champ::placeholder {
+  color: var(--papier-doux);
+  opacity: 0.7;
+}
+
+.champ:focus-visible {
+  outline: 2px solid var(--arcade-accent);
+  outline-offset: 2px;
+}
+
+.btn-village,
+.btn-voisin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1.2rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    filter 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-village:focus-visible,
+.btn-voisin:focus-visible {
+  outline: 2px solid var(--lune);
+  outline-offset: 3px;
+}
+
+/* L'action du village : la lanterne allumée. */
+.btn-village {
+  border: 1px solid transparent;
+  background: var(--lanterne);
+  color: var(--nuit-creux);
+}
+
+.btn-village:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* La commande de second rang : posée sur la pierre, elle ne s'allume
+   qu'au survol ou au clavier. */
+.btn-voisin {
+  border: 1px solid var(--arcade-trait);
+  background: var(--nuit-relief);
+  color: var(--papier-doux);
+}
+
+@media (hover: hover) {
+  .btn-village:not(:disabled):hover {
+    filter: brightness(1.07);
+  }
+  .btn-voisin:hover {
+    border-color: var(--lanterne);
+    color: var(--lanterne);
+  }
+}
+
+/* Un panneau de la place : la margelle sur laquelle on s'appuie. */
+.carte {
+  background: var(--nuit-relief);
+  border: 1px solid var(--arcade-trait);
+  border-radius: 14px;
+}

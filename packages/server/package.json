@@ -1,0 +1,28 @@
+{
+  "name": "@garoutom/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Serveur de développement Garoutom — WebSocket natif sur le port 3004, autorité sur les tables",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@garoutom/engine": "*",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "exports": {
+    ".": "./src/lib.ts"
+  }
+}
