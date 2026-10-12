@@ -47,4 +47,12 @@ describe('réglages locaux', () => {
       filOuvert: true,
     });
   });
+
+  it('le tirage du jour : papier par défaut, cuivre au choix, rien d’autre', () => {
+    expect(REGLAGES_DEFAUT.tirage).toBe('papier');
+    regler({ tirage: 'cuivre' });
+    expect(lireReglages().tirage).toBe('cuivre');
+    localStorage.setItem(CLE_REGLAGES, JSON.stringify({ tirage: 'bronze' }));
+    expect(lireReglages().tirage).toBe('papier');
+  });
 });

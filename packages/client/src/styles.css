@@ -1,203 +1,1290 @@
 @import 'tailwindcss';
 
-/* Les sous-ensembles latins seuls : le village n'écrit qu'en français, et en
-   chiffres — les autres coupes des trois fontes ne seraient jamais servies. */
-@import '@fontsource/cormorant/latin-600.css';
-@import '@fontsource/cormorant/latin-700.css';
-@import '@fontsource/alegreya-sans/latin-400.css';
-@import '@fontsource/alegreya-sans/latin-500.css';
-@import '@fontsource/alegreya-sans/latin-700.css';
-@import '@fontsource/ibm-plex-mono/latin-400.css';
-@import '@fontsource/ibm-plex-mono/latin-500.css';
-
 /**
- * Garoutom, direction artistique — « la place du village, entre chien et
- * loup » (docs/refs/design.md, choisi le 10 octobre 2026).
+ * Garoutom, direction artistique — « Caprices » (docs/design/caprices/SPEC.md,
+ * validée le 12 octobre 2026).
  *
- * Le fond n'est jamais noir pur : c'est le bleu de l'heure où l'on ne se
- * reconnaît plus. Le texte est papier — une carte à jouer dans la nuit —,
- * la lanterne éclaire le village, le sang marque la meute, la lune parle
- * sans juger, le serment lie les amoureux.
+ * « Le sommeil de la raison engendre des loups. » Chaque partie est tirée
+ * sur cuivre : la nuit mord la plaque, le jour l'imprime sur papier, et une
+ * seule encre de couleur existe — la sanguine, celle de la meute. Pas de
+ * flou, pas de lueur, pas de dégradé, pas d'ombre : une technique réelle
+ * derrière chaque effet (hachure, morsure, brunissage, cuvette).
  *
- * Le jeu rejoint une collection : une belote sur tapis vert, un carnet de
- * Yams, une vitrine de pâtissier. Aucune ne vit la nuit. Garoutom si, et
- * c'est ce qui le rend reconnaissable en vignette.
+ * Trois niveaux de variables (§ 3.10) : les encres (`--cp-*`, surchargées
+ * par un skin), les sémantiques (`--fond`, `--encre`…, une par tirage), les
+ * composants. Un composant ne connaît que les sémantiques. Les valeurs sont
+ * recopiées de `skins/habits.ts`, qui en est la source (un test les compare).
+ *
+ * Les polices sont importées par `main.tsx` (sous-ensembles latins).
  */
 
-@theme {
-  --font-corps: 'Alegreya Sans', ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
-  --font-identite: 'Cormorant', ui-serif, Georgia, serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+/* Les utilitaires suivent le tirage : `inline` écrit `var(--encre)` dans
+   chaque utilitaire, au lieu d'une variable de thème figée à la racine — un
+   `data-tirage` posé plus bas repeint donc aussi `text-encre`, `bg-surface`… */
+@theme inline {
+  --color-fond: var(--fond);
+  --color-fond-planche: var(--fond-planche);
+  --color-surface: var(--surface);
+  --color-creux: var(--creux);
+  --color-encre: var(--encre);
+  --color-encre-2: var(--encre-2);
+  --color-narrateur: var(--encre-narrateur);
+  --color-filet: var(--filet);
+  --color-filet-doux: var(--filet-doux);
+  --color-sur-encre: var(--sur-encre);
+  --color-village: var(--camp-village);
+  --color-meute: var(--camp-meute);
+  --color-serment: var(--camp-serment);
+  --color-audela: var(--canal-audela);
+  --color-mort-trait: var(--etat-mort-trait);
+  --color-mort-texte: var(--etat-mort-texte);
+  --color-focus: var(--etat-focus);
+  --color-action: var(--action-fond);
+  --color-action-texte: var(--action-texte);
+  --color-action-bord: var(--action-bord);
 
-  /* La nuit, du creux au relief : tiroirs, panneaux, lignes de la table. */
-  --color-nuit-creux: #0c0f19;
-  --color-nuit: #131726;
-  --color-nuit-relief: #1b2133;
+  /* Alias de l'habit d'avant, le temps de la vague 2 : les écrans écrivent
+     encore `bg-nuit`, `text-papier`, `text-lanterne`… Ils pointent vers les
+     sémantiques de Caprices (voir aussi les variables nues plus bas). */
+  --color-nuit: var(--fond);
+  --color-nuit-creux: var(--creux);
+  --color-nuit-relief: var(--surface);
+  --color-papier: var(--encre);
+  --color-papier-doux: var(--encre-2);
+  --color-lune: var(--encre-narrateur);
+  --color-lanterne: var(--encre);
+  --color-sang: var(--camp-meute);
+  --color-sang-creux: var(--camp-meute);
 
-  /* Le papier : le recto des cartes, le texte principal. */
-  --color-papier: #ece3cd;
-  --color-papier-doux: #b0a68f;
-
-  --color-lune: #aab4c8;
-  --color-lanterne: #e6a852;
-  --color-sang: #dd5f52;
-  --color-sang-creux: #8c2f28;
-  --color-serment: #cf8f96;
+  --font-identite: 'IM Fell French Canon', Georgia, serif;
+  --font-identite-sc: 'IM Fell French Canon SC', 'IM Fell French Canon', Georgia, serif;
+  --font-corps: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
+  /* Le mono n'est plus nécessaire : Source Serif porte les chiffres tabulaires. */
+  --font-mono: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
 }
+
+/* Rayons 0 (§ 3.8) : sur un cuivre, l'angle est vif. `rounded-full` (le
+   médaillon) n'est pas un jeton de thème et reste rond. Aucune ombre, aucun
+   flou : les utilitaires correspondants n'existent plus. */
+@theme {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --blur-*: initial;
+}
+
+/* ── 1. Les encres (primitifs) ─────────────────────────────────────────── */
 
 :root {
+  --cp-bistre-900: #17130F;
+  --cp-bistre-800: #2A241E;
+  --cp-palier-3: #4A433B;
+  --cp-palier-2: #7A7064;
+  --cp-palier-1: #A89D8C;
+  --cp-delave: #5E554A;
+  --cp-teinte: #E1D7C1;
+  --cp-verge: #E8DFCB;
+  --cp-bruni: #F5EFE2;
+  --cp-sanguine: #A23B24;
+  --cp-craie: #D9765A;
+  --cp-garance-encre: #8A3A5C;
+  --cp-garance-craie: #D29AA6;
+  --cp-rousseur: #8C6A3F;
+  --cp-creux-nuit: #0F0C09;
+  --cp-hachure-skin: #17130F;
+
+  /* Le mouvement (§ 3.9) : miroir de anim/tokens.ts. */
+  --m-morsure: 320ms;
+  --m-aube: 320ms;
+  --m-impression: 120ms;
+  --m-tirage: 240ms;
+  --m-armement: 600ms;
+  --m-arme: 4000ms;
+  --m-lecture-max: 8000ms;
+  --m-bruni-mort: 480ms;
+  --m-choix: 80ms;
+}
+
+/* Shiganshina (§ 8) : les Désastres de la guerre. Ne changent que l'encre,
+   le papier et le relief ; posé sur la racine de l'app (`data-skin`) et,
+   par `:has`, sur la page entière — le `body` aussi doit changer d'encre. */
+[data-skin='shiganshina'],
+:root:has([data-skin='shiganshina']) {
+  --cp-bistre-900: #141614;
+  --cp-bistre-800: #262926;
+  --cp-teinte: #DCD7CA;
+  --cp-verge: #E4E0D4;
+  --cp-bruni: #F1EFE8;
+  --cp-hachure-skin: #45523F;
+}
+
+/* ── 2. Les sémantiques, un jeu par tirage ─────────────────────────────── */
+
+/* Une variable qui en cite une autre se calcule là où elle est déclarée :
+   les sémantiques sont donc redéclarées sur chaque élément qui change les
+   encres (`data-skin`) ou le tirage (`data-tirage`), pas seulement à la
+   racine. `useTirage()` pose `data-tirage` et `data-heure` sur <html>. */
+:root,
+[data-skin],
+[data-tirage='papier'] {
+  color-scheme: light;
+  --fond: var(--cp-verge);
+  --fond-planche: var(--cp-teinte);
+  --surface: var(--cp-bruni);
+  --creux: var(--cp-teinte);
+  --encre: var(--cp-bistre-900);
+  --encre-2: var(--cp-delave);
+  --encre-narrateur: var(--cp-delave);
+  --filet: var(--cp-bistre-900);
+  --filet-doux: var(--cp-palier-2);
+  --sur-encre: var(--cp-bruni);
+  --camp-village: var(--cp-bistre-900);
+  --camp-meute: var(--cp-sanguine);
+  --camp-serment: var(--cp-garance-encre);
+  --canal-audela: var(--cp-delave);
+  --etat-mort-trait: var(--cp-palier-2);
+  --etat-mort-texte: var(--cp-delave);
+  --etat-focus: var(--cp-bistre-900);
+  --action-fond: var(--cp-bistre-900);
+  --action-texte: var(--cp-bruni);
+  --action-bord: var(--cp-bistre-900);
+  --hachure: url(#hach-1-e);
+  --voile: var(--cp-palier-2);
+  --voile-opacite: 0.6;
+  --cran-plein: var(--encre);
+  --cran-vide: var(--filet-doux);
+  --frise-toit: var(--surface);
+  --frise-trait: var(--encre);
+  --frise-fenetre: var(--encre);
+  --frise-mur: var(--fond-planche);
+}
+
+[data-tirage='cuivre'],
+[data-tirage='cuivre'] [data-skin]:not([data-tirage='papier']) {
   color-scheme: dark;
-
-  --papier: #ece3cd;
-  --papier-doux: #b0a68f;
-  --nuit: #131726;
-  --nuit-creux: #0c0f19;
-  --nuit-relief: #1b2133;
-  --lune: #aab4c8;
-  --lanterne: #e6a852;
-  --sang: #dd5f52;
-  --sang-creux: #8c2f28;
-  --serment: #cf8f96;
-
-  /* Le meuble commun de la collection, habillé aux couleurs du village :
-     le cadre ne connaît que ces quatre variables, le jeu les remplit. */
-  --arcade-encre: var(--papier);
-  --arcade-fond: var(--nuit-relief);
-  --arcade-trait: rgb(236 227 205 / 0.22);
-  --arcade-accent: var(--lanterne);
-  /* La lanterne est claire : ce qui s'écrit sur son aplat est de la nuit. */
-  --arcade-fond-sur-accent: var(--nuit);
+  --fond: var(--cp-bistre-900);
+  --fond-planche: var(--cp-bistre-900);
+  --surface: var(--cp-bistre-800);
+  --creux: var(--cp-creux-nuit);
+  --encre: var(--cp-verge);
+  --encre-2: var(--cp-palier-1);
+  --encre-narrateur: var(--cp-palier-1);
+  --filet: var(--cp-palier-2);
+  --filet-doux: var(--cp-palier-3);
+  --sur-encre: var(--cp-bistre-900);
+  --camp-village: var(--cp-verge);
+  --camp-meute: var(--cp-craie);
+  --camp-serment: var(--cp-garance-craie);
+  --canal-audela: var(--cp-palier-1);
+  --etat-mort-trait: var(--cp-palier-2);
+  --etat-mort-texte: var(--cp-palier-1);
+  --etat-focus: var(--cp-verge);
+  --action-fond: var(--cp-palier-3);
+  --action-texte: var(--cp-verge);
+  --action-bord: var(--cp-palier-1);
+  --hachure: url(#hach-1-v);
+  --voile: var(--cp-bistre-900);
+  --voile-opacite: 0.72;
+  /* À un mètre, une minuterie qui court et une minuterie absente sont la
+     même ligne grise (§ 5.6). */
+  --cran-plein: var(--cp-palier-2);
+  --cran-vide: var(--cp-palier-3);
+  --frise-toit: var(--cp-palier-3);
+  --frise-trait: var(--cp-palier-2);
+  --frise-fenetre: var(--cp-bistre-900);
+  --frise-mur: var(--cp-bistre-800);
 }
 
-/* La table occupe tout l'écran : l'écran de partie se dresse en `h-full`,
-   et une hauteur ne se transmet que si chaque ancêtre en a une. */
-html,
-body,
-#root {
-  height: 100%;
+/* ── 3. Composants, canaux, cadre commun, alias ────────────────────────── */
+
+:root,
+[data-skin],
+[data-tirage] {
+  --canal-village: var(--camp-village);
+  --canal-meute: var(--camp-meute);
+  --canal-serment: var(--camp-serment);
+
+  --jeton-anneau: var(--encre);
+  --jeton-anneau-l: 1.5px;
+  --jeton-anneau-choisi-l: 3.5px;
+  --jeton-fond: var(--surface);
+  --btn-h: 48px;
+  --btn-h-outil: 44px;
+  --btn-bord-l: 1.5px;
+  --barre-pouce-h: 72px;
+  --pli-h: 44px;
+  --entete-h: 56px;
+  --minuterie-h: 24px;
+  --gouttiere: 16px;
+
+  /* Le meuble commun de la collection, rempli aux encres du recueil. */
+  --arcade-encre: var(--encre);
+  --arcade-fond: var(--surface);
+  --arcade-trait: var(--filet-doux);
+  --arcade-accent: var(--action-fond);
+  --arcade-fond-sur-accent: var(--action-texte);
+
+  /* Alias de l'habit d'avant (vague 2) : les écrans écrivent encore
+     `var(--papier)`, `var(--lune)`, `var(--sang)`… dans leurs styles. La
+     lanterne n'existe plus : le village est l'encre. À retirer quand plus
+     personne ne les lit. */
+  --nuit: var(--fond);
+  --nuit-creux: var(--creux);
+  --nuit-relief: var(--surface);
+  --papier: var(--encre);
+  --papier-doux: var(--encre-2);
+  --lune: var(--encre-narrateur);
+  --lanterne: var(--encre);
+  --sang: var(--camp-meute);
+  --sang-creux: var(--camp-meute);
+  --serment: var(--camp-serment);
 }
 
-body {
-  margin: 0;
-  background: var(--nuit);
-  color: var(--papier);
-  font-family: var(--font-corps);
-}
-
-/* -- Les commandes du village ------------------------------------------
-   Le gabarit de la collection : 44 px au pouce, un contour net au clavier,
-   et rien qui ne se coupe à 320 px. L'accent de la maison est la lanterne —
-   ce qui s'écrit sur son aplat est de la nuit. */
-
-.champ {
-  box-sizing: border-box;
-  min-height: 44px;
-  width: 100%;
-  padding: 0 0.9rem;
-  background: var(--nuit-creux);
-  border: 1px solid var(--arcade-trait);
-  border-radius: 10px;
-  color: var(--papier);
-  font: inherit;
-}
-
-.champ::placeholder {
-  color: var(--papier-doux);
-  opacity: 0.7;
-}
-
-.champ:focus-visible {
-  outline: 2px solid var(--arcade-accent);
-  outline-offset: 2px;
-}
-
-.btn-village,
-.btn-voisin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 1.2rem;
-  border-radius: 999px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    filter 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.btn-village:focus-visible,
-.btn-voisin:focus-visible {
-  outline: 2px solid var(--lune);
-  outline-offset: 3px;
-}
-
-/* L'action du village : la lanterne allumée. */
-.btn-village {
-  border: 1px solid transparent;
-  background: var(--lanterne);
-  color: var(--nuit-creux);
-}
-
-.btn-village:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-/* La commande de second rang : posée sur la pierre, elle ne s'allume
-   qu'au survol ou au clavier. */
-.btn-voisin {
-  border: 1px solid var(--arcade-trait);
-  background: var(--nuit-relief);
-  color: var(--papier-doux);
-}
-
-@media (hover: hover) {
-  .btn-village:not(:disabled):hover {
-    filter: brightness(1.07);
-  }
-  .btn-voisin:hover {
-    border-color: var(--lanterne);
-    color: var(--lanterne);
+@media (width < 22.5rem) {
+  :root,
+  [data-skin],
+  [data-tirage] {
+    --gouttiere: 12px;
   }
 }
 
-/* Un bouton qui n'est plus qu'une icône sous 640 px (son libellé passe aux
-   lecteurs d'écran par `max-sm:sr-only`) : le rembourrage de `.btn-voisin`
-   se resserre en un carré de 44 px. Écrit ici, hors des couches, parce
-   qu'un utilitaire de Tailwind ne l'emporterait pas sur `.btn-voisin`. */
-@media (width < 40rem) {
-  .btn-icone-etroit {
-    width: 44px;
+@media (width >= 64rem) {
+  :root,
+  [data-skin],
+  [data-tirage] {
+    --entete-h: 64px;
+    --gouttiere: 32px;
+  }
+}
+
+/* ── La page ──────────────────────────────────────────────────────────── */
+
+@layer base {
+  /* La table occupe tout l'écran : l'écran de partie se dresse en `h-full`,
+     et une hauteur ne se transmet que si chaque ancêtre en a une. */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--fond);
+    color: var(--encre);
+    font-family: var(--font-corps);
+    font-optical-sizing: auto;
+  }
+
+  /* Le jour : papier vergé, pontuseaux, vergeures, grain et rousseurs ocre
+     (§ 4.5). La nuit : la plaque encrée, grain d'aquatinte IV (§ 4.1). */
+  html:not([data-tirage='cuivre']) body {
+    background-image:
+      url('/matieres/rousseurs.png'),
+      url('/matieres/papier.png'),
+      repeating-linear-gradient(90deg, rgb(23 19 15 / 0.05) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(0deg, rgb(23 19 15 / 0.035) 0 0.6px, transparent 0.6px 3px);
+    background-size:
+      512px 512px,
+      256px 256px,
+      auto,
+      auto;
+  }
+
+  html[data-tirage='cuivre'] body {
+    background: var(--cp-bistre-900) url('/matieres/grain-IV.png') 0 0 / 256px 256px repeat;
+  }
+
+  /* Le seul anneau autorisé (§ 3.8) ; jamais retiré. */
+  :focus-visible {
+    outline: 2px solid var(--etat-focus);
+    outline-offset: 3px;
+  }
+}
+
+/* ── La lettre (§ 3.6) ────────────────────────────────────────────────── */
+/* IM Fell titre et légende ; elle n'entre jamais dans une phrase
+   d'interface (consigne, bouton, statut) — `polices.test.ts` y veille. */
+
+@layer components {
+  .t-planche {
+    font-family: var(--font-identite);
+    font-size: 40px;
+    line-height: 44px;
+    font-weight: 400;
+  }
+  .t-titre {
+    font-family: var(--font-identite);
+    font-size: 28px;
+    line-height: 32px;
+    font-weight: 400;
+  }
+  .t-heure {
+    font-family: var(--font-identite-sc);
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+  .t-legende {
+    font-family: var(--font-identite);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 400;
+    color: var(--encre-narrateur);
+  }
+  .t-rubrique {
+    font-family: var(--font-identite-sc);
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+  }
+  .t-jeu {
+    font-family: var(--font-corps);
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 400;
+    font-variation-settings: 'opsz' 18;
+  }
+  .t-corps {
+    font-family: var(--font-corps);
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+  .t-bouton {
+    font-family: var(--font-corps);
+    font-size: 17px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .t-nom {
+    font-family: var(--font-corps);
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .t-statut {
+    font-family: var(--font-corps);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    font-variation-settings: 'opsz' 12;
+    color: var(--encre-2);
+  }
+  .t-chiffre {
+    font-family: var(--font-corps);
+    font-size: 16px;
+    line-height: 20px;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .t-code {
+    font-family: var(--font-corps);
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  @media (width >= 64rem) {
+    .t-planche {
+      font-size: 56px;
+      line-height: 60px;
+    }
+    .t-titre {
+      font-size: 36px;
+      line-height: 40px;
+    }
+    .t-heure {
+      font-size: 22px;
+      line-height: 28px;
+    }
+    .t-legende {
+      font-size: 20px;
+      line-height: 28px;
+    }
+    .t-rubrique {
+      font-size: 14px;
+      line-height: 20px;
+    }
+    .t-jeu {
+      line-height: 28px;
+    }
+    .t-nom {
+      font-size: 16px;
+    }
+    .t-statut {
+      font-size: 13px;
+    }
+    .t-code {
+      font-size: 40px;
+      line-height: 48px;
+    }
+  }
+}
+
+/* ── Les matières (§ 4) ───────────────────────────────────────────────── */
+/* Les grains sont cuits en tuiles (scripts/cuire-matieres.mjs) : jamais de
+   `feTurbulence` en direct sur une grande surface. Les seuls dégradés sont
+   à bords francs — ce sont des traits, pas des dégradés. */
+
+@layer components {
+  .aqua-I {
+    background: #A89D8C url('/matieres/grain-I.png') 0 0 / 256px 256px repeat;
+  }
+  .aqua-II {
+    background: #7A7064 url('/matieres/grain-II.png') 0 0 / 256px 256px repeat;
+  }
+  .aqua-III {
+    background: #4A433B url('/matieres/grain-III.png') 0 0 / 256px 256px repeat;
+  }
+  .aqua-IV {
+    background: var(--cp-bistre-900) url('/matieres/grain-IV.png') 0 0 / 256px 256px repeat;
+  }
+
+  .papier {
+    background-color: var(--cp-verge);
+    background-image:
+      url('/matieres/rousseurs.png'),
+      url('/matieres/papier.png'),
+      repeating-linear-gradient(90deg, rgb(23 19 15 / 0.05) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(0deg, rgb(23 19 15 / 0.035) 0 0.6px, transparent 0.6px 3px);
+    background-size:
+      512px 512px,
+      256px 256px,
+      auto,
+      auto;
+  }
+
+  /* Les hachures en HTML (§ 4.2) — jamais sous un mot. */
+  .hach-1 {
+    background-image: repeating-linear-gradient(45deg, var(--encre) 0 0.6px, transparent 0.6px 6px);
+  }
+  .hach-2 {
+    background-image: repeating-linear-gradient(45deg, var(--encre) 0 0.8px, transparent 0.8px 4px);
+  }
+  .hach-3 {
+    background-image: repeating-linear-gradient(45deg, var(--encre) 0 1.1px, transparent 1.1px 2.6px);
+  }
+  .hach-x {
+    background-image:
+      repeating-linear-gradient(30deg, var(--encre) 0 0.7px, transparent 0.7px 4px),
+      repeating-linear-gradient(120deg, var(--encre) 0 0.7px, transparent 0.7px 4px);
+  }
+  .hach-h {
+    background-image: repeating-linear-gradient(0deg, var(--encre) 0 0.6px, transparent 0.6px 3px);
+  }
+
+  /* La cuvette (§ 4.4) : la marque que la plaque laisse dans le papier.
+     `.carte` (l'ancien panneau) en est l'alias jusqu'à la vague 2. */
+  .cuvette,
+  .carte {
+    position: relative;
+    border-radius: 2px;
+    background: var(--fond-planche);
+    border: 1px solid;
+    border-color: rgb(23 19 15 / 0.38) var(--cp-bruni) var(--cp-bruni) rgb(23 19 15 / 0.38);
+    border-right-width: 1.5px;
+    border-bottom-width: 1.5px;
+  }
+  .cuvette::after,
+  .carte::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    pointer-events: none;
+    border: 1px solid rgb(23 19 15 / 0.14);
+  }
+  [data-tirage='cuivre'] .cuvette,
+  [data-tirage='cuivre'] .carte {
+    background: var(--cp-bistre-900) url('/matieres/grain-IV.png') 0 0 / 256px 256px repeat;
+    border: 1px solid var(--cp-palier-3);
+  }
+  [data-tirage='cuivre'] .cuvette::after,
+  [data-tirage='cuivre'] .carte::after {
+    border-color: var(--cp-bistre-800);
+  }
+  .cuvette-numero {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    z-index: 1;
+    font-family: var(--font-identite);
+    font-size: 16px;
+    line-height: 20px;
+    color: var(--encre-2);
+  }
+
+  /* Le brunissage (§ 4.7) : un masque circulaire à bord franc qui s'ouvre
+     par crans de 8 px (`--r` avancé en JS). */
+  .brunir {
+    --r: 0px;
+    --x: 50%;
+    --y: 50%;
+    -webkit-mask: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 0.5px));
+    mask: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 0.5px));
+  }
+
+  /* Le voile d'un modal : un grain d'aquatinte, jamais un flou (§ 3.8). */
+  .voile {
+    background: var(--voile);
+    opacity: var(--voile-opacite);
+  }
+}
+
+/* ── Les commandes (§ 5.3, 5.4, 5.5, 5.14, 5.17) ──────────────────────── */
+
+@layer components {
+  /* Le champ : un creux, un filet inférieur ; pas de cadre. */
+  .champ {
+    box-sizing: border-box;
+    min-height: 48px;
+    width: 100%;
+    padding: 0 12px;
+    background: var(--creux);
+    border: 0;
+    border-bottom: 1.5px solid var(--filet);
+    border-radius: 0;
+    color: var(--encre);
+    font: inherit;
+    font-size: 16px;
+  }
+  .champ::placeholder {
+    color: var(--encre-2);
+  }
+  .champ:focus-visible {
+    outline: none;
+    border-bottom-width: 3px;
+  }
+
+  /* -- Les boutons : angle vif, aucun rouge (§ 5.4) -- */
+  .bouton,
+  .btn-village,
+  .btn-voisin {
+    box-sizing: border-box;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--btn-h);
+    min-width: 44px;
+    padding: 0 16px;
+    border-radius: 0;
+    font-family: var(--font-corps);
+    font-size: 17px;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bouton-libelle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bouton-icone {
+    display: flex;
+    flex: none;
+  }
+
+  /* Primaire : l'encre déposée. Le danger a le même habit au repos : ce qui
+     le distingue, c'est l'armement (aucun bouton n'est rouge). */
+  .bouton-primaire,
+  .bouton-danger,
+  .btn-village {
+    background: var(--action-fond);
+    color: var(--action-texte);
+    border: 1.5px solid var(--action-bord);
+    font-weight: 600;
+  }
+  .bouton-primaire:active:not(:disabled, [aria-disabled='true'], [data-arme]),
+  .bouton-danger:active:not(:disabled, [aria-disabled='true'], [data-arme]) {
+    background-color: var(--surface);
+    background-image: repeating-linear-gradient(45deg, var(--action-fond) 0 1.1px, transparent 1.1px 2.6px);
+  }
+  .bouton-primaire:active:not(:disabled, [aria-disabled='true'], [data-arme]) .bouton-libelle,
+  .bouton-danger:active:not(:disabled, [aria-disabled='true'], [data-arme]) .bouton-libelle {
+    padding: 2px 6px;
+    background: var(--action-fond);
+    color: var(--action-texte);
+  }
+
+  /* Secondaire : un filet, pas d'aplat. */
+  .bouton-secondaire,
+  .btn-voisin {
+    background: transparent;
+    color: var(--encre);
+    border: 1.5px solid var(--filet);
+    font-weight: 400;
+  }
+  .bouton-secondaire:active:not(:disabled, [aria-disabled='true'], [data-arme]) {
+    background-image: repeating-linear-gradient(45deg, var(--encre) 0 0.6px, transparent 0.6px 6px);
+  }
+  .bouton-secondaire:active:not(:disabled, [aria-disabled='true'], [data-arme]) .bouton-libelle {
+    padding: 2px 6px;
+    background: var(--fond);
+  }
+
+  /* Discret : un mot souligné, cible de 44. */
+  .bouton-discret {
+    min-height: 44px;
+    padding: 0 4px;
+    background: transparent;
+    border: 0;
+    color: var(--encre);
+    font-size: 16px;
+    font-weight: 400;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .bouton-discret:active {
+    text-decoration-thickness: 2px;
+  }
+
+  /* Outil : 44 × 44, icône de 24, libellé à côté si la place le permet. */
+  .bouton-outil {
+    min-height: var(--btn-h-outil);
+    min-width: 44px;
     padding: 0;
+    background: var(--surface);
+    color: var(--encre);
+    border: 1px solid var(--filet-doux);
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .bouton-outil:has(.bouton-libelle) {
+    justify-content: flex-start;
+    padding: 0 10px;
+  }
+  .bouton-outil:active:not(:disabled, [aria-disabled='true']) {
+    background-color: transparent;
+    background-image: repeating-linear-gradient(45deg, var(--encre) 0 0.6px, transparent 0.6px 6px);
+  }
+
+  @media (hover: hover) {
+    .bouton-primaire:hover:not(:disabled, [aria-disabled='true'], [data-arme], :focus-visible),
+    .bouton-danger:hover:not(:disabled, [aria-disabled='true'], [data-arme], :focus-visible),
+    .btn-village:hover:not(:disabled, :focus-visible) {
+      outline: 1px solid var(--action-bord);
+      outline-offset: 0;
+    }
+    .bouton-secondaire:hover:not(:disabled, [aria-disabled='true'], [data-arme]),
+    .btn-voisin:hover:not(:disabled) {
+      background-image: repeating-linear-gradient(45deg, var(--encre) 0 0.6px, transparent 0.6px 6px);
+    }
+    .bouton-secondaire:hover:not(:disabled, [aria-disabled='true'], [data-arme]) .bouton-libelle {
+      padding: 2px 6px;
+      background: var(--fond);
+    }
+    .bouton-discret:hover {
+      text-decoration-thickness: 2px;
+    }
+    .bouton-outil:hover:not(:disabled, [aria-disabled='true']) {
+      border-color: var(--filet);
+    }
+  }
+
+  /* Éteint : pas d'opacité — un pointillé, l'encre délavée, et une raison
+     dessous (`BarrePouce`). */
+  .bouton:disabled,
+  .bouton[aria-disabled='true'],
+  .btn-village:disabled,
+  .btn-voisin:disabled {
+    background: transparent;
+    border: 1.5px dashed var(--filet-doux);
+    color: var(--encre-2);
+    cursor: default;
+  }
+  .bouton-discret:disabled,
+  .bouton-discret[aria-disabled='true'] {
+    border: 0;
+    text-decoration: none;
+  }
+
+  /* Armé (§ 5.4) : double filet, repères de visée aux quatre coins, et un
+     filet de 1 px qui se rétracte en 4 s sous le bouton. */
+  .bouton[data-arme] {
+    padding: 2px;
+    background: var(--surface);
+    border: 3px solid var(--encre);
+    overflow: visible;
+  }
+  /* Le libellé armé reste un bloc : trop long, il s'abrège (…) au lieu de
+     déborder des deux côtés. */
+  .bouton[data-arme] .bouton-libelle {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: block;
+    line-height: 36px;
+    text-align: center;
+    white-space: nowrap;
+    padding: 0 10px;
+    background: var(--action-fond);
+    border: 1px solid var(--encre);
+    color: var(--action-texte);
+    font-weight: 600;
+  }
+  .bouton-visee {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border: 0 solid var(--encre);
+    pointer-events: none;
+  }
+  .bouton-visee[data-coin='no'] {
+    left: -6px;
+    top: -6px;
+    border-left-width: 2.4px;
+    border-top-width: 2.4px;
+  }
+  .bouton-visee[data-coin='ne'] {
+    right: -6px;
+    top: -6px;
+    border-right-width: 2.4px;
+    border-top-width: 2.4px;
+  }
+  .bouton-visee[data-coin='so'] {
+    left: -6px;
+    bottom: -6px;
+    border-left-width: 2.4px;
+    border-bottom-width: 2.4px;
+  }
+  .bouton-visee[data-coin='se'] {
+    right: -6px;
+    bottom: -6px;
+    border-right-width: 2.4px;
+    border-bottom-width: 2.4px;
+  }
+  .bouton-filet-arme {
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    bottom: -5px;
+    height: 1px;
+    background: var(--encre);
+    transform-origin: left center;
+    pointer-events: none;
+    animation: filet-arme var(--m-arme) steps(16, end) forwards;
+  }
+
+  /* L'appui long (§ 5.4) : comme le secondaire, plus un anneau à gauche qui
+     se remplit en 12 crans ; l'action dure tant que le pouce reste. */
+  .appui-long {
+    justify-content: flex-start;
+    gap: 12px;
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+  .appui-anneau {
+    flex: none;
+    width: 26px;
+    height: 26px;
+  }
+  .appui-anneau-piste {
+    fill: none;
+    stroke: var(--filet-doux);
+    stroke-width: 3;
+  }
+  .appui-anneau-progres {
+    fill: none;
+    stroke: var(--encre);
+    stroke-width: 3;
+    stroke-dasharray: 62.832;
+    stroke-dashoffset: 62.832;
+    transform: rotate(-90deg);
+    transform-origin: 13px 13px;
+  }
+  .appui-long[data-etat='armement'] .appui-anneau-progres {
+    animation: appui-armement var(--m-armement) steps(12, end) forwards;
+  }
+  .appui-long[data-etat='ouvert'] .appui-anneau-progres {
+    stroke-dashoffset: 0;
+  }
+  .appui-anneau-crans {
+    stroke: var(--fond);
+    stroke-width: 0.8;
+  }
+
+  /* -- La barre au pouce (§ 5.5) : 72 = 12 + 48 + 12 -- */
+  .barre-pouce {
+    box-sizing: border-box;
+    height: var(--barre-pouce-h);
+    padding: 12px var(--gouttiere);
+    background: var(--surface);
+    border-top: 1.5px solid var(--filet);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .barre-pouce[data-raison] {
+    padding-top: 4px;
+    padding-bottom: 2px;
+    justify-content: flex-start;
+  }
+  .barre-pouce-rang {
+    display: flex;
+    gap: 8px;
+    height: 48px;
+    align-items: stretch;
+  }
+  .barre-pouce-rang > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .barre-pouce-rang > .bouton-secondaire:not(:only-child),
+  .barre-pouce-rang > .bouton-discret:not(:only-child) {
+    flex: 0 1 auto;
+    min-width: 120px;
+  }
+  .barre-pouce-raison {
+    margin: 2px 0 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* La nuit (N2, N5) : tous les boutons de la barre au palier III, le
+     dormeur comme l'acteur — rien ne distingue celui qui agit. */
+  [data-tirage='cuivre'] .barre-pouce .bouton:not(:disabled, [aria-disabled='true'], [data-arme]) {
+    background: var(--cp-palier-3);
+    border: 1.5px solid var(--cp-palier-1);
+    color: var(--cp-verge);
+    font-weight: 600;
+  }
+  [data-tirage='cuivre'] .barre-pouce .appui-anneau-piste {
+    stroke: var(--cp-palier-2);
+  }
+  [data-tirage='cuivre'] .barre-pouce .appui-anneau-crans {
+    stroke: var(--cp-palier-3);
+  }
+
+  /* -- Le pli (§ 5.14) : 44 px, présent sur tous les écrans de partie -- */
+  .pli {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: var(--pli-h);
+    margin: 0;
+    padding: 0 var(--gouttiere);
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--filet-doux);
+    border-radius: 0;
+    color: var(--encre);
+    font-family: var(--font-corps);
+    text-align: left;
+    cursor: pointer;
+  }
+  .pli-chevron {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* -- Les cartouches de camp (§ 5.3) : la forme dit le camp, le mot le
+     confirme. Le fond est toujours `--surface`, jamais une trame. -- */
+  .cartouche {
+    --cartouche-trait: var(--camp-village);
+    --cartouche-texte: var(--encre);
+    --cartouche-fond: var(--surface);
+    box-sizing: border-box;
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 12px;
+    font-family: var(--font-corps);
+    font-size: 14px;
+    line-height: 16px;
+    font-weight: 400;
+    color: var(--cartouche-texte);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .cartouche[data-taille='20'] {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .cartouche-forme {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .cartouche-forme * {
+    fill: var(--cartouche-fond);
+    stroke: var(--cartouche-trait);
+  }
+  .cartouche-forme .cartouche-filet-interieur {
+    fill: none;
+  }
+  .cartouche[data-forme='mordu'] {
+    --cartouche-trait: var(--camp-meute);
+    --cartouche-texte: var(--camp-meute);
+    font-weight: 600;
+    padding-right: 25px;
+  }
+  .cartouche[data-forme='mordu'][data-taille='20'] {
+    padding-right: 17px;
+  }
+  .cartouche[data-forme='seul'] {
+    --cartouche-trait: var(--camp-meute);
+    --cartouche-texte: var(--sur-encre);
+    --cartouche-fond: var(--camp-meute);
+    font-weight: 600;
+    padding: 0 28px;
+  }
+  .cartouche[data-forme='seul'][data-taille='20'] {
+    padding: 0 19px;
+  }
+  [data-tirage='cuivre'] .cartouche[data-forme='seul'] {
+    --cartouche-texte: var(--camp-meute);
+    --cartouche-fond: var(--surface);
+  }
+  .cartouche[data-forme='lacs'] {
+    --cartouche-trait: var(--camp-serment);
+    --cartouche-texte: var(--camp-serment);
+  }
+  .cartouche[data-forme='bruni'] {
+    --cartouche-trait: var(--canal-audela);
+    --cartouche-texte: var(--canal-audela);
+    font-style: italic;
+  }
+  .cartouche[data-forme='neutre'] {
+    --cartouche-trait: var(--encre-2);
+    --cartouche-texte: var(--encre-2);
+  }
+
+  /* Un bouton qui n'est plus qu'une icône sous 640 px (son libellé passe
+     aux lecteurs d'écran par `max-sm:sr-only`) : le rembourrage se resserre
+     en un carré de 44 px. Écrit après les boutons pour l'emporter sur eux. */
+  @media (width < 40rem) {
+    .btn-icone-etroit {
+      width: 44px;
+      padding: 0;
+    }
   }
 }
 
-/* Un panneau de la place : la margelle sur laquelle on s'appuie. */
-.carte {
-  background: var(--nuit-relief);
-  border: 1px solid var(--arcade-trait);
-  border-radius: 14px;
+/* ── La frise (§ 5.7) et le gabarit (§ 7.1) ───────────────────────────── */
+
+@layer components {
+  .frise {
+    box-sizing: border-box;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--entete-h);
+    padding: 0 var(--gouttiere);
+    overflow: hidden;
+    background: var(--fond);
+  }
+  [data-tirage='cuivre'] .frise {
+    background: var(--cp-bistre-900) url('/matieres/grain-IV.png') 0 0 / 256px 256px repeat;
+  }
+  .frise-decor {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .frise-ciel {
+    opacity: 0.28;
+  }
+  [data-tirage='cuivre'] .frise-ciel,
+  [data-tirage='cuivre'] .frise-jour-seul {
+    display: none;
+  }
+  html:not([data-heure='nuit']) .frise-nuit-seule {
+    display: none;
+  }
+  .frise-gauche,
+  .frise-droite {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .frise-droite {
+    margin-left: auto;
+  }
+  /* L'heure, posée sur un cartouche plein : aucune trame sous un mot. */
+  .frise-titre {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--filet-doux);
+    color: var(--encre);
+    white-space: nowrap;
+  }
+
+  /* Le gabarit unique, mobile : chaque zone garde sa hauteur, même vide —
+     la nuit, rien ne bouge d'une ligne d'un siège à l'autre (loi N1). Les
+     hauteurs viennent de `Gabarit.tsx` (`--zone-h`). */
+  .gabarit {
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overflow: hidden;
+  }
+  /* L'indicateur d'accueil se pose sur la même surface que la barre. */
+  .gabarit::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+  }
+  .gabarit-zone {
+    box-sizing: border-box;
+    position: relative;
+    flex: 0 0 var(--zone-h);
+    height: var(--zone-h);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .gabarit-zone[data-zone='minuterie'],
+  .gabarit-zone[data-zone='consigne'],
+  .gabarit-zone[data-zone='resume'] {
+    padding: 0 var(--gouttiere);
+  }
+  .gabarit-zone[data-zone='consigne'] {
+    display: flex;
+    align-items: center;
+  }
+  .gabarit-zone[data-zone='place'] {
+    flex: 1 1 var(--zone-h);
+    height: auto;
+    padding: 8px 0;
+  }
+  /* Le fil ouvert au tiers prend la place du pli ; la consigne se replie
+     dans la ligne du crieur (40 px), mais reste lisible aux lecteurs
+     d'écran. */
+  .gabarit[data-fil='tiers'] > .gabarit-zone[data-zone='consigne'] {
+    padding: 0;
+    clip-path: inset(50%);
+  }
+  .gabarit[data-fil='tiers'] > .gabarit-zone[data-zone='pli'] {
+    display: none;
+  }
+  /* Plein écran : le fil couvre la place, le résumé et le pli. */
+  .gabarit[data-fil='plein'] > .gabarit-zone[data-zone='colonne'] {
+    position: absolute;
+    inset: var(--fil-plein-haut) 0 calc(var(--barre-pouce-h) + env(safe-area-inset-bottom, 0px));
+    height: auto;
+    z-index: 2;
+    background: var(--fond);
+  }
+  .gabarit[data-fil='ferme'] > .gabarit-zone[data-zone='colonne'] {
+    display: none;
+  }
+
+  /* Desktop (§ 7.1) : frise de 64 sur toute la largeur (la minuterie
+     dedans), crieur au-dessus de la place, la colonne de 340 à droite — le
+     fil le jour, la même colonne pour tous la nuit. Le **pupitre** (360 de
+     large) se dresse au centre de la place : la consigne, le résumé et la
+     barre s'y empilent, entre deux rangées élastiques qui le centrent. */
+  @media (width >= 64rem) {
+    .gabarit {
+      display: grid;
+      grid-template-columns: var(--gouttiere) minmax(0, 1fr) var(--gouttiere) 340px var(--gouttiere);
+      grid-template-rows: 64px 56px minmax(0, 1fr) auto auto auto auto minmax(0, 1fr) var(--gouttiere);
+    }
+    .gabarit > .gabarit-zone {
+      height: auto;
+      min-height: 0;
+    }
+    .gabarit > .gabarit-zone[data-zone='frise'] {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
+    .gabarit > .gabarit-zone[data-zone='minuterie'] {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+      justify-self: center;
+      height: 44px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--filet-doux);
+      z-index: 1;
+    }
+    .gabarit > .gabarit-zone[data-zone='crieur'] {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .gabarit > .gabarit-zone[data-zone='place'] {
+      grid-column: 2;
+      grid-row: 3 / 9;
+      padding: 0;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='consigne'],
+    .gabarit[data-fil] > .gabarit-zone[data-zone='resume'],
+    .gabarit[data-fil] > .gabarit-zone[data-zone='pli'],
+    .gabarit[data-fil] > .gabarit-zone[data-zone='barre'] {
+      grid-column: 2;
+      justify-self: center;
+      width: 360px;
+      z-index: 1;
+      background: var(--fond-planche);
+      clip-path: none;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='consigne'] {
+      grid-row: 4;
+      min-height: var(--zone-h);
+      padding: 12px 16px 0;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='resume'] {
+      grid-row: 5;
+      min-height: var(--zone-h);
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='pli'] {
+      grid-row: 6;
+      display: block;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='barre'] {
+      grid-row: 7;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='barre'] .barre-pouce {
+      border-top-width: 1px;
+    }
+    .gabarit[data-fil] > .gabarit-zone[data-zone='colonne'] {
+      grid-column: 4;
+      grid-row: 2 / 9;
+      display: block;
+      position: relative;
+      inset: auto;
+      margin-top: 16px;
+      background: transparent;
+    }
+    /* La colonne remplace le pli : le fil y est toujours ouvert. */
+    .gabarit[data-colonne] > .gabarit-zone[data-zone='pli'] {
+      display: none;
+    }
+  }
 }
 
-/* Le halo du puits, au centre de la place en rond : il respire, lentement,
-   comme une flamme à l'abri du vent — et se tient immobile pour qui a
-   demandé moins de mouvement. */
-@keyframes place-halo {
+/* ── La bascule de l'heure (§ 3.2, § 3.9) ─────────────────────────────── */
+/* L'aube et la tombée de la nuit sont des évènements de table : quatre
+   paliers d'aquatinte, 80 ms chacun, au même instant pour tous les sièges.
+   `useTirage()` pose `data-bascule` le temps de la bascule ; le voile vit
+   dans `<Matieres/>`. */
+
+@keyframes bascule-morsure {
+  0% {
+    background-color: var(--cp-palier-1);
+  }
+  25% {
+    background-color: var(--cp-palier-2);
+  }
+  50% {
+    background-color: var(--cp-palier-3);
+  }
+  75% {
+    background-color: var(--cp-bistre-900);
+  }
+  100% {
+    background-color: var(--cp-bistre-900);
+  }
+}
+
+@keyframes bascule-aube {
+  0% {
+    background-color: var(--cp-bistre-900);
+  }
+  25% {
+    background-color: var(--cp-palier-3);
+  }
+  50% {
+    background-color: var(--cp-palier-2);
+  }
+  75% {
+    background-color: var(--cp-palier-1);
+  }
+  100% {
+    background-color: var(--cp-palier-1);
+  }
+}
+
+@keyframes bascule-fondu {
   from {
-    opacity: 0.78;
+    opacity: 0.6;
   }
   to {
-    opacity: 1;
+    opacity: 0;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  html:not([data-calme]) .place-halo {
-    animation: place-halo 3.6s ease-in-out infinite alternate;
+@keyframes filet-arme {
+  from {
+    transform: scaleX(1);
   }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes appui-armement {
+  from {
+    stroke-dashoffset: 62.832;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.voile-bascule {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: none;
+  display: none;
+}
+html[data-bascule='morsure'] .voile-bascule {
+  display: block;
+  animation: bascule-morsure var(--m-morsure) steps(4, end) forwards;
+}
+html[data-bascule='aube'] .voile-bascule {
+  display: block;
+  animation: bascule-aube var(--m-aube) steps(4, end) forwards;
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,62 +1298,34 @@ html[data-grand-texte] {
 
 /* Le calme : moins de mouvement, que le système le demande ou les réglages
    (`data-calme`, posé par lib/reglages.ts). Motion s'en charge pour ses
-   ressorts (`MotionConfig`) ; ceci couvre les transitions et animations CSS
-   — les barres qui se vident sautent d'un cran au lieu de glisser. */
+   transitions (`MotionConfig`) ; ceci couvre les animations CSS. Les
+   durées fonctionnelles (`data-anim-fonctionnelle` : l'anneau d'un appui
+   long, le filet d'un bouton armé) ne bougent pas : elles disent combien de
+   temps on a. La bascule de l'heure devient un fondu de 160 ms. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not([data-anim-fonctionnelle]),
+  *:not([data-anim-fonctionnelle])::before,
+  *:not([data-anim-fonctionnelle])::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  html[data-bascule] .voile-bascule {
+    background: var(--cp-palier-2);
+    animation: bascule-fondu 160ms linear forwards !important;
+  }
 }
 
-html[data-calme] *,
-html[data-calme] *::before,
-html[data-calme] *::after {
+html[data-calme] *:not([data-anim-fonctionnelle]),
+html[data-calme] *:not([data-anim-fonctionnelle])::before,
+html[data-calme] *:not([data-anim-fonctionnelle])::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
 }
-
-/* -- L'habit des autres skins ------------------------------------------
-   Tailwind 4 écrit les couleurs du @theme en variables (`--color-nuit`,
-   résolues à l'usage : `bg-nuit` devient `var(--color-nuit)`). Redéfinir ces
-   variables sous `[data-skin]` repeint donc les utilitaires ; les variables
-   nues (`--nuit`…) servent au CSS maison. Les deux jeux sont posés ensemble.
-   `App.tsx` pose `data-skin` sur sa racine : le `body`, hors de celle-ci,
-   est suivi par `:has`. Les valeurs et leurs contrastes mesurés sont dans
-   skins/habits.ts (qui en est la source, un test les compare). */
-[data-skin='shiganshina'] {
-  --papier: #ebe4d0;
-  --papier-doux: #aea995;
-  --nuit: #161a1a;
-  --nuit-creux: #0e1111;
-  --nuit-relief: #212727;
-  --lune: #a8b2aa;
-  --lanterne: #86b45e;
-  --sang: #e9715b;
-  --sang-creux: #8f2e22;
-  --serment: #d1a574;
-
-  --color-papier: #ebe4d0;
-  --color-papier-doux: #aea995;
-  --color-nuit: #161a1a;
-  --color-nuit-creux: #0e1111;
-  --color-nuit-relief: #212727;
-  --color-lune: #a8b2aa;
-  --color-lanterne: #86b45e;
-  --color-sang: #e9715b;
-  --color-sang-creux: #8f2e22;
-  --color-serment: #d1a574;
-
-  --arcade-trait: rgb(235 228 208 / 0.22);
-}
-
-body:has([data-skin='shiganshina']) {
-  background: #161a1a;
+html[data-calme][data-bascule] .voile-bascule {
+  background: var(--cp-palier-2);
+  animation: bascule-fondu 160ms linear forwards !important;
 }

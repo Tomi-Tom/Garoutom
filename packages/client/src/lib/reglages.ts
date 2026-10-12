@@ -21,6 +21,13 @@ export interface Reglages {
   filOuvert: boolean;
   /** Vibrer quand c'est à soi de jouer (mobile). */
   vibrations: boolean;
+  /**
+   * « Le jour s'imprime sur : Papier · Cuivre » (SPEC Caprices § 3.2).
+   * `cuivre` garde tout l'écran sur le tirage de nuit, jour compris, pour qui
+   * joue dans le noir. Ne touche jamais la nuit (toujours cuivre pour tout
+   * le monde) : il ne peut donc rien trahir.
+   */
+  tirage: 'papier' | 'cuivre';
 }
 
 export const REGLAGES_DEFAUT: Reglages = {
@@ -29,6 +36,7 @@ export const REGLAGES_DEFAUT: Reglages = {
   grandTexte: false,
   filOuvert: false,
   vibrations: true,
+  tirage: 'papier',
 };
 
 export const CLE_REGLAGES = 'garoutom.reglages';
@@ -42,6 +50,9 @@ function champ<K extends keyof Reglages>(brut: Record<string, unknown>, cle: K):
   }
   if (cle === 'animations') {
     return (valeur === 'systeme' || valeur === 'reduites' ? valeur : defaut) as Reglages[K];
+  }
+  if (cle === 'tirage') {
+    return (valeur === 'papier' || valeur === 'cuivre' ? valeur : defaut) as Reglages[K];
   }
   return (valeur === 'barre' || valeur === 'discrete' ? valeur : defaut) as Reglages[K];
 }
@@ -69,6 +80,7 @@ export function lireReglages(): Reglages {
     grandTexte: champ(objet, 'grandTexte'),
     filOuvert: champ(objet, 'filOuvert'),
     vibrations: champ(objet, 'vibrations'),
+    tirage: champ(objet, 'tirage'),
   };
 }
 

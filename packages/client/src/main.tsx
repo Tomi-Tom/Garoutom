@@ -4,6 +4,17 @@ import { createRoot } from 'react-dom/client';
 
 import '@tombp/arcade/arcade.css';
 
+/* Les polices de « Caprices » (SPEC § 3.6), en sous-ensemble latin : le
+   village n'écrit qu'en français. IM Fell French Canon titre et légende
+   (romain, italique, petites capitales) ; Source Serif 4, variable sur ses
+   axes `opsz` et `wght`, porte tout le reste — ses @font-face sont bornés
+   par `unicode-range`, le navigateur ne charge que la coupe latine. */
+import '@fontsource/im-fell-french-canon/latin-400.css';
+import '@fontsource/im-fell-french-canon/latin-400-italic.css';
+import '@fontsource/im-fell-french-canon-sc/latin-400.css';
+import '@fontsource-variable/source-serif-4/opsz.css';
+import '@fontsource-variable/source-serif-4/opsz-italic.css';
+
 import { App } from './App.js';
 import { useReglages } from './lib/reglages.js';
 import './styles.css';

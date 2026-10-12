@@ -24,4 +24,22 @@ describe('<BoutonReglages />', () => {
     await utilisateur.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('« Le jour s’imprime sur » : un groupe radio, Papier puis Cuivre', async () => {
+    const utilisateur = userEvent.setup();
+    render(<BoutonReglages />);
+    await utilisateur.click(screen.getByRole('button', { name: 'Réglages' }));
+    const groupe = screen.getByRole('radiogroup', { name: 'Le jour s’imprime sur' });
+    expect(groupe).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Papier/ })).toHaveAttribute('aria-checked', 'true');
+
+    await utilisateur.click(screen.getByRole('radio', { name: /Cuivre/ }));
+    expect(JSON.parse(localStorage.getItem(CLE_REGLAGES) ?? '{}')).toMatchObject({ tirage: 'cuivre' });
+    expect(screen.getByRole('radio', { name: /Cuivre/ })).toHaveAttribute('aria-checked', 'true');
+
+    // Les flèches passent d'un tirage à l'autre.
+    await utilisateur.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('radio', { name: /Papier/ })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /Papier/ })).toHaveFocus();
+  });
 });

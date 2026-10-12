@@ -6,9 +6,9 @@
  */
 
 import { useVolume } from '@tombp/arcade';
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 
-import { useReglages } from '../lib/reglages.js';
+import { useReglages, type Reglages } from '../lib/reglages.js';
 import { Interrupteur } from './Interrupteur.js';
 import { Panneau } from './Panneau.js';
 
@@ -49,7 +49,7 @@ export function BoutonReglages({ className }: { className?: string }) {
 }
 
 function PanneauReglages({ onFermer }: { onFermer: () => void }) {
-  const { animations, minuterie, grandTexte, filOuvert, vibrations, regler } = useReglages();
+  const { animations, minuterie, grandTexte, filOuvert, vibrations, tirage, regler } = useReglages();
   const son = useVolume();
   const pourcent = Math.round(son.volume * 100);
 
@@ -59,6 +59,8 @@ function PanneauReglages({ onFermer }: { onFermer: () => void }) {
         Ces préférences restent sur cet appareil : la table ne les voit pas.
       </p>
       <div className="flex flex-col gap-3">
+        <ChoixTirage tirage={tirage} onChoisir={(choix) => regler({ tirage: choix })} />
+
         <div
           className="flex flex-col gap-1.5 rounded-lg p-3"
           style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}
@@ -126,5 +128,111 @@ function PanneauReglages({ onFermer }: { onFermer: () => void }) {
         />
       </div>
     </Panneau>
+  );
+}
+
+const CHOIX_TIRAGE: readonly { valeur: Reglages['tirage']; nom: string; note: string }[] = [
+  { valeur: 'papier', nom: 'Papier', note: 'par défaut' },
+  { valeur: 'cuivre', nom: 'Cuivre', note: 'la nuit, jour compris' },
+];
+
+/**
+ * « Le jour s'imprime sur : Papier · Cuivre » (SPEC Caprices § 3.2).
+ *
+ * Deux vignettes, chacune tirée dans son propre tirage (`data-tirage` posé
+ * sur la vignette) : on voit ce qu'on choisit. Le choix ne touche jamais la
+ * nuit, toujours sur cuivre pour tout le monde. Un groupe radio : une seule
+ * cible de tabulation, les flèches passent d'un tirage à l'autre.
+ */
+function ChoixTirage({ tirage, onChoisir }: { tirage: Reglages['tirage']; onChoisir: (choix: Reglages['tirage']) => void }) {
+  const boutons = useRef<(HTMLButtonElement | null)[]>([]);
+  const surTouche = (evenement: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const pas =
+      evenement.key === 'ArrowRight' || evenement.key === 'ArrowDown'
+        ? 1
+        : evenement.key === 'ArrowLeft' || evenement.key === 'ArrowUp'
+          ? -1
+          : 0;
+    if (pas === 0) return;
+    evenement.preventDefault();
+    const suivant = (index + pas + CHOIX_TIRAGE.length) % CHOIX_TIRAGE.length;
+    const choix = CHOIX_TIRAGE[suivant];
+    if (choix === undefined) return;
+    onChoisir(choix.valeur);
+    boutons.current[suivant]?.focus();
+  };
+
+  return (
+    <div>
+      <p id="reglage-tirage" className="t-rubrique mb-1.5" style={{ color: 'var(--encre-2)' }}>
+        Le jour s’imprime sur
+      </p>
+      <div role="radiogroup" aria-labelledby="reglage-tirage" className="flex gap-2">
+        {CHOIX_TIRAGE.map(({ valeur, nom, note }, index) => {
+          const coche = tirage === valeur;
+          return (
+            <button
+              key={valeur}
+              ref={(el) => {
+                boutons.current[index] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={coche}
+              tabIndex={coche ? 0 : -1}
+              onClick={() => onChoisir(valeur)}
+              onKeyDown={(evenement) => surTouche(evenement, index)}
+              className="flex min-w-0 flex-1 flex-col text-left"
+              style={{
+                background: 'transparent',
+                border: coche ? '1.5px solid var(--filet)' : '1px solid var(--filet-doux)',
+                color: 'var(--encre)',
+              }}
+            >
+              {/* La vignette : une frise en miniature, dans son tirage. */}
+              <span
+                aria-hidden="true"
+                data-tirage={valeur}
+                className="block h-14 p-px"
+                style={{ background: valeur === 'cuivre' ? undefined : 'var(--fond)' }}
+              >
+                <span
+                  className={`flex h-full items-end px-2 pb-1.5 ${valeur === 'cuivre' ? 'aqua-IV' : 'hach-h'}`}
+                >
+                  <span
+                    className="t-heure px-2"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--filet-doux)', color: 'var(--encre)' }}
+                  >
+                    Jour II
+                  </span>
+                </span>
+              </span>
+              <span
+                className="flex items-center gap-2 px-2 py-1.5"
+                style={{ borderTop: coche ? '1px solid var(--filet)' : '1px solid var(--filet-doux)' }}
+              >
+                <CaseGravee cochee={coche} />
+                <span className="block min-w-0">
+                  <span className="block text-[15px] leading-5 font-semibold">{nom}</span>
+                  <span className="t-statut block">{note}</span>
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** La case gravée (§ 5.17) : un carré de 24, filet 1,5 ; cochée, une croix de deux traits. */
+function CaseGravee({ cochee }: { cochee: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="flex-none">
+      <rect x=".75" y=".75" width="22.5" height="22.5" fill="var(--surface)" stroke="var(--encre)" strokeWidth="1.5" />
+      {cochee && (
+        <path d="M6.2 6 L17.8 18.1 M17.9 6.1 L6.1 17.9" stroke="var(--encre)" strokeWidth="2" strokeLinecap="square" />
+      )}
+    </svg>
   );
 }

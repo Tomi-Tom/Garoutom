@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { NoticePayload, SyncPayload } from '@garoutom/engine';
 
 import { DUREE_AVIS_MS, RESSORT_CARTE, RESSORT_PANNEAU } from './anim/tokens.js';
+import { Matieres, useTirage } from './components/caprices/index.js';
 import {
   annulerReprise,
   codeDeLUrl,
@@ -150,6 +151,9 @@ export function App() {
   // L'écran reste allumé à table — salon compris —, et s'éteint quand on la quitte.
   useEcranAllume(room !== null);
 
+  // Papier le jour, cuivre la nuit (Caprices § 3.2) : posé sur <html>.
+  useTirage();
+
   // Le dernier état reste lisible, grisé, le temps de reprendre sa place.
   const suspendu = room !== null && (!connected || rattachement !== 'rattache');
 
@@ -173,6 +177,7 @@ export function App() {
         {ecran}
       </div>
 
+      <Matieres />
       <RegionVivante />
       <Avis />
       <Bandeau />
