@@ -91,7 +91,8 @@ function zone(container: HTMLElement, nomZone: string): HTMLElement {
 function boutonsDeLaBarre(container: HTMLElement): string[] {
   return within(zone(container, 'barre'))
     .getAllByRole('button')
-    .map((bouton) => bouton.textContent ?? '');
+    // Le nom du bouton : l'appui long porte un libellé court pour la barre étroite.
+    .map((bouton) => bouton.getAttribute('aria-label') ?? bouton.textContent ?? '');
 }
 
 /** Le geste en deux temps : un toucher arme, le second confirme. */

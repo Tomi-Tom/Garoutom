@@ -14,6 +14,7 @@ import { Frontispice, deuxLignes } from './Frontispice.js';
 import { Glyphe, NOMS_GLYPHES } from './glyphes.js';
 import { Icone, NOMS_ICONES } from './Icone.js';
 import { SymboleRole } from './Symbole.js';
+import { VIGNETTES } from './traces/vignettes.js';
 import { NOMS_VIGNETTES, Vignette } from './Vignette.js';
 
 // La palette des skins et sa recopie dans styles.css sont vérifiées par
@@ -320,6 +321,8 @@ describe('vignettes, frontispice, décor', () => {
 
   it('les dix-huit vignettes du récit se dessinent, à 96 et à 192', () => {
     expect(NOMS_VIGNETTES).toHaveLength(18);
+    // La liste écrite à la main (le module des tracés est chargé à part) suit celle du générateur.
+    expect([...NOMS_VIGNETTES]).toEqual(Object.keys(VIGNETTES));
     for (const nom of NOMS_VIGNETTES) {
       for (const taille of [96, 192] as const) {
         const { container, unmount } = render(<Vignette nom={nom} taille={taille} />);

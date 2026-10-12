@@ -40,6 +40,13 @@ export interface EvenementRecu {
    * d'une mort qu'on lit après coup.
    */
   rejoue?: true;
+  /**
+   * L'heure du navigateur (`Date.now()`) à laquelle l'évènement est entré
+   * dans la chronique. Les planches passagères (le dépouillement, l'aube)
+   * en tirent leur échéance absolue : un onglet en arrière-plan, aux
+   * minuteurs bridés, ne les laisse pas traîner au-delà.
+   */
+  recuA?: number;
 }
 
 /** Un avis éphémère : le message du serveur ou d'une action refusée. */
@@ -192,6 +199,7 @@ export const useStore = create<StoreState>((set) => ({
 
       let chronique = autreTable ? [] : state.chronique;
       if (neufs.length > 0) {
+        const recuA = Date.now();
         // Une partie qui commence repart d'une page blanche : la revanche ne
         // doit pas raconter les morts de la manche d'avant.
         const base = neufs.some((recu) => recu.event.type === 'debut') ? [] : chronique;
@@ -202,6 +210,7 @@ export const useStore = create<StoreState>((set) => ({
               id: nextId(),
               event: recu.event,
               day,
+              recuA,
               ...(recu.seq === null ? {} : { seq: recu.seq }),
               ...(rejoue ? { rejoue: true as const } : {}),
             }),

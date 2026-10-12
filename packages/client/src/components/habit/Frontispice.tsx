@@ -13,6 +13,7 @@
  * légende est écrite à côté) ; `libelle` en fait une image nommée.
  */
 import { useVoix } from '../../lib/partie.js';
+import { TRACE_RECUEIL } from './traces-paresseuses.js';
 import { FRONTISPICES } from './traces/frontispice.js';
 import { useTrace } from './Trace.js';
 
@@ -34,20 +35,27 @@ export function deuxLignes(texte: string): [string, string] | [string] {
   return [nu.slice(0, coupe), nu.slice(coupe + 1)];
 }
 
+/** La boîte du bandeau du recueil, connue avant que sa planche n'arrive (la place est gardée). */
+const BOITE_RECUEIL = '0 0 358 160';
+
 export function Frontispice({ format, motif = 'recueil', className, libelle }: FrontispiceProps) {
   const voix = useVoix();
   const cle = format === 'portrait' ? 'portrait' : motif;
-  const planche = FRONTISPICES[cle];
-  const trace = useTrace(planche.trace, {});
-  const inscription = cle === 'recueil' ? voix.legendeEcran('accueil') : undefined;
-  const [largeur, hauteur] = planche.viewBox.split(' ').slice(2).map(Number);
+  // Le recueil n'orne que la nuit racontée : sa planche est chargée à la
+  // demande (préchargée au lancement de la partie) ; l'accueil a les siennes.
+  const recueil = TRACE_RECUEIL.useModule(cle === 'recueil')?.FRONTISPICE_RECUEIL;
+  const planche = cle === 'recueil' ? recueil : FRONTISPICES[cle];
+  const trace = useTrace(planche?.trace, {});
+  const inscription = cle === 'recueil' && planche !== undefined ? voix.legendeEcran('accueil') : undefined;
+  const viewBox = planche?.viewBox ?? BOITE_RECUEIL;
+  const [largeur, hauteur] = viewBox.split(' ').slice(2).map(Number);
 
   return (
     <svg
       {...(libelle === undefined ? { 'aria-hidden': true } : { role: 'img', 'aria-label': libelle })}
       width={largeur}
       height={hauteur}
-      viewBox={planche.viewBox}
+      viewBox={viewBox}
       className={className}
       data-frontispice={cle}
       style={{ display: 'block', maxWidth: '100%', height: 'auto' }}

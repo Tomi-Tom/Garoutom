@@ -256,6 +256,8 @@ export const shiganshina: Skin = {
     // nuit — l’écran peut dire « nuit 3 » (SKINS.md).
     nuit: 'Nuit {n}',
     jour: 'Jour {n}',
+    // Les Portes se rouvrent au matin : l’aube garde son mot.
+    aube: 'Aube {n}',
     lignes: {
       amoureux: 'Ymir a lié {nom} et {ancien} d’un même pacte.',
       protection: 'La Sentinelle a veillé sur {nom}.',

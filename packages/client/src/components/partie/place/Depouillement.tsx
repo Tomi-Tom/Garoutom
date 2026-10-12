@@ -2,7 +2,8 @@
  * Le dépouillement (SPEC § 7.8, `Caprices-E2-Depouillement`) : une planche
  * « Les voix sont comptées », posée sur la table quelques secondes après la
  * clôture d'un vote — au même instant, pour le même temps, chez tous les
- * sièges (N6) ; un toucher la passe.
+ * sièges (N6) ; un toucher la passe. La pose, l'échéance et la file sont
+ * celles des planches passagères (`PlanchePassagere.tsx`), comme l'aube.
  *
  * Par cible, des **bâtons gravés** : un trait par voix, le cinquième barre
  * les quatre autres ; les deux voix d'office du Corbeau (R93) se marquent
@@ -16,17 +17,16 @@
 
 import type { GameEvent, RoleId } from '@garoutom/engine';
 
-import { DUREE_AVIS_MS } from '../../../anim/tokens.js';
-import { BarrePouce, Bouton, Cuvette } from '../../caprices/index.js';
 import { CarteRole } from '../../habit/CarteRole.js';
 import { Glyphe } from '../../habit/glyphes.js';
 import { useNoms, useSkinId, useVoix } from '../../../lib/partie.js';
 import { useStore, type EvenementRecu } from '../../../lib/store.js';
 import { peauDuSkin } from '../../../skins/registre.js';
 import { dire } from '../Narrateur.js';
+import { CadrePlanche, DUREE_PLANCHE_MS } from './PlanchePassagere.js';
 
-/** Combien de temps la planche reste posée. */
-export const DUREE_DEPOUILLEMENT_MS = DUREE_AVIS_MS;
+/** Combien de temps la planche reste posée : celui de toutes les planches passagères. */
+export const DUREE_DEPOUILLEMENT_MS = DUREE_PLANCHE_MS;
 
 type EvenementVote = Extract<GameEvent, { type: 'vote' }>;
 
@@ -79,7 +79,16 @@ function roleDuCondamne(chronique: readonly EvenementRecu[], id: number, seat: n
   return null;
 }
 
-export function Depouillement({ recu, onPasser }: { recu: EvenementRecu; onPasser: () => void }) {
+export function Depouillement({
+  recu,
+  onPasser,
+  debut = recu.recuA ?? 0,
+}: {
+  recu: EvenementRecu;
+  onPasser: () => void;
+  /** L'heure où la planche s'est posée, pour le décompte de « Toucher pour passer ». */
+  debut?: number;
+}) {
   const chronique = useStore((state) => state.chronique);
   const voix = useVoix();
   const peau = peauDuSkin(useSkinId());
@@ -96,61 +105,45 @@ export function Depouillement({ recu, onPasser }: { recu: EvenementRecu; onPasse
     condamne === null ? dire(peau.narrateur.vote.personne) : dire(peau.narrateur.vote.condamne, { nom: nom(condamne) });
 
   return (
-    <div
-      role="dialog"
-      aria-label="Le dépouillement"
-      data-testid="depouillement"
-      className="fixed inset-x-0 bottom-0 z-[60] flex flex-col bg-[var(--fond)] text-[var(--encre)] lg:top-16"
-      style={{ top: 'calc(80px + env(safe-area-inset-top, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      onClick={onPasser}
-    >
-      <div className="flex min-h-0 flex-1 justify-center overflow-hidden border-t-[1.5px] border-[var(--filet)] px-6 py-6">
-        <Cuvette className="flex w-full max-w-[420px] flex-col items-center gap-3 overflow-hidden px-5 pt-5 pb-4">
-          <h2 className="t-titre m-0 text-center">Les voix sont comptées</h2>
-          <ul className="m-0 flex w-full list-none flex-col gap-2 p-0" aria-label="Les voix, par cible">
-            {lignes.map((ligne) => {
-              const corbeau = marque === ligne.seat;
-              return (
-                <li key={ligne.seat} data-cible={ligne.seat} className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-y-0.5">
-                  <span className="truncate text-[16px] leading-5 font-semibold">{nom(ligne.seat)}</span>
-                  <span className="text-right text-[16px] leading-5 tabular-nums">{ligne.voix}</span>
-                  <span className="col-span-2">
-                    <Batons voix={ligne.voix} corbeau={corbeau} />
-                  </span>
-                  {corbeau && (
-                    <span className="t-statut col-span-2">
-                      {voix.nomRole('corbeau')} +2
-                    </span>
-                  )}
-                  <span className="sr-only">
-                    {`${String(ligne.voix)} voix${corbeau ? `, dont deux d’office par ${voix.nomRole('corbeau')}` : ''}`}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="flex w-full items-center gap-3">
-            {condamne !== null && (
-              <span
-                role="img"
-                aria-label={role === null ? `La carte de ${nom(condamne)} reste face contre table` : `La carte de ${nom(condamne)} se retourne : ${voix.nomRole(role)}`}
-                className="block shrink-0"
-              >
-                <CarteRole role={role} retournee={role !== null} taille="petite" />
+    <CadrePlanche libelle="Le dépouillement" testId="depouillement" debut={debut} onPasser={onPasser}>
+      <h2 className="t-titre m-0 text-center">Les voix sont comptées</h2>
+      <ul className="m-0 flex min-h-0 w-full list-none flex-col gap-2 overflow-hidden p-0" aria-label="Les voix, par cible">
+        {lignes.map((ligne) => {
+          const corbeau = marque === ligne.seat;
+          return (
+            <li key={ligne.seat} data-cible={ligne.seat} className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-y-0.5">
+              <span className="truncate text-[16px] leading-5 font-semibold">{nom(ligne.seat)}</span>
+              <span className="text-right text-[16px] leading-5 tabular-nums">{ligne.voix}</span>
+              <span className="col-span-2">
+                <Batons voix={ligne.voix} corbeau={corbeau} />
               </span>
-            )}
-            <p data-testid="verdict" className="m-0 text-[16px] leading-6">
-              {verdict}
-            </p>
-          </div>
-          <p className="t-legende m-0 text-center text-[var(--encre-narrateur)]">« {voix.legendeEcran('depouillement')} »</p>
-        </Cuvette>
+              {corbeau && (
+                <span className="t-statut col-span-2">
+                  {voix.nomRole('corbeau')} +2
+                </span>
+              )}
+              <span className="sr-only">
+                {`${String(ligne.voix)} voix${corbeau ? `, dont deux d’office par ${voix.nomRole('corbeau')}` : ''}`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex w-full items-center gap-3">
+        {condamne !== null && (
+          <span
+            role="img"
+            aria-label={role === null ? `La carte de ${nom(condamne)} reste face contre table` : `La carte de ${nom(condamne)} se retourne : ${voix.nomRole(role)}`}
+            className="block shrink-0"
+          >
+            <CarteRole role={role} retournee={role !== null} taille="petite" />
+          </span>
+        )}
+        <p data-testid="verdict" className="m-0 text-[16px] leading-6">
+          {verdict}
+        </p>
       </div>
-      <BarrePouce>
-        <Bouton variante="secondaire" onClick={onPasser}>
-          Toucher pour passer
-        </Bouton>
-      </BarrePouce>
-    </div>
+      <p className="t-legende m-0 text-center text-[var(--encre-narrateur)]">« {voix.legendeEcran('depouillement')} »</p>
+    </CadrePlanche>
   );
 }

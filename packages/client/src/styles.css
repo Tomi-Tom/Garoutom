@@ -225,6 +225,9 @@
   --entete-h: 56px;
   --minuterie-h: 24px;
   --gouttiere: 16px;
+  /* Le pupitre desktop (§ 7.1) : 360 au départ, élargi pour qu'aucun
+     libellé d'action ne s'abrège (`LARGEUR_PUPITRE`, Place.tsx). */
+  --pupitre-l: 440px;
 
   /* Le meuble commun de la collection, rempli aux encres du recueil. */
   --arcade-encre: var(--encre);
@@ -592,10 +595,17 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Un libellé d'action ne s'abrège jamais (« Élire Bo… ») : trop long, il
+     passe à la ligne — deux lignes de 20 tiennent dans les 48 du bouton. */
   .bouton-libelle {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+    text-align: center;
+  }
+  .appui-long .bouton-libelle {
+    text-align: left;
   }
   .bouton-icone {
     display: flex;
@@ -725,16 +735,19 @@
     border: 3px solid var(--encre);
     overflow: visible;
   }
-  /* Le libellé armé reste un bloc : trop long, il s'abrège (…) au lieu de
-     déborder des deux côtés. */
+  /* Le libellé armé reste un bloc : trop long, il passe sur deux lignes
+     plutôt que de s'abréger ou de déborder. */
   .bouton[data-arme] .bouton-libelle {
     box-sizing: border-box;
     flex: 1 1 auto;
     align-self: stretch;
-    display: block;
-    line-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    line-height: 17px;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal;
     padding: 0 10px;
     background: var(--action-fond);
     border: 1px solid var(--encre);
@@ -786,6 +799,22 @@
 
   /* L'appui long (§ 5.4) : comme le secondaire, plus un anneau à gauche qui
      se remplit en 12 crans ; l'action dure tant que le pouce reste. */
+  /* Un libellé court (`libelleCourt`) remplace le long quand le bouton est
+     étroit — à côté d'un autre bouton dans la barre : jamais trois lignes. */
+  .appui-long[data-libelle-court] {
+    container-type: inline-size;
+  }
+  .appui-libelle-court {
+    display: none;
+  }
+  @container (width < 210px) {
+    .appui-libelle-long {
+      display: none;
+    }
+    .appui-libelle-court {
+      display: inline;
+    }
+  }
   .appui-long {
     justify-content: flex-start;
     gap: 12px;
@@ -1034,7 +1063,10 @@
     gap: 8px;
     min-width: 0;
   }
+  /* Les commandes de droite ne se tassent jamais (un bouton coupé au bord
+     ne se touche plus) : ce qui ne tient pas passe dans le menu « … ». */
   .frise-droite {
+    flex: none;
     margin-left: auto;
   }
   /* L'heure, posée sur un cartouche plein : aucune trame sous un mot. */
@@ -1042,6 +1074,8 @@
     box-sizing: border-box;
     display: flex;
     align-items: center;
+    flex: 0 1 auto;
+    min-width: 0;
     height: 44px;
     margin: 0;
     padding: 0 12px;
@@ -1049,6 +1083,11 @@
     border: 1px solid var(--filet-doux);
     color: var(--encre);
     white-space: nowrap;
+  }
+  @media (width < 22.5rem) {
+    .frise-titre {
+      padding: 0 8px;
+    }
   }
 
   /* Le gabarit unique, mobile : chaque zone garde sa hauteur, même vide —
@@ -1162,7 +1201,9 @@
     .gabarit[data-fil] > .gabarit-zone[data-zone='barre'] {
       grid-column: 2;
       justify-self: center;
-      width: 360px;
+      /* 360 au § 7.1, élargi : les libellés d'action ne s'abrègent jamais
+         (`LARGEUR_PUPITRE` dans Place.tsx). */
+      width: min(var(--pupitre-l), 100%);
       z-index: 1;
       background: var(--fond-planche);
       clip-path: none;
@@ -1202,6 +1243,41 @@
   }
 }
 
+/* ── La frise sur mobile : les meubles de l'arcade ─────────────────────── */
+/* Hors de toute couche : la feuille de l'arcade (`.arcade-lien`,
+   `.arcade-son`) n'est pas en couche, et une règle en couche lui céderait
+   quelle que soit sa précision. */
+
+/* Le lien retour de l'arcade : 44 × 44 sur mobile (§ 5.7), le losange
+   seul ; le mot reste pour les lecteurs d'écran. */
+@media (width < 48rem) {
+  .frise .arcade-lien {
+    flex: none;
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+  .frise .arcade-lien-mot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+/* Sous 360 px, le son quitte la frise pour le menu de la table (`MenuTable`). */
+.frise-son-etroit {
+  display: none;
+}
+@media (width < 22.5rem) {
+  .frise-droite .frise-son {
+    display: none;
+  }
+  .frise-son-etroit {
+    display: flex;
+  }
+}
+
 /* ── La bascule de l'heure (§ 3.2, § 3.9) ─────────────────────────────── */
 /* L'aube et la tombée de la nuit sont des évènements de table : quatre
    paliers d'aquatinte, 80 ms chacun, au même instant pour tous les sièges.
@@ -1221,8 +1297,11 @@
   75% {
     background-color: var(--cp-bistre-900);
   }
+  /* La bascule finie, le voile s'efface de lui-même, même si `data-bascule`
+     tarde à partir (un onglet en arrière-plan bride ses minuteurs) : jamais
+     un écran noyé sous un aplat. */
   100% {
-    background-color: var(--cp-bistre-900);
+    background-color: transparent;
   }
 }
 
@@ -1240,7 +1319,7 @@
     background-color: var(--cp-palier-1);
   }
   100% {
-    background-color: var(--cp-palier-1);
+    background-color: transparent;
   }
 }
 

@@ -5,31 +5,36 @@
  *
  * Décorative : la légende du graveur, à côté, dit le moment. `libelle` en fait
  * une image nommée.
+ *
+ * Les tracés (le plus gros module de gravures) sont chargés à la demande
+ * (`TRACES_VIGNETTES`, préchargés au lancement de la partie) : tant qu'ils ne
+ * sont pas là, la vignette garde sa place, vide.
  */
-import { VIGNETTES } from './traces/vignettes.js';
+import { TRACES_VIGNETTES } from './traces-paresseuses.js';
 import { useTrace } from './Trace.js';
 
-/** Les vignettes, dans l'ordre de priorité du récit (§ 6.4). */
-export const NOMS_VIGNETTES = Object.keys(VIGNETTES);
-export type NomVignette =
-  | 'machoire'
-  | 'branche'
-  | 'aconit'
-  | 'cor'
-  | 'lacs'
-  | 'corde'
-  | 'bouc'
-  | 'potence'
-  | 'vie'
-  | 'yeux'
-  | 'canne'
-  | 'porte'
-  | 'lettre'
-  | 'main'
-  | 'fleche'
-  | 'dormeur'
-  | 'place'
-  | 'sablier';
+/** Les vignettes, dans l'ordre de priorité du récit (§ 6.4) — celui de `traces/vignettes.ts`. */
+export const NOMS_VIGNETTES = [
+  'machoire',
+  'branche',
+  'aconit',
+  'cor',
+  'lacs',
+  'corde',
+  'bouc',
+  'potence',
+  'vie',
+  'yeux',
+  'canne',
+  'porte',
+  'lettre',
+  'main',
+  'fleche',
+  'dormeur',
+  'place',
+  'sablier',
+] as const;
+export type NomVignette = (typeof NOMS_VIGNETTES)[number];
 
 export interface VignetteProps {
   /** Une des dix-huit (`NomVignette`) ; un nom inconnu laisse la place vide. */
@@ -40,7 +45,7 @@ export interface VignetteProps {
 }
 
 export function Vignette({ nom, taille = 96, className, libelle }: VignetteProps) {
-  const vignette = VIGNETTES[nom];
+  const vignette = TRACES_VIGNETTES.useModule()?.VIGNETTES[nom];
   const trace = useTrace(vignette?.[taille], {});
   return (
     <svg

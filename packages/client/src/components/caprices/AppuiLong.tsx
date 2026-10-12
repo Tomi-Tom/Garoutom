@@ -36,6 +36,7 @@ export function AppuiLong({
   onFin,
   className,
   disabled,
+  libelleCourt,
 }: {
   libelle: string;
   dureeMs?: number;
@@ -43,6 +44,13 @@ export function AppuiLong({
   onFin: () => void;
   className?: string;
   disabled?: boolean;
+  /**
+   * Le libellé quand le bouton est étroit (moins de 210 px : à côté d'un
+   * autre bouton dans la barre au pouce) — « Ma carte » plutôt que « Gardez
+   * le pouce : ma carte » sur trois lignes. Le nom accessible reste
+   * `libelle`.
+   */
+  libelleCourt?: string;
 }) {
   const [etat, setEtat] = useState<Etat>('repos');
   // L'état vit aussi dans une référence : les écouteurs (minuteurs,
@@ -143,6 +151,8 @@ export function AppuiLong({
       type="button"
       className={classes.join(' ')}
       data-etat={etat}
+      data-libelle-court={libelleCourt === undefined ? undefined : ''}
+      aria-label={libelleCourt === undefined ? undefined : libelle}
       aria-pressed={etat === 'ouvert'}
       aria-keyshortcuts="Space Enter"
       disabled={disabled}
@@ -163,7 +173,16 @@ export function AppuiLong({
         <circle className="appui-anneau-progres" cx={13} cy={13} r={10} data-anim-fonctionnelle="" />
         <path className="appui-anneau-crans" d={CRANS} />
       </svg>
-      <span className="bouton-libelle">{libelle}</span>
+      {libelleCourt === undefined ? (
+        <span className="bouton-libelle">{libelle}</span>
+      ) : (
+        <span className="bouton-libelle">
+          <span className="appui-libelle-long">{libelle}</span>
+          <span className="appui-libelle-court" aria-hidden="true">
+            {libelleCourt}
+          </span>
+        </span>
+      )}
     </button>
   );
 }

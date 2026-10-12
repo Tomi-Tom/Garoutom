@@ -29,7 +29,8 @@ import { campOf, type RoleId } from '@garoutom/engine';
 
 import { useSkinId, useVoix } from '../../lib/partie.js';
 import { voixDuSkin, type Voix } from '../../skins/registre.js';
-import { niveauSymbole, traceSymbole } from './Symbole.js';
+import { niveauSymbole, traceSymbole, useGravuresDuSkin } from './Symbole.js';
+import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import { CARTOUCHES, DOS, FONDS_IMAGE, type FormatCarte } from './traces/cartes.js';
 import { NUMEROS, SYMBOLES_FACE } from './traces/symboles.js';
 import { useTrace, type Noeud } from './Trace.js';
@@ -57,6 +58,12 @@ export interface CarteRoleProps {
   className?: string;
   /** Le skin dont la carte porte les mots et la gravure. Défaut : celui de la table. */
   skin?: string;
+  /**
+   * La carte prend toute la largeur de son conteneur, au-delà de sa taille
+   * nominale (la révélation l'ajuste à la zone qui la porte). Défaut : elle ne
+   * dépasse jamais sa taille nominale.
+   */
+  pleineLargeur?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -212,6 +219,7 @@ export function FaceGravee({ role, format, tirage, skin, morte = false, pleineTa
 
   const [sx, sy, st] = f.symbole;
   const niveau = niveauSymbole(st);
+  useGravuresDuSkin(skin);
   const face: Noeud | undefined =
     papier && !morte && niveau === '128' && skin !== 'shiganshina' ? SYMBOLES_FACE[role] : undefined;
   // Le Loup Blanc est « mordu, bruni » (SPEC § 6.1) : sur la face imprimée, sa
@@ -364,9 +372,14 @@ export function FaceGravee({ role, format, tirage, skin, morte = false, pleineTa
   );
 }
 
-/** Le dos unique (300 × 420, mis à l'échelle de la carte). */
+/**
+ * Le dos unique (300 × 420, mis à l'échelle de la carte). La Porte du district
+ * est chargée à la demande avec les autres gravures de Shiganshina : en
+ * l'attendant, le dormeur du tirage.
+ */
 function DosGrave({ tirage, skin, cache }: { tirage: TirageCarte; skin: string; cache: boolean }) {
-  const dos = DOS[skin === 'shiganshina' ? 'shiganshina' : tirage];
+  const district = TRACES_SHIGANSHINA.useModule(skin === 'shiganshina');
+  const dos = district?.DOS_SHIGANSHINA ?? DOS[tirage];
   const trace = useTrace(dos.trace, {});
   return (
     <svg
@@ -423,6 +436,7 @@ export function CarteRole({
   onClic,
   className,
   skin,
+  pleineLargeur = false,
 }: CarteRoleProps) {
   const voixTable = useVoix();
   const skinTable = useSkinId();
@@ -541,7 +555,7 @@ export function CarteRole({
 
   const dimensions: CSSProperties = {
     position: 'relative',
-    width: taille === 'petite' ? f.W : `min(${String(f.W)}px, 100%)`,
+    width: pleineLargeur ? '100%' : taille === 'petite' ? f.W : `min(${String(f.W)}px, 100%)`,
     aspectRatio: `${String(f.W)} / ${String(f.H)}`,
     containerType: 'inline-size',
     flexShrink: 0,

@@ -1,5 +1,5 @@
 // Généré par docs/design/caprices/generateurs/extraire.mjs — ne pas éditer à la main.
-// Les dix-huit vignettes de la nuit racontée (grille 96), à 96 et à 192 px.
+// Les dix-huit vignettes de la nuit racontée (grille 96), à 96 et à 192 px. Chargé à la demande.
 // Sources : gen-C/vignettes.mjs.
 /* eslint-disable */
 import type { Noeud } from '../Trace.js';

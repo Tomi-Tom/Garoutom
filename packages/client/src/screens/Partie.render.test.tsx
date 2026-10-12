@@ -459,6 +459,10 @@ describe('<Partie />', () => {
     expect(within(feuille).getByRole('button', { name: 'Règles' })).toBeInTheDocument();
     expect(within(feuille).getByRole('button', { name: 'Réglages' })).toBeInTheDocument();
     expect(within(feuille).getByRole('button', { name: 'Le registre' })).toBeInTheDocument();
+    // Sous 360 px, le son quitte la frise pour le menu (styles.css) : les
+    // deux emplacements existent, le CSS montre l'un ou l'autre.
+    expect(within(feuille).getByTestId('menu-son')).toHaveClass('frise-son-etroit');
+    expect(document.querySelector('.frise-droite .frise-son')).not.toBeNull();
 
     await utilisateur.click(within(feuille).getByRole('button', { name: 'Quitter' }));
     await utilisateur.click(within(feuille).getByRole('button', { name: 'Oui, quitter' }));

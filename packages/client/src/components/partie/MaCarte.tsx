@@ -494,6 +494,7 @@ export function MaCarte({ declencheur }: { declencheur: 'frise' | 'barre' }) {
         <span className="flex min-w-0 flex-1" {...lecture.ecouteurs}>
           <AppuiLong
             libelle={ouverte ? `Relâchez pour cacher · ${String(lecture.restant)} s` : 'Gardez le pouce : ma carte'}
+            libelleCourt={ouverte ? `Relâcher · ${String(lecture.restant)} s` : 'Ma carte'}
             onDebut={lecture.surDebut}
             onFin={lecture.surFin}
             className="w-full"

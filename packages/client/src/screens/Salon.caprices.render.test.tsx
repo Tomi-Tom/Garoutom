@@ -353,3 +353,86 @@ describe('<Salon /> — sur le téléphone, trois étapes pour l’hôte', () =>
     ).toBeInTheDocument();
   });
 });
+
+describe('<Salon /> — la frise tient dans le téléphone, la table dit les noms entiers', () => {
+  let canal: Channel;
+
+  afterEach(() => {
+    window.matchMedia = matchMediaDOrigine;
+  });
+
+  it('sous le bureau, la frise garde le son et range règles, réglages et « Quitter » dans le menu', async () => {
+    canal = prepare(false);
+    useStore.getState().applySync(sync(6));
+    useStore.setState({ playerId: 'p3' });
+    const utilisateur = userEvent.setup();
+    const { container } = render(<Salon room={useStore.getState().room!} />);
+
+    const frise = container.querySelector<HTMLElement>('.frise')!;
+    // À droite : le menu « … » et le son, deux boutons de 44 — rien d'autre.
+    const droite = frise.querySelector<HTMLElement>('.frise-droite')!;
+    expect(within(droite).getByRole('button', { name: 'Menu du salon' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(within(droite).getByRole('button', { name: /le son/ })).toBeInTheDocument();
+    expect(within(frise).queryByRole('button', { name: 'Règles' })).toBeNull();
+    expect(within(frise).queryByRole('button', { name: 'Réglages' })).toBeNull();
+    expect(within(frise).queryByRole('button', { name: 'Quitter' })).toBeNull();
+
+    // Le menu ouvre une feuille basse : règles, réglages, quitter.
+    await utilisateur.click(within(droite).getByRole('button', { name: 'Menu du salon' }));
+    const feuille = screen.getByRole('dialog', { name: 'Table TEST' });
+    expect(within(feuille).getByRole('button', { name: 'Règles' })).toBeInTheDocument();
+    expect(within(feuille).getByRole('button', { name: 'Réglages' })).toBeInTheDocument();
+    await utilisateur.click(within(feuille).getByRole('button', { name: 'Quitter la table' }));
+    await waitFor(() => {
+      expect(canal.request).toHaveBeenCalledWith('room:leave', {});
+    });
+  });
+
+  it('sur le bureau, règles, réglages, son et « Quitter » restent à vue dans la frise, sans menu', () => {
+    prepare(true);
+    useStore.getState().applySync(sync(6));
+    useStore.setState({ playerId: 'p0' });
+    const { container } = render(<Salon room={useStore.getState().room!} />);
+    const droite = container.querySelector<HTMLElement>('.frise-droite')!;
+    for (const nom of ['Règles', 'Réglages', 'Quitter']) {
+      expect(within(droite).getByRole('button', { name: nom })).toBeInTheDocument();
+    }
+    expect(within(droite).queryByRole('button', { name: 'Menu du salon' })).toBeNull();
+  });
+
+  it('autour du cercle, aucun nom n’est tronqué ni ne passe sous la carte du milieu', () => {
+    prepare(true);
+    const pseudos = ['Anna', 'Bot Fernand', 'Bot Mireille', 'Bot Colette', 'Bot Gaston', 'Bot Hortense', 'Bot Isidore', 'Bot Jules'];
+    const room = salle(8);
+    room.players = room.players.map((joueur, i) => ({ ...joueur, name: pseudos[i] ?? joueur.name }));
+    useStore.getState().applySync({ room, game: null, events: [], seq: 0, serverNow: Date.now() });
+    useStore.setState({ playerId: 'p0' });
+    const { container } = render(<Salon room={useStore.getState().room!} />);
+
+    expect(container.querySelector('[data-cercle]')).not.toBeNull();
+    // Le nom passe à la ligne s'il le faut, il n'est plus coupé en « Bot Fern… ».
+    for (const nom of container.querySelectorAll('[data-nom]')) {
+      expect(nom.className).not.toMatch(/truncate/);
+    }
+    expect(screen.getByText('Bot Mireille')).toBeInTheDocument();
+
+    // Les boîtes posées : ni sous la carte, ni l'une sur l'autre, ni hors du cercle.
+    const boite = (el: Element) => {
+      const s = (el as HTMLElement).style;
+      return { x: parseFloat(s.left), y: parseFloat(s.top), l: parseFloat(s.width), h: parseFloat(s.height) };
+    };
+    const touche = (a: ReturnType<typeof boite>, b: ReturnType<typeof boite>) =>
+      a.x < b.x + b.l && b.x < a.x + a.l && a.y < b.y + b.h && b.y < a.y + a.h;
+    const cadre = boite(container.querySelector('[data-cercle]')!);
+    const carte = boite(container.querySelector('[data-carte-table]')!);
+    const jetons = [...container.querySelectorAll('[data-jeton]')].map(boite);
+    expect(jetons).toHaveLength(8);
+    for (const [i, jeton] of jetons.entries()) {
+      expect(jeton.l).toBeGreaterThanOrEqual(112);
+      expect(touche(jeton, carte)).toBe(false);
+      expect(jeton.x).toBeGreaterThanOrEqual(0);
+      expect(jeton.x + jeton.l).toBeLessThanOrEqual(cadre.l);
+      for (const autre of jetons.slice(i + 1)) expect(touche(jeton, autre)).toBe(false);
+    }
+  });
+});

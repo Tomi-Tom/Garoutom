@@ -214,6 +214,11 @@ export interface Legendes {
 export interface TextesRecit {
   nuit: string;
   jour: string;
+  /**
+   * Le titre de la planche d'aube — « Aube {n} », `{n}` en chiffres romains
+   * (SPEC § 7.8). Facultatif : un skin qui n'en dit rien prend « Aube {n} ».
+   */
+  aube?: string;
   lignes: LignesRecit;
 }
 

@@ -77,8 +77,15 @@ export interface PlaceProps {
   className?: string;
 }
 
-/** Le pupitre desktop (§ 5.16) : 360 × 200, un peu d'air autour. */
-const PUPITRE: Scene = { largeur: 376, hauteur: 216 };
+/**
+ * La largeur du pupitre desktop (§ 7.1 : 360, élargi à 440 pour que les
+ * libellés d'action — « Voter contre Bot Fernand » à côté de « S'abstenir » —
+ * tiennent sans s'abréger). `styles.css` la déclare aussi (`--pupitre-l`).
+ */
+export const LARGEUR_PUPITRE = 440;
+
+/** Le pupitre desktop (§ 5.16) : 440 × 200, un peu d'air autour. */
+const PUPITRE: Scene = { largeur: LARGEUR_PUPITRE + 16, hauteur: 216 };
 
 /** L'heure du serveur, rafraîchie chaque seconde tant qu'un compte à rebours d'absence court. */
 function useHeureServeur(actif: boolean): number {

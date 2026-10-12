@@ -244,6 +244,7 @@ export const thiercelieux: Skin = {
   recit: {
     nuit: 'Nuit {n}',
     jour: 'Jour {n}',
+    aube: 'Aube {n}',
     lignes: {
       amoureux: 'Cupidon a lié {nom} et {ancien} d’un même destin.',
       protection: 'Le Salvateur a veillé sur {nom}.',

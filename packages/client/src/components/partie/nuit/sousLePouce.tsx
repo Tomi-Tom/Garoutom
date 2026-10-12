@@ -56,7 +56,7 @@ export function appuiMaCarte(game: GameView): ReactNode {
   if (game.you !== null) return <MaCarte declencheur="barre" />;
   return (
     <span className="flex min-w-0 flex-1">
-      <AppuiLong libelle="Gardez le pouce : ma carte" onDebut={() => {}} onFin={() => {}} className="w-full" />
+      <AppuiLong libelle="Gardez le pouce : ma carte" libelleCourt="Ma carte" onDebut={() => {}} onFin={() => {}} className="w-full" />
     </span>
   );
 }

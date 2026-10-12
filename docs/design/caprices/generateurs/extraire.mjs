@@ -354,10 +354,18 @@ const js = (v) => JSON.stringify(v);
 function ecrire(nom, contenu) {
   mkdirSync(SORTIE, { recursive: true });
   writeFileSync(join(SORTIE, nom), contenu);
-  console.log(`${nom.padEnd(16)} ${(contenu.length / 1024).toFixed(1).padStart(6)} Ko`);
+  console.log(`${nom.padEnd(24)} ${(contenu.length / 1024).toFixed(1).padStart(6)} Ko`);
 }
 
-ecrire('symboles.ts', `${ENTETE('Les treize symboles de rôle, grille 32 : niveaux 128 (carte), 32 (trait 2) et 16 (simplifié) ; Shiganshina en deux niveaux.', 'gen-C/roles.mjs, gen-C/shig.mjs')}
+// Le découpage suit le chargement du client : les tracés des écrans courants
+// restent dans des modules importés statiquement ; les vignettes du récit, le
+// frontispice du recueil (fin de partie) et tout ce qui est propre à
+// Shiganshina sont chargés à la demande (`import()` dynamique, voir
+// `components/habit/paresseux.ts`). Déplacer un tracé d'un module à l'autre
+// change ce que le joueur télécharge avant son premier écran : mesurer avec
+// `npm run build -w @garoutom/client`.
+
+ecrire('symboles.ts', `${ENTETE('Les treize symboles de rôle, grille 32 : niveaux 128 (carte), 32 (trait 2) et 16 (simplifié). Shiganshina : shiganshina.ts (chargé à la demande).', 'gen-C/roles.mjs')}
 export type NiveauSymbole = '128' | '32' | '16';
 /** Le numéro de planche de chaque rôle (SPEC § 6.1), imprimé sur la carte. */
 export const NUMEROS: Record<string, number> = ${js(Object.fromEntries(ROLES.map((r) => [r.id, r.n])))};
@@ -365,22 +373,28 @@ export const NUMEROS: Record<string, number> = ${js(Object.fromEntries(ROLES.map
 export const SYMBOLES: Record<string, Record<NiveauSymbole, Noeud>> = ${js(symboles)};
 /** Variantes de face de carte (arbitrage n° 3 : aucune masse plus sombre que le village). */
 export const SYMBOLES_FACE: Record<string, Noeud> = ${js(symbolesFace)};
-/** Shiganshina : par rôle du moteur (numéro de planche), grand (≥ 96 px) ou petit. */
-export const SYMBOLES_SHIGANSHINA: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesShig)};
 `);
 
-ecrire('cartes.ts', `${ENTETE('Les pièces des cartes : fonds d’image (hachure du village, aquatinte de la meute), cartouches de camp, dos.', 'gen-C/cartes.mjs, gen-C/lib.mjs, gen-C/shig.mjs')}
+ecrire('cartes.ts', `${ENTETE('Les pièces des cartes : fonds d’image (hachure du village, aquatinte de la meute), cartouches de camp, dos. Le dos de Shiganshina : shiganshina.ts (chargé à la demande).', 'gen-C/cartes.mjs, gen-C/lib.mjs')}
 export type FormatCarte = 'grande' | 'moyenne' | 'petite';
 /** Fond de la zone d'image, en coordonnées de la carte (300 × 420, 216 × 302, 96 × 134). */
 export const FONDS_IMAGE: Record<FormatCarte, { village: Noeud; meute: Noeud }> = ${js(fonds)};
 /** Chemins des cartouches de camp (SPEC § 5.3), à la taille de chaque format. */
 export const CARTOUCHES: Record<FormatCarte, { ecu: string; mordu: string; mordu2: string }> = ${js(cartouches)};
-/** Le dos unique (300 × 420) : marge selon le tirage ; la Porte du district pour Shiganshina. */
-export const DOS: Record<'papier' | 'cuivre' | 'shiganshina', { viewBox: string; trace: Noeud }> = ${js(dos)};
+/** Le dos unique (300 × 420) : marge de papier ou de cuivre selon le tirage. */
+export const DOS: Record<'papier' | 'cuivre', { viewBox: string; trace: Noeud }> = ${js({ papier: dos.papier, cuivre: dos.cuivre })};
 `);
 
-ecrire('chefs.ts', `${ENTETE('Les dix-huit couvre-chefs (buste 48 × 48), gravés et en fantôme (mort brunie) ; les six coiffes du district.', 'lotF/chefs.mjs, gen-C/shig.mjs (planche C-V)')}
+ecrire('chefs.ts', `${ENTETE('Les dix-huit couvre-chefs (buste 48 × 48), gravés et en fantôme (mort brunie). Les coiffes du district : shiganshina.ts (chargé à la demande).', 'lotF/chefs.mjs')}
 export const COUVRE_CHEFS: readonly { nom: string; grave: Noeud; fantome: Noeud }[] = ${js(chefs)};
+`);
+
+ecrire('shiganshina.ts', `${ENTETE('Ce qui est propre au skin Shiganshina, chargé à la demande : les treize symboles (deux niveaux), le dos (la Porte du district), les six coiffes.', 'gen-C/shig.mjs (dont la planche C-V)')}
+/** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
+export const SYMBOLES_SHIGANSHINA: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesShig)};
+/** Le dos (300 × 420) : la Porte du district. */
+export const DOS_SHIGANSHINA: { viewBox: string; trace: Noeud } = ${js(dos.shiganshina)};
+/** Les coiffes du district (buste 48 × 48), sièges 1 à 6. */
 export const COIFFES_SHIGANSHINA: readonly { nom: string; grave: Noeud }[] = ${js(coiffes)};
 `);
 
@@ -389,10 +403,14 @@ export const ICONES = ${js(icones)} as const satisfies Record<string, Noeud>;
 export const GLYPHES = ${js(glyphes)} as const satisfies Record<string, Noeud>;
 `);
 
-ecrire('vignettes.ts', `${ENTETE('Les dix-huit vignettes de la nuit racontée (grille 96), à 96 et à 192 px.', 'gen-C/vignettes.mjs')}
+ecrire('vignettes.ts', `${ENTETE('Les dix-huit vignettes de la nuit racontée (grille 96), à 96 et à 192 px. Chargé à la demande.', 'gen-C/vignettes.mjs')}
 export const VIGNETTES: Record<string, { nom: string; 96: Noeud; 192: Noeud }> = ${js(vignettes)};
 `);
 
-ecrire('frontispice.ts', `${ENTETE('Les frontispices du Caprice 43 : le bandeau du recueil (358 × 160, sans son inscription), et ceux de l’accueil (bandeau aux yeux, portrait 640 × 720).', 'gen-C/cartes.mjs, maquettes Caprices-E1-Accueil(-Desktop).dc.html')}
-export const FRONTISPICES: Record<'recueil' | 'yeux' | 'portrait', { viewBox: string; trace: Noeud }> = ${js({ recueil: frontBandeau, yeux: frontYeux, portrait: frontPortrait })};
+ecrire('frontispice.ts', `${ENTETE('Les frontispices du Caprice 43 pour l’accueil (lot E1) : bandeau aux yeux, portrait 640 × 720. Le bandeau du recueil : frontispice-recueil.ts (chargé à la demande).', 'maquettes Caprices-E1-Accueil(-Desktop).dc.html')}
+export const FRONTISPICES: Record<'yeux' | 'portrait', { viewBox: string; trace: Noeud }> = ${js({ yeux: frontYeux, portrait: frontPortrait })};
+`);
+
+ecrire('frontispice-recueil.ts', `${ENTETE('Le frontispice du Caprice 43, bandeau du recueil (358 × 160, sans son inscription), pour la nuit racontée. Chargé à la demande.', 'gen-C/cartes.mjs')}
+export const FRONTISPICE_RECUEIL: { viewBox: string; trace: Noeud } = ${js(frontBandeau)};
 `);

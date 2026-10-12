@@ -8,11 +8,13 @@
  *
  * À Shiganshina, les coiffes du district. Le lot C n'en a gravé que six (sièges
  * 1 à 6) ; les sièges 7 à 18 gardent le couvre-chef de Thiercelieux en
- * attendant les douze autres.
+ * attendant les douze autres. Les coiffes voyagent avec les autres gravures du
+ * district, chargées à la demande : en les attendant, le couvre-chef du village.
  *
  * Décoratif : le jeton qui le porte dit le nom et l'état du joueur.
  */
-import { COIFFES_SHIGANSHINA, COUVRE_CHEFS } from './traces/chefs.js';
+import { COUVRE_CHEFS } from './traces/chefs.js';
+import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import { useTrace } from './Trace.js';
 
 export interface CouvreChefProps {
@@ -35,7 +37,8 @@ export function rangDuSiege(numero: number): number {
 
 export function CouvreChef({ numero, taille = 40, skin, tirage = 'papier', mort = false, className }: CouvreChefProps) {
   const rang = rangDuSiege(numero);
-  const coiffe = skin === 'shiganshina' ? COIFFES_SHIGANSHINA[rang] : undefined;
+  const district = TRACES_SHIGANSHINA.useModule(skin === 'shiganshina');
+  const coiffe = district?.COIFFES_SHIGANSHINA[rang];
   const chef = COUVRE_CHEFS[rang];
   const noeud = coiffe !== undefined ? coiffe.grave : mort ? chef?.fantome : chef?.grave;
   const cuivre = tirage === 'cuivre';

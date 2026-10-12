@@ -9,6 +9,11 @@
  * Le choix d’écran se lit en une ligne : pas de table → l’accueil ; salon →
  * la table qui se remplit ; partie lancée ou finie → l’écran de partie.
  *
+ * Seul l'accueil voyage dans le paquet initial : le salon et l'écran de partie
+ * sont des morceaux à part (`screens/ecrans.ts`), préchargés dès le premier
+ * rendu ; les gravures de la fin et de Shiganshina, au moment où la table en
+ * aura besoin.
+ *
  * Depuis D22, la racine tient aussi le lien : le réveil du canal sur la vie
  * de la page, la reprise de sa place à chaque connexion, et ce que disent les
  * codes de fermeture — partie ouverte ailleurs, version refusée, table
@@ -23,6 +28,7 @@ import type { NoticePayload, SyncPayload } from '@garoutom/engine';
 import { DUREE_AVIS_MS, IMPRESSION } from './anim/tokens.js';
 import { Bouton, Cartouche, Cuvette, Matieres, useTirage } from './components/caprices/index.js';
 import { Glyphe } from './components/habit/glyphes.js';
+import { prechargerFinDePartie, prechargerShiganshina } from './components/habit/traces-paresseuses.js';
 import {
   annulerReprise,
   codeDeLUrl,
@@ -35,9 +41,8 @@ import { useEcranAllume } from './lib/ecranAllume.js';
 import { loadToken } from './lib/identity.js';
 import { brancherReveil, canal } from './lib/socket.js';
 import { useStore, type Notice } from './lib/store.js';
+import { ECRAN_PARTIE, ECRAN_SALON, prechargerEcrans } from './screens/ecrans.js';
 import { Home } from './screens/Home.js';
-import { Partie } from './screens/Partie.js';
-import { Salon } from './screens/Salon.js';
 import { voixDuSkin } from './skins/registre.js';
 
 /** La table qui s'est levée sans nous : ce qu'il faut pour la dire, après qu'on l'a oubliée. */
@@ -172,13 +177,33 @@ export function App() {
   const suspendu = room !== null && (!connected || rattachement !== 'rattache');
   const horsLigne = useStore((state) => state.horsLigne);
 
+  // Les morceaux à part : les écrans de table dès le premier rendu (l'accueil
+  // est déjà peint) ; la fin de partie quand la partie se joue ; les gravures
+  // du district quand la table passe à Shiganshina. Un échec réseau se
+  // retentera au rendu qui en a besoin.
+  const statut = room?.status ?? null;
+  const skinTable = room?.options.skin ?? null;
+  useEffect(() => {
+    prechargerEcrans().catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    if (statut !== null && statut !== 'lobby') prechargerFinDePartie().catch(() => undefined);
+  }, [statut]);
+  useEffect(() => {
+    if (skinTable === 'shiganshina') prechargerShiganshina().catch(() => undefined);
+  }, [skinTable]);
+
+  // Tant qu'un écran de table n'est pas arrivé (presque jamais : il est
+  // préchargé), la page reste nue un instant.
+  const salon = ECRAN_SALON.useModule(statut === 'lobby');
+  const partie = ECRAN_PARTIE.useModule(statut !== null && statut !== 'lobby');
   const ecran =
     room === null ? (
       <Home />
     ) : room.status === 'lobby' ? (
-      <Salon room={room} />
+      salon !== undefined && <salon.Salon room={room} />
     ) : (
-      <Partie room={room} />
+      partie !== undefined && <partie.Partie room={room} />
     );
 
   return (

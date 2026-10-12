@@ -172,7 +172,7 @@ describe('<Nuit /> — les rôles optionnels', () => {
     expect(screen.queryByTestId(/^annotation-/)).toBeNull();
 
     // Rien de touché : le principal propose d'épargner la meute.
-    expect(within(zone(vue.container, 'barre')).getAllByRole('button').map((bouton) => bouton.textContent)).toEqual([
+    expect(within(zone(vue.container, 'barre')).getAllByRole('button').map((bouton) => bouton.getAttribute('aria-label') ?? bouton.textContent)).toEqual([
       'Gardez le pouce : ma carte',
       'Épargner la meute',
     ]);
@@ -230,7 +230,7 @@ describe('<Nuit /> — les rôles optionnels', () => {
     expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('visé·e par 1');
     // Elle regarde, elle n'agit pas : la place ne répond pas, la barre est celle du dormeur (N1).
     expect(within(zone(container, 'place')).queryAllByRole('button')).toEqual([]);
-    expect(within(zone(container, 'barre')).getAllByRole('button').map((bouton) => bouton.textContent)).toEqual([
+    expect(within(zone(container, 'barre')).getAllByRole('button').map((bouton) => bouton.getAttribute('aria-label') ?? bouton.textContent)).toEqual([
       'Gardez le pouce : ma carte',
       'Fermer les yeux',
     ]);

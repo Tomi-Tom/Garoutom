@@ -13,10 +13,13 @@
  *   sur la place qui vient de le condamner ;
  * - `fin` → le verdict et la nuit racontée (`Fin`).
  *
- * Par-dessus, deux choses publiques, au même instant pour tous :
+ * Par-dessus, des choses publiques, au même instant pour tous :
  *
- * - **le dépouillement** : quand un vote se clôt, la planche « Les voix sont
- *   comptées » se pose quelques secondes (un toucher la passe) ;
+ * - **les planches passagères** (`place/PlanchePassagere.tsx`) : quand un
+ *   vote se clôt, « Les voix sont comptées » ; quand la nuit cède au jour,
+ *   l'aube (« Aube II », ses morts ou sa paix, la marque du Corbeau). Quatre
+ *   secondes, un toucher les passe, jamais à la fin de partie, jamais
+ *   rejouées au montage ni à la reprise ;
  * - **la Scène TV** : une vue sans siège ouverte avec `?scene=1` devient
  *   l'écran partagé du milieu de la table.
  *
@@ -24,7 +27,6 @@
  */
 
 import { LienArcade } from '@tombp/arcade';
-import { useEffect, useRef, useState } from 'react';
 
 import type { GameView, RoomView } from '@garoutom/engine';
 
@@ -34,19 +36,20 @@ import { EcranJour, useGrandEcran } from '../components/partie/EcranJour.js';
 import { Fin } from '../components/partie/Fin.js';
 import { Nuit } from '../components/partie/Nuit.js';
 import { Place } from '../components/partie/Place.js';
-import { Depouillement, DUREE_DEPOUILLEMENT_MS } from '../components/partie/place/Depouillement.js';
+import { Aube } from '../components/partie/place/Aube.js';
+import { Depouillement } from '../components/partie/place/Depouillement.js';
+import { usePlanchesPassageres } from '../components/partie/place/PlanchePassagere.js';
 import { estSceneTV, SceneTV } from '../components/partie/place/SceneTV.js';
 import { Revelation } from '../components/partie/Revelation.js';
 import { useZonesCommunes } from '../components/partie/zones.js';
 import { ARCADE_ID } from '../lib/identity.js';
 import { useGame, useVoix } from '../lib/partie.js';
-import { useStore, type EvenementRecu } from '../lib/store.js';
 import { useSonsPartie } from '../lib/useSonsPartie.js';
 
 export function Partie({ room }: { room: RoomView }) {
   useSonsPartie();
   const game = useGame();
-  const depouillement = useDepouillement(game);
+  const { planche, debut, passer } = usePlanchesPassageres(game);
 
   if (game === null) {
     // Le salon est fermé, la vue n'est pas encore arrivée : un instant de
@@ -73,7 +76,12 @@ export function Partie({ room }: { room: RoomView }) {
       <main key={ecranDe(game)} className="flex min-h-0 flex-1 flex-col">
         {scene ? <SceneTV /> : <Ecran game={game} />}
       </main>
-      {depouillement.recu !== null && <Depouillement recu={depouillement.recu} onPasser={depouillement.passer} />}
+      {planche?.genre === 'depouillement' && (
+        <Depouillement key={planche.cle} recu={planche.recu} debut={debut} onPasser={() => passer(planche.cle)} />
+      )}
+      {planche?.genre === 'aube' && (
+        <Aube key={planche.cle} planche={planche} debut={debut} onPasser={() => passer(planche.cle)} />
+      )}
     </div>
   );
 }
@@ -130,34 +138,4 @@ function RevelationDuSpectateur() {
       }
     />
   );
-}
-
-/**
- * Le dépouillement d'un vote : la planche se pose quand un vote **arrive**
- * (jamais pour un vote déjà dans la chronique au montage, ni pour un vote
- * rejoué à la reprise), reste `DUREE_DEPOUILLEMENT_MS`, et se passe d'un
- * toucher. La fin a son verdict : la planche ne s'y pose pas.
- */
-function useDepouillement(game: GameView | null): { recu: EvenementRecu | null; passer: () => void } {
-  const chronique = useStore((state) => state.chronique);
-  const dernierVote = [...chronique]
-    .reverse()
-    .find((recu) => recu.event.type === 'vote' && recu.rejoue !== true);
-  const vu = useRef<number>(dernierVote?.id ?? 0);
-  const [planche, setPlanche] = useState<EvenementRecu | null>(null);
-
-  useEffect(() => {
-    if (dernierVote === undefined || dernierVote.id <= vu.current) return;
-    vu.current = dernierVote.id;
-    setPlanche(dernierVote);
-  }, [dernierVote]);
-
-  useEffect(() => {
-    if (planche === null) return;
-    const minuteur = setTimeout(() => setPlanche(null), DUREE_DEPOUILLEMENT_MS);
-    return () => clearTimeout(minuteur);
-  }, [planche]);
-
-  const fin = game?.phase === 'fin';
-  return { recu: fin ? null : planche, passer: () => setPlanche(null) };
 }

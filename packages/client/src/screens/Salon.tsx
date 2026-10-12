@@ -19,7 +19,8 @@
  */
 
 import { BoutonSon, LienArcade } from '@tombp/arcade';
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   autoComposition,
@@ -47,6 +48,7 @@ import { CouvreChef } from '../components/habit/CouvreChef.js';
 import { Glyphe } from '../components/habit/glyphes.js';
 import { SymboleRole } from '../components/habit/Symbole.js';
 import { Interrupteur } from '../components/Interrupteur.js';
+import { FeuilleBasse } from '../components/partie/fil/FeuilleBasse.js';
 import { BoutonReglages } from '../components/Reglages.js';
 import { BoutonRegles } from '../components/Regles.js';
 import { useEstLarge } from '../components/useEstLarge.js';
@@ -56,6 +58,14 @@ import { useVoix } from '../lib/partie.js';
 import { useReglages } from '../lib/reglages.js';
 import { useStore } from '../lib/store.js';
 import { peauDuSkin, SKINS, type Voix } from '../skins/registre.js';
+import {
+  CERCLE_ETIQUETTE,
+  CERCLE_NOM_PX,
+  grilleSieges,
+  lignesDuNom,
+  poserTable,
+  type TableEnRond,
+} from './salonTable.js';
 
 /** Combien de temps la fenêtre d'une arrivée reste allumée. */
 const DUREE_ARRIVEE_MS = 8_000;
@@ -344,18 +354,28 @@ export function Salon({ room }: { room: RoomView }) {
           </>
         }
         droite={
-          <>
-            <BoutonRegles />
-            <BoutonReglages />
-            <BoutonSon />
-            <Bouton
-              variante="outil"
-              icone="quitter"
-              aria-label="Quitter"
-              title="Quitter la table"
-              onClick={() => void quitterTable()}
-            />
-          </>
+          large ? (
+            <>
+              <BoutonRegles />
+              <BoutonReglages />
+              <BoutonSon />
+              <Bouton
+                variante="outil"
+                icone="quitter"
+                aria-label="Quitter"
+                title="Quitter la table"
+                onClick={() => void quitterTable()}
+              />
+            </>
+          ) : (
+            // Sous le bureau, quatre boutons de 44 ne tiennent pas à côté du
+            // titre à 360 : les règles, les réglages et « Quitter » passent
+            // dans le menu (§ 5.7), le son reste à portée de pouce.
+            <>
+              <MenuSalon code={room.code} />
+              <BoutonSon />
+            </>
+          )
         }
       />
 
@@ -363,7 +383,9 @@ export function Salon({ room }: { room: RoomView }) {
 
       <main ref={defilement} className="min-h-0 flex-1 overflow-y-auto">
         {large ? (
-          <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[400px_392px_minmax(0,1fr)] items-start gap-8 p-8">
+          // La table prend la plus grande part de la place libre : à 1 400 px
+          // et plus, ~530 px, de quoi asseoir douze noms entiers en rond.
+          <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(400px,3fr)_392px_minmax(0,2fr)] items-start gap-8 p-8">
             <div className="flex flex-col gap-4">{panneauTable}</div>
             <div className="flex flex-col gap-4">{panneauDonne}</div>
             <div className="flex flex-col gap-4">{panneauRegles}</div>
@@ -423,6 +445,51 @@ function FenetresAllumees({ arrivees, joueurs }: { arrivees: readonly string[]; 
         );
       })}
     </span>
+  );
+}
+
+/**
+ * Le menu du salon, sous la largeur du bureau : le « … » de la frise (les
+ * trois traits de burin, 44 px), qui ouvre une feuille basse — les règles,
+ * les réglages, quitter la table. Calqué sur le menu de la table en partie
+ * (`MenuTable`), sans le registre : au salon, rien n'est encore arrivé.
+ * « Quitter » garde le comportement du bouton du bureau : il quitte.
+ */
+function MenuSalon({ code }: { code: string }) {
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <>
+      <Bouton
+        variante="outil"
+        icone="menu"
+        aria-label="Menu du salon"
+        title="Règles, réglages, quitter"
+        aria-haspopup="dialog"
+        aria-expanded={ouvert}
+        aria-controls="menu-salon"
+        onClick={() => setOuvert(true)}
+        className="shrink-0"
+      />
+      {/* La feuille se pose sur la page, pas dans la frise : la frise isole
+          ses couches (`isolation: isolate`), et la table passerait dessus. */}
+      {ouvert &&
+        createPortal(
+          <FeuilleBasse titre={`Table ${code}`} onFermer={() => setOuvert(false)}>
+            <div id="menu-salon" data-testid="menu-salon" className="flex flex-col gap-3 pb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <BoutonRegles />
+                <span className="t-statut">Règles</span>
+                <BoutonReglages />
+                <span className="t-statut">Réglages</span>
+              </div>
+              <Bouton variante="secondaire" icone="quitter" onClick={() => void quitterTable()}>
+                Quitter la table
+              </Bouton>
+            </div>
+          </FeuilleBasse>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -549,7 +616,14 @@ function PanneauTable({
 }) {
   const legende = voix.legendeEcran('salon');
   const tirage = useReglages().tirage;
-  const cercle = large && nombre <= 12;
+  // La table se pose à la largeur réelle de sa colonne : le cercle sur le
+  // bureau s'il y tient sans qu'aucun nom ne passe sous la carte ni ne sorte
+  // par le bord, la grille sinon (et toujours sur le téléphone).
+  const mesure = useRef<HTMLDivElement>(null);
+  const largeurTable = useLargeur(mesure, large ? LARGEUR_TABLE_BUREAU : LARGEUR_TABLE_TELEPHONE);
+  const lignes = assis.some((joueur) => lignesDuNom(joueur.name, CERCLE_ETIQUETTE, CERCLE_NOM_PX) === 2) ? 2 : 1;
+  const table = large ? poserTable(nombre, largeurTable, lignes) : null;
+  const cercle = table !== null;
   const phraseLibres = `${pluriel(libres, 'place')} libre${libres > 1 ? 's' : ''} — la table accepte jusqu'à ${String(MAX_PLAYERS)} joueurs.`;
 
   const sieges = (
@@ -558,7 +632,8 @@ function PanneauTable({
       playerId={playerId}
       arrivees={arrivees}
       maintenant={maintenant}
-      cercle={cercle}
+      table={table}
+      largeur={largeurTable}
       tirage={tirage}
       skin={room.options.skin}
       voix={voix}
@@ -603,8 +678,10 @@ function PanneauTable({
               : `${pluriel(nombre, 'joueur')} · il en manque ${String(manque)} pour lancer`
           }
         />
-        {sieges}
-        {!cercle && libres > 0 && <p className="t-statut m-0 text-center">{phraseLibres}</p>}
+        <div ref={mesure} className="w-full min-w-0">
+          {sieges}
+        </div>
+        {!cercle && libres > 0 &&<p className="t-statut m-0 text-center">{phraseLibres}</p>}
         <p className="t-statut m-0 max-sm:sr-only">
           Les sièges suivent l'ordre d'arrivée, et ils fixent l'ordre du tour de parole. Une place
           perdue en cours de route tient le temps du délai de grâce, puis se libère.
@@ -616,11 +693,27 @@ function PanneauTable({
   );
 }
 
-/** La densité des jetons (SPEC § 5.1.1) : plus la table est pleine, plus le médaillon se resserre. */
-function densite(nombre: number): { m: number; cellule: number; colonnes: number; ecart: number; nom: number } {
-  if (nombre <= 8) return { m: 72, cellule: 114, colonnes: 3, ecart: 8, nom: 15 };
-  if (nombre <= 12) return { m: 60, cellule: 85, colonnes: 4, ecart: 6, nom: 15 };
-  return { m: 48, cellule: 68, colonnes: 5, ecart: 4, nom: 14 };
+/** Les largeurs de la table tant qu'on ne l'a pas mesurée (et sous jsdom) : la colonne du bureau à 1 440, le téléphone à 390. */
+const LARGEUR_TABLE_BUREAU = 528;
+const LARGEUR_TABLE_TELEPHONE = 358;
+
+/** La largeur réelle d'un élément, suivie au redimensionnement ; `defaut` tant qu'on n'a pas mesuré. */
+function useLargeur(ref: RefObject<HTMLElement | null>, defaut: number): number {
+  const [largeur, setLargeur] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el === null) return;
+    const mesurer = () => {
+      const l = Math.floor(el.getBoundingClientRect().width);
+      if (l > 0) setLargeur(l);
+    };
+    mesurer();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observateur = new ResizeObserver(mesurer);
+    observateur.observe(el);
+    return () => observateur.disconnect();
+  }, [ref]);
+  return largeur ?? defaut;
 }
 
 function Sieges({
@@ -628,7 +721,8 @@ function Sieges({
   playerId,
   arrivees,
   maintenant,
-  cercle,
+  table,
+  largeur,
   tirage,
   skin,
   voix,
@@ -638,7 +732,9 @@ function Sieges({
   playerId: string | null;
   arrivees: readonly string[];
   maintenant: number;
-  cercle: boolean;
+  /** Le cercle posé par `poserTable`, ou `null` : la grille. */
+  table: TableEnRond | null;
+  largeur: number;
   tirage: 'papier' | 'cuivre';
   skin: string;
   voix: Voix;
@@ -647,73 +743,76 @@ function Sieges({
   const nombre = assis.length;
   const etiquette = `Autour de la table, ${pluriel(nombre, 'joueur')}`;
 
-  if (cercle) {
+  if (table !== null) {
     // Le cercle du bureau : « moi » à six heures, les autres dans l'ordre des
-    // sièges, tous les 360 / max(n, 6) degrés ; le pupitre au centre.
-    const m = 56;
-    const largeur = 84;
-    const lx = 400;
-    const ly = 540;
-    const [cx, cy, rx, ry] = [lx / 2, ly / 2, 150, 210] as const;
+    // sièges ; chaque étiquette a sa boîte, que rien ne chevauche — ni sa
+    // voisine, ni la carte du milieu, ni le bord.
+    const places = table.sieges.length;
     const moiRang = Math.max(
       0,
       assis.findIndex((joueur) => joueur.id === playerId),
     );
-    const pas = 360 / Math.max(nombre, MIN_PLAYERS);
+    const boite = (i: number) => {
+      const b = table.sieges[(((i - moiRang) % places) + places) % places];
+      return b === undefined
+        ? undefined
+        : ({ position: 'absolute', left: b.x, top: b.y, width: b.largeur, height: b.hauteur } as const);
+    };
     return (
-      <div className="relative mx-auto" style={{ width: lx, height: ly }} data-cercle="">
+      <div
+        className="relative mx-auto"
+        style={{ width: table.largeur, height: table.hauteur }}
+        data-cercle=""
+        data-lignes={table.lignes}
+      >
         <ul aria-label={etiquette} className="m-0 list-none p-0">
-          {assis.map((joueur, i) => {
-            const theta = ((90 + (i - moiRang) * pas) * Math.PI) / 180;
-            const x = cx + rx * Math.cos(theta);
-            const y = cy + ry * Math.sin(theta);
-            return (
-              <Jeton
-                key={joueur.id}
-                joueur={joueur}
-                estMoi={joueur.id === playerId}
-                arrive={arrivees.includes(joueur.id)}
-                maintenant={maintenant}
-                m={m}
-                largeur={largeur}
-                nomPx={16}
-                tirage={tirage}
-                skin={skin}
-                voix={voix}
-                style={{ position: 'absolute', left: x - largeur / 2, top: y - (m + 16) / 2 - 4 }}
-              />
-            );
-          })}
-          {Array.from({ length: Math.max(0, MIN_PLAYERS - nombre) }, (_, k) => {
-            const i = nombre + k;
-            const theta = ((90 + (i - moiRang) * pas) * Math.PI) / 180;
-            const x = cx + rx * Math.cos(theta);
-            const y = cy + ry * Math.sin(theta);
-            return (
-              <PlaceLibre
-                key={`libre-${String(k)}`}
-                rang={i + 1}
-                m={m}
-                nomPx={16}
-                style={{ position: 'absolute', width: largeur, left: x - largeur / 2, top: y - (m + 16) / 2 - 4 }}
-              />
-            );
-          })}
+          {assis.map((joueur, i) => (
+            <Jeton
+              key={joueur.id}
+              joueur={joueur}
+              estMoi={joueur.id === playerId}
+              arrive={arrivees.includes(joueur.id)}
+              maintenant={maintenant}
+              m={table.medaillon}
+              largeur={CERCLE_ETIQUETTE}
+              nomPx={CERCLE_NOM_PX}
+              tirage={tirage}
+              skin={skin}
+              voix={voix}
+              style={boite(i)}
+            />
+          ))}
+          {Array.from({ length: Math.max(0, places - nombre) }, (_, k) => (
+            <PlaceLibre
+              key={`libre-${String(k)}`}
+              rang={nombre + k + 1}
+              m={table.medaillon}
+              nomPx={CERCLE_NOM_PX}
+              style={boite(nombre + k)}
+            />
+          ))}
         </ul>
-        <Cuvette className="absolute top-1/2 left-1/2 flex h-32 w-60 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-2 px-4">
-          {pupitre}
-        </Cuvette>
+        <div
+          className="absolute"
+          style={{ left: table.carte.x, top: table.carte.y, width: table.carte.largeur, height: table.carte.hauteur }}
+          data-carte-table=""
+        >
+          <Cuvette className="box-border flex size-full flex-col items-center justify-center gap-2 overflow-hidden px-3">
+            {pupitre}
+          </Cuvette>
+        </div>
       </div>
     );
   }
 
-  const d = densite(Math.max(nombre, 1));
+  const d = grilleSieges(nombre, largeur);
   // Sous six, les places qui manquent encore se montrent : la table se dresse.
   const vides = Math.max(0, MIN_PLAYERS - nombre);
   return (
     <ul
       aria-label={etiquette}
       className="m-0 grid list-none p-0"
+      data-colonnes={d.colonnes}
       style={{
         gridTemplateColumns: `repeat(${String(d.colonnes)}, minmax(0, 1fr))`,
         gap: d.ecart,
@@ -727,7 +826,6 @@ function Sieges({
           arrive={arrivees.includes(joueur.id)}
           maintenant={maintenant}
           m={d.m}
-          largeur={d.cellule}
           nomPx={d.nom}
           tirage={tirage}
           skin={skin}
@@ -789,7 +887,8 @@ function Jeton({
   arrive: boolean;
   maintenant: number;
   m: number;
-  largeur: number;
+  /** La largeur de l'étiquette (le cercle) ; sans elle, toute la cellule (la grille). */
+  largeur?: number;
   nomPx: number;
   tirage: 'papier' | 'cuivre';
   skin: string;
@@ -817,7 +916,7 @@ function Jeton({
   return (
     <li
       className="flex flex-col items-center"
-      style={{ width: largeur, ...style }}
+      style={{ width: largeur ?? '100%', ...style }}
       data-jeton={joueur.seat + 1}
       data-moi={estMoi ? '' : undefined}
     >
@@ -880,9 +979,12 @@ function Jeton({
         </span>
       </span>
       <span
-        className="block truncate text-center"
+        // Le nom entier : à la ligne plutôt que tronqué (deux lignes au plus —
+        // au-delà, ce qui ne tient pas s'efface en points de suspension).
+        className="line-clamp-2 w-full text-center"
+        data-nom=""
         style={{
-          maxWidth: largeur,
+          overflowWrap: 'anywhere',
           fontSize: nomPx,
           lineHeight: nomPx >= 15 ? '20px' : '16px',
           fontWeight: estMoi ? 700 : 600,

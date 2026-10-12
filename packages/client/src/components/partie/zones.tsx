@@ -56,7 +56,7 @@ function DroiteDeLaFrise({ code, titre }: { code: string; titre: string }) {
       </span>
       <MaCarte declencheur="frise" />
       <MenuTable code={code} titre={titre} />
-      <BoutonSon className="shrink-0" />
+      <BoutonSon className="frise-son shrink-0" />
     </>
   );
 }

@@ -11,7 +11,9 @@
  * s'ouvrent par-dessus la feuille, et se referment pour y revenir.
  */
 
+import { BoutonSon } from '@tombp/arcade';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Bouton } from '../../caprices/Bouton.js';
 import { BoutonReglages } from '../../Reglages.js';
@@ -67,28 +69,38 @@ export function MenuTable({ code, titre }: { code: string; titre: string }) {
         onClick={() => setOuvert(true)}
         className="shrink-0"
       />
-      {ouvert && (
-        <FeuilleBasse titre={`Table ${code}`} onFermer={() => setOuvert(false)}>
-          <div id="menu-table" data-testid="menu-table" className="flex flex-col gap-3 pb-4">
-            {sieges > 0 && (
-              <p className="t-statut m-0">
-                {String(sieges)} sièges · {titre}
-              </p>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              <BoutonRegles />
-              <span className="t-statut">Règles</span>
-              <BoutonReglages />
-              <span className="t-statut">Réglages</span>
+      {/* La feuille et le registre sortent de la frise (portail) : la frise
+          isole ses couches (`isolation: isolate`), et la feuille passerait
+          sous les jetons et la barre au pouce. */}
+      {ouvert &&
+        createPortal(
+          <FeuilleBasse titre={`Table ${code}`} onFermer={() => setOuvert(false)}>
+            <div id="menu-table" data-testid="menu-table" className="flex flex-col gap-3 pb-4">
+              {sieges > 0 && (
+                <p className="t-statut m-0">
+                  {String(sieges)} sièges · {titre}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <BoutonRegles />
+                <span className="t-statut">Règles</span>
+                <BoutonReglages />
+                <span className="t-statut">Réglages</span>
+              </div>
+              {/* Sous 360 px, le son quitte la frise et vient ici (styles.css). */}
+              <div data-testid="menu-son" className="frise-son-etroit items-center gap-2">
+                <BoutonSon curseur />
+                <span className="t-statut">Son</span>
+              </div>
+              <Bouton variante="secondaire" icone="registre" onClick={() => setRegistre(true)}>
+                Le registre
+              </Bouton>
+              <Quitter />
             </div>
-            <Bouton variante="secondaire" icone="registre" onClick={() => setRegistre(true)}>
-              Le registre
-            </Bouton>
-            <Quitter />
-          </div>
-        </FeuilleBasse>
-      )}
-      {registre && <Registre onFermer={() => setRegistre(false)} />}
+          </FeuilleBasse>,
+          document.body,
+        )}
+      {registre && createPortal(<Registre onFermer={() => setRegistre(false)} />, document.body)}
     </>
   );
 }

@@ -111,7 +111,7 @@ function capitale(texte: string): string {
 /** La consigne du rôle (`--t-jeu`, trois lignes au plus). */
 function Consigne({ children }: { children: ReactNode }) {
   return (
-    <p data-testid="consigne" className="t-jeu m-0 line-clamp-3 w-full max-[359px]:line-clamp-2">
+    <p data-testid="consigne" className="t-jeu m-0 line-clamp-3 w-full max-[359px]:line-clamp-2 lg:line-clamp-none">
       {children}
     </p>
   );

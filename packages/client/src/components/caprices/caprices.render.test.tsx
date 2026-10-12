@@ -457,3 +457,22 @@ describe('useTirage() — papier le jour, cuivre la nuit', () => {
     expect(document.documentElement).not.toHaveAttribute('data-bascule');
   });
 });
+
+describe('<AppuiLong libelleCourt />', () => {
+  it('porte les deux libellés, garde le long pour nom accessible, et le court ne se lit pas deux fois', () => {
+    render(<AppuiLong libelle="Gardez le pouce : ma carte" libelleCourt="Ma carte" onDebut={() => {}} onFin={() => {}} />);
+    const bouton = screen.getByRole('button', { name: 'Gardez le pouce : ma carte' });
+    expect(bouton).toHaveAttribute('data-libelle-court');
+    expect(bouton.querySelector('.appui-libelle-long')).toHaveTextContent('Gardez le pouce : ma carte');
+    const court = bouton.querySelector('.appui-libelle-court');
+    expect(court).toHaveTextContent('Ma carte');
+    expect(court).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('sans libellé court, rien ne change', () => {
+    render(<AppuiLong libelle="Gardez le pouce : ma carte" onDebut={() => {}} onFin={() => {}} />);
+    const bouton = screen.getByRole('button', { name: 'Gardez le pouce : ma carte' });
+    expect(bouton).not.toHaveAttribute('data-libelle-court');
+    expect(bouton).not.toHaveAttribute('aria-label');
+  });
+});

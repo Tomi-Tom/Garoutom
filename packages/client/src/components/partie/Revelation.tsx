@@ -42,7 +42,8 @@ import { AppuiLong, BarrePouce, Bouton, Cartouche, Gabarit, Pli } from '../capri
 import { CarteRole } from '../habit/CarteRole.js';
 import { useEstLarge } from '../useEstLarge.js';
 import { Perimetre, useLecture, type EtatLecture, type FormatLecture } from './MaCarte.js';
-import { Place } from './Place.js';
+import { LARGEUR_PUPITRE, Place } from './Place.js';
+import { jetonDuCercle } from './place/densite.js';
 import { Registre } from './Registre.js';
 import { useZonesCommunes } from './zones.js';
 
@@ -62,6 +63,22 @@ const LECTURE_MIN_MS = 1_000;
 /* Le brunissage (§ 4.7)                                               */
 /* ------------------------------------------------------------------ */
 
+/** Une image : le brunissoir avance d'un cran (8 px) toutes les 16 ms. */
+const IMAGE_MS = 16;
+
+/**
+ * Le rayon du masque après `ecouleMs` de brunissage : un cran de 8 px par
+ * image, le premier tout de suite, jusqu'à `rayonMax` (la demi-diagonale :
+ * la carte entière). Le rayon se lit sur l'horloge, pas au compte des images
+ * peintes : un navigateur qui bride ses images (onglet en arrière-plan,
+ * iframe, machine lente) saute des crans, mais finit toujours la carte à
+ * l'heure.
+ */
+export function rayonBruni(ecouleMs: number, rayonMax: number): number {
+  const crans = Math.floor(Math.max(0, ecouleMs) / IMAGE_MS) + 1;
+  return Math.min(rayonMax, crans * CRAN_BRUNIR_PX);
+}
+
 /**
  * Le rayon du masque : +8 px par image jusqu'à couvrir la carte ; relâché,
  * 0 dans la même image (`--m-reencrer`). Mouvement réduit : ouvert d'un coup.
@@ -74,21 +91,27 @@ function useBrunissage(ouverte: boolean, rayonMax: number): number {
       setRayon(0);
       return;
     }
-    if (reduit || typeof requestAnimationFrame !== 'function') {
+    if (reduit) {
       setRayon(rayonMax);
       return;
     }
-    let r = 0;
-    let image = 0;
+    const debut = Date.now();
+    let minuteur: ReturnType<typeof setInterval> | null = null;
     const pas = () => {
-      r = Math.min(rayonMax, r + CRAN_BRUNIR_PX);
+      const r = rayonBruni(Date.now() - debut, rayonMax);
       setRayon(r);
-      if (r < rayonMax) image = requestAnimationFrame(pas);
+      if (r >= rayonMax && minuteur !== null) {
+        clearInterval(minuteur);
+        minuteur = null;
+      }
     };
-    image = requestAnimationFrame(pas);
-    return () => cancelAnimationFrame(image);
+    pas();
+    minuteur = setInterval(pas, IMAGE_MS);
+    return () => {
+      if (minuteur !== null) clearInterval(minuteur);
+    };
   }, [ouverte, rayonMax, reduit]);
-  return ouverte ? rayon : 0;
+  return ouverte ? Math.min(rayon, rayonMax) : 0;
 }
 
 /**
@@ -110,20 +133,29 @@ function CarteBrunie({
   const { W, H } = CARTES[format];
   const l = largeur ?? W;
   const ouverte = etat === 'ouverte';
-  const rayon = useBrunissage(ouverte, Math.ceil(Math.hypot(l, (l * H) / W) / 2) + 1);
+  const rayonMax = Math.ceil(Math.hypot(l, (l * H) / W) / 2) + 1;
+  const rayon = useBrunissage(ouverte, rayonMax);
+  // Le dos et la face occupent toute la boîte de la carte (`pleineLargeur`) :
+  // le masque s'ouvre depuis le centre de CETTE boîte, donc de la carte.
   return (
     <div
       data-revelation-carte={etat}
-      className="relative max-w-full shrink-0"
+      data-bruni={ouverte && rayon >= rayonMax ? 'complet' : undefined}
+      className="relative mx-auto max-w-full shrink-0"
       style={{ width: l, aspectRatio: `${String(W)} / ${String(H)}` }}
     >
       {ouverte && (
         <div className="absolute inset-0" aria-hidden="true">
-          <CarteRole role={role} retournee taille={format} tirage="papier" avecDescription={false} />
+          <CarteRole role={role} retournee taille={format} tirage="papier" avecDescription={false} pleineLargeur />
         </div>
       )}
-      <div className="brunir absolute inset-0" style={{ '--r': `${String(rayon)}px` } as CSSProperties} aria-hidden="true">
-        <CarteRole role={null} retournee={false} taille={format} tirage="cuivre" />
+      <div
+        className="brunir absolute inset-0"
+        data-rayon={rayon}
+        style={{ '--r': `${String(rayon)}px` } as CSSProperties}
+        aria-hidden="true"
+      >
+        <CarteRole role={null} retournee={false} taille={format} tirage="cuivre" pleineLargeur />
       </div>
       <Perimetre etat={etat} format={format} tirage={ouverte ? 'papier' : 'cuivre'} />
     </div>
@@ -151,6 +183,48 @@ function useLargeurCarte(format: FormatLecture, reserve: number) {
     return () => observateur.disconnect();
   }, [W, H, reserve]);
   return { ref, largeur };
+}
+
+/**
+ * Ce que le pupitre desktop ajoute autour de la carte : le haut de la
+ * consigne (12), l'air sous la carte (12), le résumé (24), la barre (72).
+ */
+const PUPITRE_AUTOUR = 12 + 12 + 24 + 72;
+/** L'air que le cercle garde autour du pupitre, et autour des jetons (cercle.ts : AIR + MARGE). */
+const AIR_PUPITRE = 16;
+const AIR_JETON = 12;
+
+/**
+ * Desktop : la largeur de la carte pour que le pupitre (carte + résumé +
+ * barre) tienne entre le jeton du haut et le jeton du bas du cercle — le
+ * joueur local est assis à six heures, sous le pupitre, jamais dessous.
+ * `hauteurPlace` : la hauteur de la place ; `null` tant qu'on n'a pas mesuré.
+ */
+export function largeurCarteDesktop(hauteurPlace: number | null, hauteurJeton: number): number {
+  const { W, H } = CARTES.grande;
+  if (hauteurPlace === null) return W;
+  const hauteurCarte = hauteurPlace - 2 * (hauteurJeton + AIR_JETON) - AIR_PUPITRE - PUPITRE_AUTOUR;
+  return Math.max(140, Math.min(W, Math.floor((hauteurCarte * W) / H)));
+}
+
+/** La hauteur d'un élément, suivie ; `null` tant qu'on ne l'a pas mesurée (jsdom). */
+function useHauteur() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hauteur, setHauteur] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el === null) return;
+    const mesurer = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      if (h > 0) setHauteur((avant) => (avant === h ? avant : h));
+    };
+    mesurer();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observateur = new ResizeObserver(mesurer);
+    observateur.observe(el);
+    return () => observateur.disconnect();
+  }, []);
+  return { ref, hauteur };
 }
 
 /* ------------------------------------------------------------------ */
@@ -224,6 +298,7 @@ export function Revelation() {
   });
   const format: FormatLecture = large ? 'grande' : 'moyenne';
   const { ref: boiteCarte, largeur } = useLargeurCarte(format, SOUS_LA_CARTE);
+  const { ref: boitePlace, hauteur: hauteurPlace } = useHauteur();
   const idRaison = useId();
 
   if (game === null) return null;
@@ -294,16 +369,28 @@ export function Revelation() {
   ) : null;
 
   if (large) {
+    // La carte se règle sur la hauteur de la place : le pupitre tient entre
+    // le jeton du haut et le nôtre, en bas — et le cercle garde ce pupitre
+    // libre en son milieu.
+    const largeurDesktop = largeurCarteDesktop(hauteurPlace, jetonDuCercle(game.players.length).hauteur);
+    const pupitre = {
+      largeur: LARGEUR_PUPITRE + AIR_PUPITRE,
+      hauteur: Math.ceil((largeurDesktop * CARTES.grande.H) / CARTES.grande.W) + PUPITRE_AUTOUR + AIR_PUPITRE,
+    };
     return (
       <section data-testid="revelation" data-vue="joueur" className="contents">
         <Gabarit
           {...zones}
           consigne={
             <div className="flex w-full justify-center pb-3">
-              <CarteBrunie role={role} etat={etat} format={format} largeur={null} />
+              <CarteBrunie role={role} etat={etat} format={format} largeur={largeurDesktop} />
             </div>
           }
-          place={<Place label="La place du village" disposition="cercle" className="h-full" />}
+          place={
+            <div ref={boitePlace} className="h-full w-full">
+              <Place label="La place du village" disposition="cercle" className="h-full" pupitre={pupitre} />
+            </div>
+          }
           resume={<p className="t-statut m-0 w-full text-center">Bouton tenu à la souris, ou Espace tenu.</p>}
           pli={null}
           barre={<BarrePouce>{appui}</BarrePouce>}

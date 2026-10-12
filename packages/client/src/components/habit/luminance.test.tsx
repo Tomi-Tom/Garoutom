@@ -25,17 +25,23 @@
  * cartouche « Seul » plein (68 × 20 sur 96 × 134) assombrit la face du Loup
  * Blanc de ~10 % sans rien trahir. Le tirage cuivre (Ma carte, la nuit) n'a
  * pas d'image : sa luminance tient au seul trait des symboles (rapport V1-B).
+ *
+ * Rastériser 52 faces prend plusieurs secondes, davantage quand toute la suite
+ * tourne en parallèle : le délai est porté à 30 s pour ce fichier. Le rendu
+ * serveur n'exécute pas d'effets : les gravures de Shiganshina (chargées à la
+ * demande dans l'app) sont attendues avant de mesurer.
  */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { ROLES, type RoleId } from '@garoutom/engine';
 
 import { FaceGravee } from './CarteRole.js';
+import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import type { FormatCarte } from './traces/cartes.js';
 
 const require = createRequire(import.meta.url);
@@ -71,7 +77,11 @@ function luminanceMoyenne(role: RoleId, format: FormatCarte, skin: string, tirag
   return somme / (pixels.length / 4);
 }
 
-describe('arbitrage n° 3 — la luminance des faces', () => {
+describe('arbitrage n° 3 — la luminance des faces', { timeout: 30_000 }, () => {
+  beforeAll(async () => {
+    await TRACES_SHIGANSHINA.precharger();
+  });
+
   for (const skin of ['thiercelieux', 'shiganshina']) {
     for (const format of ['grande', 'moyenne'] as const) {
       it(`${skin}, ${format} : les treize faces papier à ± 3 % de leur moyenne`, () => {

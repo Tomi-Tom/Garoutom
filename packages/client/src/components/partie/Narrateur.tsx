@@ -491,7 +491,7 @@ export function Narrateur({ className = '', uneLigne = false }: { className?: st
           <span
             aria-hidden="true"
             data-testid="crieur-legende"
-            className={`t-legende block w-full overflow-hidden text-center text-[var(--encre-narrateur)] ${lignesMax}`}
+            className={`t-legende w-full overflow-hidden text-center text-[var(--encre-narrateur)] ${lignesMax}`}
           >
             « {voix.legendeEcran(cleLegendeDuMoment(phase))} »
           </span>
@@ -500,7 +500,7 @@ export function Narrateur({ className = '', uneLigne = false }: { className?: st
             aria-hidden="true"
             data-testid="crieur"
             data-resume={lot?.resume === true ? '' : undefined}
-            className={`block w-full overflow-hidden text-[16px] leading-6 ${lignesMax}`}
+            className={`w-full overflow-hidden text-[16px] leading-6 ${lignesMax}`}
           >
             {rubrique !== '' && (
               <span data-testid="crieur-rubrique" className="t-rubrique mr-2 text-[var(--encre-2)]">
