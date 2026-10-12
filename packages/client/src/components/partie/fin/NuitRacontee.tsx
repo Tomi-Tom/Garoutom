@@ -1,208 +1,173 @@
 /**
- * La nuit racontée : le `log` de la partie finie, récité nuit après nuit dans
- * la voix du skin, secrets compris (R88). Le log dit, le skin récite : rien
- * n'est inventé ici, on pose seulement les pseudos et les noms de rôles dans
- * les modèles de phrase du skin.
+ * La nuit racontée, en portfolio (SPEC Caprices § 5.15, § 6.4 ; maquettes
+ * `C-Fin-NuitRacontee`, `C-Fin-Planche`, `C-Fin-Desktop`) : le `log` de la
+ * partie finie, récité dans la voix du skin, secrets compris (R88), planche
+ * après planche — « Pl. 3 — Nuit 2 », une vignette, la légende du graveur,
+ * les lignes du récit. La dernière planche est toujours « Il est l'heure. ».
  *
- * Mobile : chaque jour est un bloc repliable (le dernier est ouvert).
- * Grand écran (≥ 1024 px) : tout est déplié, le bouton n'est plus qu'un titre.
+ * Mobile : le frontispice, puis les planches empilées, la dernière du récit
+ * ouverte, les autres repliées sur leur titre et leur légende ; la vignette
+ * ouvre la planche en plein écran. Desktop : trois planches par rangée,
+ * toutes ouvertes, chacune dans sa cuvette.
+ *
+ * Une planche repliée garde ses lignes dans la page (masquées) : le récit est
+ * complet, et se lit d'un seul tenant.
  */
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { GameView, LogEntry } from '@garoutom/engine';
 
-import { useNoms, useSkinId, useVoix } from '../../../lib/partie.js';
-import { peauDuSkin, resoudre } from '../../../skins/registre.js';
-import { listeDeNoms } from '../Narrateur.js';
-import { decouperLog, type JourRaconte } from './recit.js';
+import { useVoix } from '../../../lib/partie.js';
+import { Cuvette } from '../../caprices/index.js';
+import { Frontispice } from '../../habit/Frontispice.js';
+import { Vignette } from '../../habit/Vignette.js';
+import { useEstLarge } from '../../useEstLarge.js';
+import { LignesPlanche, PlanchePleinEcran, RubriquePlanche, useLignes, type Ligne } from './Planche.js';
+import { planchesDuLog, type Planche } from './planches.js';
 
-interface Ligne {
-  texte: string;
-  /** Le décompte d'un vote, en petit. */
-  detail?: string;
-  /** La teinte du filet à gauche. */
-  filet: string;
-}
-
-function useLignes(game: GameView): (entree: LogEntry) => Ligne {
-  const voix = useVoix();
-  const noms = useNoms();
-  const lignes = peauDuSkin(useSkinId()).recit.lignes;
-  const roles = new Map(game.players.map((joueur) => [joueur.seat, joueur.role] as const));
-
-  return (entree) => {
-    switch (entree.type) {
-      case 'amoureux':
-        return {
-          texte: resoudre(lignes.amoureux, { nom: noms(entree.seats[0]), ancien: noms(entree.seats[1]) }),
-          filet: 'var(--serment)',
-        };
-      case 'protection':
-        return { texte: resoudre(lignes.protection, { nom: noms(entree.target) }), filet: 'var(--lanterne)' };
-      case 'voyance':
-        return {
-          texte: resoudre(lignes.voyance, { nom: noms(entree.target), role: voix.nomRole(entree.role) }),
-          filet: 'var(--lune)',
-        };
-      case 'loups':
-        return {
-          texte:
-            entree.target === null
-              ? lignes.loups.personne
-              : resoudre(lignes.loups.cible, { nom: noms(entree.target) }),
-          filet: 'var(--sang)',
-        };
-      case 'sauvetage':
-        return { texte: resoudre(lignes.sauvetage, { nom: noms(entree.target) }), filet: 'var(--lanterne)' };
-      case 'poison':
-        return { texte: resoudre(lignes.poison, { nom: noms(entree.target) }), filet: 'var(--sang)' };
-      case 'mort':
-        return {
-          texte: voix.phraseMort(entree.cause, noms(entree.seat), roles.get(entree.seat) ?? null),
-          filet: 'var(--sang-creux)',
-        };
-      case 'grace':
-        return { texte: resoudre(lignes.grace, { nom: noms(entree.seat) }), filet: 'var(--lanterne)' };
-      case 'capitaine':
-        return { texte: resoudre(lignes.capitaine, { nom: noms(entree.seat) }), filet: 'var(--lanterne)' };
-      case 'tir':
-        return {
-          texte:
-            entree.target === null
-              ? lignes.tir.personne
-              : resoudre(lignes.tir.cible, { nom: noms(entree.target) }),
-          filet: 'var(--sang)',
-        };
-      case 'vote': {
-        const decompte = Object.entries(entree.tally)
-          .map(([siege, nombre]) => ({ siege: Number(siege), nombre }))
-          .sort((a, b) => b.nombre - a.nombre || a.siege - b.siege)
-          .map(({ siege, nombre }) => `${noms(siege)} ×${String(nombre)}`)
-          .join(', ');
-        return {
-          texte:
-            entree.executed === null
-              ? lignes.vote.personne
-              : resoudre(lignes.vote.condamne, { nom: noms(entree.executed) }),
-          detail: decompte === '' ? undefined : decompte,
-          filet: 'var(--lune)',
-        };
-      }
-      case 'resistance':
-        return { texte: resoudre(lignes.resistance, { nom: noms(entree.seat) }), filet: 'var(--lanterne)' };
-      case 'rancune':
-        return { texte: resoudre(lignes.rancune, { nom: noms(entree.seat) }), filet: 'var(--sang-creux)' };
-      case 'corbeau':
-        return { texte: resoudre(lignes.corbeau, { nom: noms(entree.target) }), filet: 'var(--lune)' };
-      case 'bouc':
-        return { texte: resoudre(lignes.bouc, { nom: noms(entree.seat) }), filet: 'var(--sang)' };
-      case 'votants':
-        // `null` : le Bouc s'est tu (ou son temps a filé), tout le monde vote.
-        return {
-          texte:
-            entree.seats === null
-              ? lignes.votants.personne
-              : resoudre(lignes.votants.designes, { noms: listeDeNoms(entree.seats.map(noms)) }),
-          filet: 'var(--lanterne)',
-        };
-      case 'loupBlanc':
-        return {
-          texte:
-            entree.target === null
-              ? lignes.loupBlanc.personne
-              : resoudre(lignes.loupBlanc.cible, { nom: noms(entree.target) }),
-          filet: 'var(--sang)',
-        };
-    }
-  };
-}
-
-function Bloc({
-  titre,
-  entrees,
-  ligne,
-}: {
-  titre: string;
-  entrees: LogEntry[];
-  ligne: (entree: LogEntry) => Ligne;
-}) {
-  if (entrees.length === 0) return null;
+/** Le chevron du pli : deux traits, pas une icône de bibliothèque. */
+function Chevron({ ouvert }: { ouvert: boolean }) {
   return (
-    <div className="mt-3">
-      <h4 className="font-identite text-lg text-lanterne">{titre}</h4>
-      <ol className="mt-1 flex flex-col gap-1.5">
-        {entrees.map((entree, i) => {
-          const l = ligne(entree);
-          return (
-            <li
-              key={`${entree.type}-${String(i)}`}
-              className="border-l-2 pl-3 text-papier"
-              style={{ borderColor: l.filet }}
-            >
-              {l.texte}
-              {l.detail && <span className="block text-sm text-papier-doux">{l.detail}</span>}
-            </li>
-          );
-        })}
-      </ol>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className="shrink-0 text-encre-2">
+      <path d={ouvert ? 'M7 14.5L12 9.5L17 14.5' : 'M7 9.5L12 14.5L17 9.5'} />
+    </svg>
+  );
+}
+
+/** La vignette et la légende ; la vignette ouvre la planche en plein écran. */
+function TetePlanche({ planche, onPleinEcran }: { planche: Planche; onPleinEcran: () => void }) {
+  const voix = useVoix();
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onPleinEcran}
+        aria-label={`Voir la planche ${String(planche.numero)} en plein écran`}
+        className="shrink-0 cursor-zoom-in border-0 bg-transparent p-0"
+      >
+        <Vignette nom={planche.vignette} />
+      </button>
+      <p className="t-legende m-0 flex-1 text-left">« {voix.legendeRecit(planche.legende)} »</p>
     </div>
   );
 }
 
-function Jour({
-  jour,
-  ouvertParDefaut,
+function PlancheMobile({
+  planche,
+  ouverteParDefaut,
   ligne,
+  onPleinEcran,
 }: {
-  jour: JourRaconte;
-  ouvertParDefaut: boolean;
+  planche: Planche;
+  ouverteParDefaut: boolean;
   ligne: (entree: LogEntry) => Ligne;
+  onPleinEcran: () => void;
 }) {
-  const recit = peauDuSkin(useSkinId()).recit;
-  const [ouvert, setOuvert] = useState(ouvertParDefaut);
-  const id = `fin-jour-${String(jour.n)}`;
-  const n = String(jour.n);
+  const voix = useVoix();
+  const [ouverte, setOuverte] = useState(ouverteParDefaut);
+  const id = useId();
   return (
-    <section className="carte p-3">
+    <li data-planche={planche.numero} className="border-t-[0.75px] border-filet-doux">
       <h3 className="m-0">
         <button
           type="button"
-          aria-expanded={ouvert}
+          aria-expanded={ouverte}
           aria-controls={id}
-          onClick={() => setOuvert((o) => !o)}
-          className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-identite text-xl text-papier lg:pointer-events-none"
+          onClick={() => setOuverte((o) => !o)}
+          className="flex min-h-[52px] w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-left text-encre"
         >
-          <span>
-            {resoudre(recit.nuit, { n })} · {resoudre(recit.jour, { n })}
+          <span className={`t-rubrique ${ouverte ? 'flex-1' : 'w-[92px] shrink-0'}`}>
+            <RubriquePlanche planche={planche} />
           </span>
-          <span aria-hidden className="text-papier-doux lg:hidden">
-            {ouvert ? '−' : '+'}
-          </span>
+          {!ouverte && (
+            <span className="t-legende flex-1 text-[16px] leading-5">« {voix.legendeRecit(planche.legende)} »</span>
+          )}
+          <Chevron ouvert={ouverte} />
         </button>
       </h3>
-      <div id={id} className={ouvert ? 'block' : 'hidden lg:block'}>
-        <Bloc titre={resoudre(recit.nuit, { n })} entrees={jour.nuit} ligne={ligne} />
-        <Bloc titre={resoudre(recit.jour, { n })} entrees={jour.jour} ligne={ligne} />
+      <div id={id} className={ouverte ? 'pb-4' : 'hidden'}>
+        <TetePlanche planche={planche} onPleinEcran={onPleinEcran} />
+        <LignesPlanche entrees={planche.entrees} ligne={ligne} className="mt-2.5" />
       </div>
-    </section>
+    </li>
+  );
+}
+
+function PlancheDesktop({
+  planche,
+  ligne,
+  onPleinEcran,
+}: {
+  planche: Planche;
+  ligne: (entree: LogEntry) => Ligne;
+  onPleinEcran: () => void;
+}) {
+  return (
+    <li data-planche={planche.numero} className="min-w-0">
+      <Cuvette className="h-full p-3.5">
+        <h3 className="t-rubrique m-0">
+          <RubriquePlanche planche={planche} />
+        </h3>
+        <TetePlanche planche={planche} onPleinEcran={onPleinEcran} />
+        <LignesPlanche entrees={planche.entrees} ligne={ligne} className="mt-2.5" />
+      </Cuvette>
+    </li>
   );
 }
 
 export function NuitRacontee({ game }: { game: GameView }) {
+  const voix = useVoix();
+  const large = useEstLarge();
   const ligne = useLignes(game);
-  const jours = decouperLog(game.log ?? []);
-  if (jours.length === 0) return null;
+  const [pleinEcran, setPleinEcran] = useState<number | null>(null);
+  const roles = new Map(game.players.map((joueur) => [joueur.seat, joueur.role] as const));
+  const planches = planchesDuLog(game.log ?? [], (seat) => roles.get(seat) ?? null);
+  if (planches.length === 0) return null;
+  // La dernière planche du récit est ouverte ; « Il est l'heure. » aussi, qui le clôt.
+  const derniereDuRecit = planches.length - 2;
+
   return (
     <section aria-labelledby="fin-recit" className="w-full">
-      <h2 id="fin-recit" className="font-identite text-2xl text-papier">
-        La nuit racontée
-      </h2>
-      <div className="mt-3 flex flex-col gap-3">
-        {jours.map((jour, i) => (
-          <Jour key={jour.n} jour={jour} ouvertParDefaut={i === jours.length - 1} ligne={ligne} />
-        ))}
+      <div className="flex items-baseline justify-between gap-3 lg:border-t-[0.75px] lg:border-filet-doux lg:pt-3">
+        <h2 id="fin-recit" className="t-titre m-0">
+          La nuit racontée
+        </h2>
+        <p className="t-rubrique m-0 text-encre-2">{planches.length} planches</p>
       </div>
+
+      {!large && (
+        <figure className="m-0 mt-2.5 flex flex-col items-center">
+          <Frontispice format="bandeau" />
+          <figcaption className="t-legende mt-1.5 text-center">« {voix.legendeEcran('revelation')} »</figcaption>
+        </figure>
+      )}
+
+      <ol className="m-0 mt-4 list-none p-0 lg:grid lg:grid-cols-3 lg:gap-4">
+        {planches.map((planche, rang) =>
+          large ? (
+            <PlancheDesktop key={planche.cle} planche={planche} ligne={ligne} onPleinEcran={() => setPleinEcran(rang)} />
+          ) : (
+            <PlancheMobile
+              key={planche.cle}
+              planche={planche}
+              ouverteParDefaut={rang >= derniereDuRecit}
+              ligne={ligne}
+              onPleinEcran={() => setPleinEcran(rang)}
+            />
+          ),
+        )}
+      </ol>
+
+      {pleinEcran !== null && (
+        <PlanchePleinEcran
+          planches={planches}
+          rang={pleinEcran}
+          ligne={ligne}
+          onAller={setPleinEcran}
+          onFermer={() => setPleinEcran(null)}
+        />
+      )}
     </section>
   );
 }

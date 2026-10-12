@@ -1,18 +1,25 @@
 /**
  * Le salon : la table qui se remplit.
  *
- * Chaque arrivée allume une fenêtre du village — c'est ici que la partie se
- * décide, et tout l'écran est fait pour qu'elle se décide à plusieurs. La
- * composition choisie est publique : c'est l'attribution des cartes qui est
- * secrète, et le salon peut afficher « 2 loups · la Voyante · la Sorcière »
- * sans rien dévoiler. L'hôte règle, les autres lisent — en lecture seule,
- * mais sans rien perdre de l'explication : arriver à une table sans savoir
- * à quoi on joue est le meilleur moyen de se croire volé au premier mort.
+ * Chaque arrivée allume une fenêtre du village — dans la frise, en tête —,
+ * et c'est ici que la partie se décide : tout l'écran est fait pour qu'elle
+ * se décide à plusieurs. La composition choisie est publique : c'est
+ * l'attribution des cartes qui est secrète, et le salon peut afficher
+ * « 2 loups · la Voyante · la Sorcière » sans rien dévoiler. L'hôte règle, les
+ * autres lisent — en lecture seule, mais sans rien perdre de l'explication :
+ * arriver à une table sans savoir à quoi on joue est le meilleur moyen de se
+ * croire volé au premier mort.
+ *
+ * Trois chapitres, « La table · La donne · Les règles » (SPEC § 7.7) :
+ * - sur le téléphone, l'hôte les parcourt en trois étapes (des cartouches
+ *   cliquables en tête, « Suivant : … » collé au pouce, « Lancer la partie »
+ *   au bout) ; les autres joueurs lisent les trois d'une traite ;
+ * - sur le bureau, ce sont trois colonnes, et « Lancer la partie » tombe au
+ *   bas de la colonne centrale.
  */
 
 import { BoutonSon, LienArcade } from '@tombp/arcade';
-import { motion } from 'motion/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import {
   autoComposition,
@@ -27,22 +34,26 @@ import {
   SPECIAL_ROLES,
   suggestionsFor,
   wolvesIn,
+  type ChoosableRoleId,
   type GameOptions,
+  type OptionalRoleId,
   type PlayerInfo,
   type RoomView,
   type Rng,
-  type ChoosableRoleId,
-  type OptionalRoleId,
 } from '@garoutom/engine';
 
-import { RESSORT_CARTE, RESSORT_PANNEAU } from '../anim/tokens.js';
+import { BarrePouce, Bouton, Cuvette, Frise } from '../components/caprices/index.js';
+import { CouvreChef } from '../components/habit/CouvreChef.js';
+import { Glyphe } from '../components/habit/glyphes.js';
+import { SymboleRole } from '../components/habit/Symbole.js';
 import { Interrupteur } from '../components/Interrupteur.js';
 import { BoutonReglages } from '../components/Reglages.js';
-import { SymboleRole } from '../components/habit/Symbole.js';
 import { BoutonRegles } from '../components/Regles.js';
+import { useEstLarge } from '../components/useEstLarge.js';
 import { lancerPartie, quitterTable, reglerOptions } from '../lib/actions.js';
 import { ARCADE_ID } from '../lib/identity.js';
 import { useVoix } from '../lib/partie.js';
+import { useReglages } from '../lib/reglages.js';
 import { useStore } from '../lib/store.js';
 import { peauDuSkin, SKINS, type Voix } from '../skins/registre.js';
 
@@ -88,10 +99,23 @@ function bascule<C extends CleInterrupteur>(cle: C, valeur: boolean): Pick<GameO
  */
 const hasard: Rng = { nextInt: (max) => Math.floor(Math.random() * max) };
 
+type Etape = 'table' | 'donne' | 'regles';
+const ETAPES: readonly { cle: Etape; titre: string }[] = [
+  { cle: 'table', titre: 'La table' },
+  { cle: 'donne', titre: 'La donne' },
+  { cle: 'regles', titre: 'Les règles' },
+];
+const SUIVANT: Record<Exclude<Etape, 'regles'>, Etape> = { table: 'donne', donne: 'regles' };
+
+function pluriel(nombre: number, mot: string): string {
+  return `${String(nombre)} ${mot}${nombre > 1 ? 's' : ''}`;
+}
+
 export function Salon({ room }: { room: RoomView }) {
   const playerId = useStore((state) => state.playerId);
   const decalage = useStore((state) => state.decalageHorloge);
   const pushNotice = useStore((state) => state.pushNotice);
+  const large = useEstLarge();
 
   const moi = room.players.find((player) => player.id === playerId);
   const hote = moi?.isHost ?? false;
@@ -175,235 +199,840 @@ export function Salon({ room }: { room: RoomView }) {
     }
   };
 
-  return (
-    <div data-testid="salon" className="min-h-full overflow-auto p-4 sm:p-6">
-      <motion.main
-        initial={{ y: 16, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={RESSORT_PANNEAU}
-        className="mx-auto flex w-[min(56rem,100%)] flex-col gap-4"
-      >
-        {/* --- Le code : la seule chose qu'on ait à transmettre --- */}
-        <header className="carte flex flex-wrap items-center justify-between gap-3 p-4 sm:gap-4 sm:p-5">
-          <div className="flex items-center gap-4">
-            <LienArcade id={ARCADE_ID} className="shrink-0" />
-            <div>
-              <p
-                className="text-[11px] font-bold tracking-[0.14em] uppercase"
-                style={{ color: 'var(--papier-doux)' }}
-              >
-                Code de la table
-              </p>
-              {/* La fonction d'un code est de se recopier : mono, gros, chasse
-                  fixe — quatre lettres qui ne se lisent pas en chiffre. */}
-              <p className="font-mono text-[2.5rem] leading-none font-bold tracking-[0.18em]">
-                {room.code}
-              </p>
+  /* --- Les étapes de l'hôte (téléphone) --- */
+  const [etape, setEtape] = useState<Etape>('table');
+  const parEtapes = hote && !large;
+  const visible = (chapitre: Etape): boolean => !parEtapes || etape === chapitre;
+  const defilement = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // Une étape nouvelle s'ouvre en haut de page.
+    defilement.current?.scrollTo?.({ top: 0 });
+  }, [etape]);
+
+  /* --- Pourquoi le lancement ne part pas (dit en toutes lettres, jamais « impossible ») --- */
+  const raisonLongue = peutLancer
+    ? null
+    : assezDeMonde
+      ? `La composition ne tient pas pour ${String(nombre)} joueurs : ${erreurComposition ?? ''}. Changez-la dans la donne.`
+      : `Il faut ${String(MIN_PLAYERS)} joueurs pour lancer — ${String(nombre)} à la table, il en manque ${String(manque)}. Partagez le code ou le lien d’invitation.`;
+  const raisonCourte = peutLancer
+    ? undefined
+    : assezDeMonde
+      ? 'La composition ne tient pas'
+      : `Il manque ${pluriel(manque, 'joueur')}`;
+  const raisonLancement = raisonLongue === null ? null : (
+    <p
+      id="raison-lancement"
+      className="t-statut m-0 text-center"
+      style={{ color: assezDeMonde ? 'var(--encre)' : 'var(--encre-2)' }}
+    >
+      {raisonLongue}
+    </p>
+  );
+
+  const boutonLancer = (
+    <Bouton
+      variante="primaire"
+      onClick={() => void lancerPartie()}
+      disabled={!peutLancer}
+      aria-describedby={peutLancer ? undefined : 'raison-lancement'}
+    >
+      Lancer la partie
+    </Bouton>
+  );
+
+  /* --- Ce que dit le salon à qui ne lance pas --- */
+  const attente = peutLancer
+    ? 'Tout est prêt — l’hôte peut lancer la partie.'
+    : assezDeMonde
+      ? 'La composition de l’hôte ne tient pas encore : il doit la corriger avant de lancer.'
+      : `En attente de joueurs : ${String(nombre)} à la table, ${String(MIN_PLAYERS)} au moins — il en manque ${String(manque)}.`;
+
+  const panneauTable = (
+    <PanneauTable
+      room={room}
+      assis={assis}
+      playerId={playerId}
+      arrivees={arrivees}
+      maintenant={maintenant}
+      libres={libres}
+      manque={manque}
+      assezDeMonde={assezDeMonde}
+      nombre={nombre}
+      large={large}
+      voix={voix}
+      onCopierCode={() => void copierCode()}
+      onCopierLien={() => void copierLien()}
+      avertissement={hote && !large && manque > 0 ? raisonLancement : null}
+    />
+  );
+
+  const panneauDonne = (
+    <PanneauDonne
+      options={room.options}
+      nombre={nombre}
+      editable={hote}
+      voix={voix}
+      avecUnivers={large || !hote}
+      bas={
+        large ? (
+          hote ? (
+            <div className="mt-2 flex flex-col gap-2">
+              {boutonLancer}
+              {raisonLancement}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          ) : (
+            <p className="t-statut m-0 text-center">{attente}</p>
+          )
+        ) : null
+      }
+    />
+  );
+
+  const panneauRegles = (
+    <PanneauRegles
+      options={room.options}
+      nombre={nombre}
+      editable={hote}
+      voix={voix}
+      avecUnivers={!(large || !hote)}
+      recap={parEtapes && etape === 'regles' ? <Recap options={room.options} nombre={nombre} voix={voix} aviser={raisonLancement} /> : null}
+    />
+  );
+
+  /* --- La barre au pouce --- */
+  let barre: ReactNode = null;
+  if (!large) {
+    if (!hote) {
+      barre = (
+        <BarrePouce raison={attente}>
+          <Bouton variante="primaire" disabled>
+            En attente de l’hôte
+          </Bouton>
+        </BarrePouce>
+      );
+    } else if (etape === 'table') {
+      barre = (
+        <BarrePouce raison={manque > 0 ? raisonCourte : undefined}>
+          <Bouton variante="primaire" disabled={!assezDeMonde} onClick={() => setEtape(SUIVANT.table)}>
+            Suivant : la donne
+          </Bouton>
+        </BarrePouce>
+      );
+    } else if (etape === 'donne') {
+      barre = (
+        <BarrePouce>
+          <ResumeDonne options={room.options} nombre={nombre} voix={voix} />
+          <Bouton variante="primaire" style={{ flex: '0 0 196px' }} onClick={() => setEtape(SUIVANT.donne)}>
+            Suivant : les règles
+          </Bouton>
+        </BarrePouce>
+      );
+    } else {
+      barre = <BarrePouce raison={raisonCourte}>{boutonLancer}</BarrePouce>;
+    }
+  }
+
+  return (
+    <div data-testid="salon" className="flex h-full min-h-0 flex-col bg-fond text-encre">
+      <Frise
+        titre="Salon"
+        gauche={
+          <>
+            <LienArcade id={ARCADE_ID} className="shrink-0" />
+            <FenetresAllumees arrivees={arrivees} joueurs={room.players} />
+          </>
+        }
+        droite={
+          <>
             <BoutonRegles />
             <BoutonReglages />
             <BoutonSon />
-            <button type="button" onClick={() => void copierCode()} className="btn-voisin min-h-11 px-3">
-              Copier le code
-            </button>
-            <button type="button" onClick={() => void copierLien()} className="btn-voisin min-h-11 px-3">
-              Copier le lien d’invitation
-            </button>
-            <button type="button" onClick={() => void quitterTable()} className="btn-voisin min-h-11 px-3">
-              Quitter
-            </button>
-          </div>
-        </header>
+            <Bouton
+              variante="outil"
+              icone="quitter"
+              aria-label="Quitter"
+              title="Quitter la table"
+              onClick={() => void quitterTable()}
+            />
+          </>
+        }
+      />
 
-        {/* --- Les sièges --- */}
-        <section className="carte p-4 sm:p-5">
-          <TitreSection
-            title="Autour de la table"
-            aside={
-              assezDeMonde
-                ? `${String(nombre)} joueur${nombre > 1 ? 's' : ''} · prêts à lancer`
-                : `${String(nombre)} joueur${nombre > 1 ? 's' : ''} · il en manque ${String(manque)} pour lancer`
-            }
-          />
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-            {assis.map((joueur) => (
-              <RangeeJoueur
-                key={joueur.id}
-                joueur={joueur}
-                estMoi={joueur.id === playerId}
-                arrive={arrivees.includes(joueur.id)}
-                maintenant={maintenant}
-              />
-            ))}
-            {libres > 0 && (
-              <li
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm sm:col-span-2"
-                style={{ color: 'var(--papier-doux)', boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}
-              >
-                {String(libres)} place{libres > 1 ? 's' : ''} libre{libres > 1 ? 's' : ''} — la table
-                accepte jusqu'à {String(MAX_PLAYERS)} joueurs.
-              </li>
+      {parEtapes && <EtapesHote etape={etape} onChoisir={setEtape} />}
+
+      <main ref={defilement} className="min-h-0 flex-1 overflow-y-auto">
+        {large ? (
+          <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[400px_392px_minmax(0,1fr)] items-start gap-8 p-8">
+            <div className="flex flex-col gap-4">{panneauTable}</div>
+            <div className="flex flex-col gap-4">{panneauDonne}</div>
+            <div className="flex flex-col gap-4">{panneauRegles}</div>
+          </div>
+        ) : (
+          <div className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 px-4 py-4">
+            {visible('table') && panneauTable}
+            {visible('donne') && (
+              <div className={parEtapes ? '' : 'border-t pt-6'} style={{ borderColor: 'var(--filet-doux)' }}>
+                {panneauDonne}
+              </div>
             )}
-          </ul>
-          <p className="mt-3 text-xs max-sm:sr-only" style={{ color: 'var(--papier-doux)' }}>
-            Les sièges suivent l'ordre d'arrivée, et ils fixent l'ordre du tour de parole. Une
-            place perdue en cours de route tient le temps du délai de grâce, puis se libère.
-          </p>
-        </section>
-
-        {/* --- Les règles de la table --- */}
-        <section className="carte p-4 sm:p-5" data-testid="regles-salon">
-          <TitreSection
-            title="Les règles de la table"
-            aside={hote ? 'vous décidez' : 'réglées par l’hôte'}
-          />
-          <div className="mt-4 flex flex-col gap-6">
-            <ChoixSkin options={room.options} editable={hote} />
-            <Composition options={room.options} nombre={nombre} editable={hote} voix={voix} />
-            <Minuteries options={room.options} editable={hote} />
-            <Interrupteurs options={room.options} editable={hote} voix={voix} />
+            {visible('regles') && (
+              <div className={parEtapes ? '' : 'border-t pt-6'} style={{ borderColor: 'var(--filet-doux)' }}>
+                {panneauRegles}
+              </div>
+            )}
           </div>
-          {!hote && (
-            <p className="mt-4 text-xs leading-relaxed" style={{ color: 'var(--papier-doux)' }}>
-              Seul l'hôte peut modifier les règles. Elles se figent au lancement de la partie et ne
-              bougent plus jusqu'au bout de la nuit.
-            </p>
-          )}
-        </section>
+        )}
+      </main>
 
-        {/*
-          Le lancement reste sous le pouce. En flux, il tombait au bas d'un
-          document de trois écrans : l'hôte devait redescendre tout le salon
-          pour lancer, à chaque fois qu'un joueur arrivait. Amarré, il ne
-          bouge plus ; là où la place existe, il reprend sa position en flux.
-        */}
-        <div
-          className="sticky bottom-0 -mx-4 flex flex-col border-t bg-nuit px-4 pt-3 pb-[calc(0.9rem+env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
-          style={{ borderColor: 'var(--arcade-trait)' }}
-        >
-          {hote ? (
-            <>
-              <button
-                type="button"
-                onClick={() => void lancerPartie()}
-                disabled={!peutLancer}
-                aria-describedby={peutLancer ? undefined : 'raison-lancement'}
-                className="btn-village px-4 py-4 text-lg"
-              >
-                Lancer la partie
-              </button>
-              {!peutLancer && (
-                <p
-                  id="raison-lancement"
-                  className="pt-2 text-center text-sm"
-                  style={{ color: assezDeMonde ? 'var(--sang)' : 'var(--papier-doux)' }}
-                >
-                  {assezDeMonde
-                    ? `La composition ne tient pas pour ${String(nombre)} joueurs : ${erreurComposition ?? ''}. Changez-la ci-dessus.`
-                    : `Il faut ${String(MIN_PLAYERS)} joueurs pour lancer — ${String(nombre)} à la table, il en manque ${String(manque)}. Partagez le code ou le lien d’invitation.`}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="py-3 text-center text-sm" style={{ color: 'var(--papier-doux)' }}>
-              {peutLancer
-                ? 'Tout est prêt — l’hôte peut lancer la partie.'
-                : assezDeMonde
-                  ? 'La composition de l’hôte ne tient pas encore : il doit la corriger avant de lancer.'
-                  : `En attente de joueurs : ${String(nombre)} à la table, ${String(MIN_PLAYERS)} au moins — il en manque ${String(manque)}.`}
-            </p>
-          )}
-        </div>
-      </motion.main>
+      {barre}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Les sièges                                                          */
+/* La frise : les fenêtres qui s'allument                              */
 /* ------------------------------------------------------------------ */
 
 /**
- * Une place à la table : le nom, le siège, et ce que la table a le droit d'en
- * dire. Rien ne trahit un rôle — il n'est même pas encore distribué.
+ * Une fenêtre du village s'allume à chaque arrivée (SPEC § 7.7). Posées sur
+ * la ligne des toits, à une place que le siège de l'arrivant fixe : deux
+ * arrivées ne s'allument pas au même endroit, et la même s'allume toujours là.
+ * Décoratif : l'arrivée se dit aussi au jeton (« a rejoint »).
  */
-function RangeeJoueur({
-  joueur,
-  estMoi,
-  arrive,
-  maintenant,
-}: {
-  joueur: PlayerInfo;
-  estMoi: boolean;
-  arrive: boolean;
-  maintenant: number;
-}) {
-  const initial = joueur.name.trim().charAt(0).toUpperCase() || '?';
-  const reprise =
-    joueur.disconnectedUntil === null
-      ? null
-      : Math.max(0, Math.ceil((joueur.disconnectedUntil - maintenant) / 1000));
-
+function FenetresAllumees({ arrivees, joueurs }: { arrivees: readonly string[]; joueurs: readonly PlayerInfo[] }) {
+  if (arrivees.length === 0) return null;
   return (
-    <motion.li
-      layout
-      transition={RESSORT_CARTE}
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-      style={{
-        background: 'var(--nuit-creux)',
-        boxShadow: estMoi
-          ? 'inset 0 0 0 1px var(--lanterne), inset 0 0 0 2px var(--nuit-creux)'
-          : 'inset 0 0 0 1px var(--arcade-trait)',
-      }}
-    >
-      <span
-        aria-hidden="true"
-        className="grid size-9 shrink-0 place-items-center rounded-full font-identite text-lg font-bold"
-        style={{ background: 'var(--nuit)', color: 'var(--lanterne)', border: '1px solid var(--arcade-trait)' }}
-      >
-        {initial}
-      </span>
-
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-bold">
-          {joueur.name}
-          {estMoi && <span style={{ color: 'var(--papier-doux)' }}> (vous)</span>}
-        </span>
-        <span className="text-[11px] font-semibold" style={{ color: 'var(--papier-doux)' }}>
-          siège {String(joueur.seat + 1)}
-        </span>
-      </span>
-
-      <span className="flex shrink-0 items-center gap-1.5">
-        {joueur.isHost && <Badge couleur="var(--lanterne)">Hôte</Badge>}
-        {arrive && <Badge couleur="var(--lune)">a rejoint</Badge>}
-        {!joueur.connected && (
-          <Badge couleur="var(--sang)">
-            Absent{reprise === null ? '' : ` · ${String(reprise)} s`}
-          </Badge>
-        )}
-      </span>
-    </motion.li>
-  );
-}
-
-/** Un badge se lit par son texte ; la couleur ne fait que l'accompagner. */
-function Badge({ couleur, children }: { couleur: string; children: ReactNode }) {
-  return (
-    <span
-      className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-[0.06em] uppercase"
-      style={{ color: couleur, border: `1px solid color-mix(in srgb, ${couleur} 45%, transparent)` }}
-    >
-      {children}
+    <span aria-hidden="true" data-fenetres="" className="pointer-events-none absolute inset-0">
+      {arrivees.map((id) => {
+        const siege = joueurs.find((joueur) => joueur.id === id)?.seat ?? 0;
+        return (
+          <span
+            key={id}
+            data-fenetre-allumee={siege}
+            style={{
+              position: 'absolute',
+              left: `${String(14 + ((siege * 29) % 72))}%`,
+              bottom: 5,
+              width: 6,
+              height: 9,
+              background: 'var(--frise-fenetre)',
+              outline: '1px solid var(--frise-trait)',
+            }}
+          />
+        );
+      })}
     </span>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* La composition                                                      */
+/* Les étapes de l'hôte                                                */
 /* ------------------------------------------------------------------ */
+
+/** « La table · La donne · Les règles » : trois cartouches cliquables, la courante pleine, les faites scellées. */
+function EtapesHote({ etape, onChoisir }: { etape: Etape; onChoisir: (etape: Etape) => void }) {
+  const rang = ETAPES.findIndex((candidate) => candidate.cle === etape);
+  return (
+    <nav aria-label="Étapes du salon" className="flex shrink-0 gap-2 px-4 pt-3 pb-1">
+      {ETAPES.map(({ cle, titre }, i) => {
+        const courante = cle === etape;
+        const faite = i < rang;
+        return (
+          <button
+            key={cle}
+            type="button"
+            aria-current={courante ? 'step' : undefined}
+            onClick={() => onChoisir(cle)}
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 px-1.5 text-[15px] leading-5"
+            style={{
+              background: courante ? 'var(--action-fond)' : 'transparent',
+              color: courante ? 'var(--action-texte)' : 'var(--encre)',
+              border: '1.5px solid var(--filet)',
+              fontWeight: courante ? 600 : 400,
+            }}
+          >
+            {faite && <Glyphe nom="a-vote" taille={16} />}
+            {titre}
+            {faite && <span className="sr-only"> (faite)</span>}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Le meuble commun                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Le titre d'un chapitre : un grand titre sur le bureau, une rubrique sur le téléphone. */
+function TitreChapitre({
+  titre,
+  aside,
+  large,
+  niveau = 2,
+}: {
+  titre: string;
+  aside?: string;
+  large: boolean;
+  niveau?: 1 | 2;
+}) {
+  const Titre = niveau === 1 ? 'h1' : 'h2';
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <Titre
+        className={large ? 'm-0' : 't-rubrique m-0'}
+        style={
+          large
+            ? { fontFamily: 'var(--font-identite)', fontSize: 36, lineHeight: '40px', fontWeight: 400 }
+            : { color: 'var(--encre-2)' }
+        }
+      >
+        {titre}
+      </Titre>
+      {aside !== undefined && <span className="t-statut">{aside}</span>}
+    </div>
+  );
+}
+
+/** Une rubrique de chapitre : petites capitales, puis un commentaire d'une ligne. */
+function Rubrique({ titre, aside, id }: { titre: string; aside?: string; id?: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2">
+      <span id={id} className="t-rubrique" style={{ color: 'var(--encre-2)' }}>
+        {titre}
+      </span>
+      {aside !== undefined && <span className="t-statut">{aside}</span>}
+    </div>
+  );
+}
+
+function majuscule(texte: string): string {
+  return texte.replace(/^./, (lettre) => lettre.toUpperCase());
+}
+
+/* ------------------------------------------------------------------ */
+/* La table : le code, les sièges                                      */
+/* ------------------------------------------------------------------ */
+
+function PanneauTable({
+  room,
+  assis,
+  playerId,
+  arrivees,
+  maintenant,
+  libres,
+  manque,
+  assezDeMonde,
+  nombre,
+  large,
+  voix,
+  onCopierCode,
+  onCopierLien,
+  avertissement,
+}: {
+  room: RoomView;
+  assis: readonly PlayerInfo[];
+  playerId: string | null;
+  arrivees: readonly string[];
+  maintenant: number;
+  libres: number;
+  manque: number;
+  assezDeMonde: boolean;
+  nombre: number;
+  large: boolean;
+  voix: Voix;
+  onCopierCode: () => void;
+  onCopierLien: () => void;
+  avertissement: ReactNode;
+}) {
+  const legende = voix.legendeEcran('salon');
+  const tirage = useReglages().tirage;
+  const cercle = large && nombre <= 12;
+  const phraseLibres = `${pluriel(libres, 'place')} libre${libres > 1 ? 's' : ''} — la table accepte jusqu'à ${String(MAX_PLAYERS)} joueurs.`;
+
+  const sieges = (
+    <Sieges
+      assis={assis}
+      playerId={playerId}
+      arrivees={arrivees}
+      maintenant={maintenant}
+      cercle={cercle}
+      tirage={tirage}
+      skin={room.options.skin}
+      voix={voix}
+      pupitre={
+        cercle ? (
+          <>
+            <p className="t-legende m-0 text-center">«&nbsp;{legende.replace(/^[«\s]+|[»\s]+$/g, '')}&nbsp;»</p>
+            {libres > 0 && <p className="t-statut m-0 text-center">{phraseLibres}</p>}
+          </>
+        ) : null
+      }
+    />
+  );
+
+  return (
+    <section className="flex flex-col gap-4" aria-label="La table">
+      <div className="flex flex-col gap-1">
+        <TitreChapitre titre="La table" large={large} niveau={1} />
+        {/* La fonction d'un code est de se recopier : gros, chasse fixe — quatre
+            lettres qui ne se lisent pas en chiffre. */}
+        <p className="t-code font-mono m-0" style={{ fontSize: large ? 40 : 32, lineHeight: large ? '48px' : '40px' }}>
+          {room.code}
+        </p>
+      </div>
+      {!cercle && <p className="t-legende m-0">«&nbsp;{legende.replace(/^[«\s]+|[»\s]+$/g, '')}&nbsp;»</p>}
+
+      <div className="flex flex-wrap gap-2">
+        <Bouton variante="secondaire" style={{ minHeight: 44 }} onClick={onCopierCode}>
+          Copier le code
+        </Bouton>
+        <Bouton variante="secondaire" style={{ minHeight: 44 }} onClick={onCopierLien}>
+          Copier le lien d’invitation
+        </Bouton>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Rubrique
+          titre="Autour de la table"
+          aside={
+            assezDeMonde
+              ? `${pluriel(nombre, 'joueur')} · prêts à lancer`
+              : `${pluriel(nombre, 'joueur')} · il en manque ${String(manque)} pour lancer`
+          }
+        />
+        {sieges}
+        {!cercle && libres > 0 && <p className="t-statut m-0 text-center">{phraseLibres}</p>}
+        <p className="t-statut m-0 max-sm:sr-only">
+          Les sièges suivent l'ordre d'arrivée, et ils fixent l'ordre du tour de parole. Une place
+          perdue en cours de route tient le temps du délai de grâce, puis se libère.
+        </p>
+      </div>
+
+      {avertissement}
+    </section>
+  );
+}
+
+/** La densité des jetons (SPEC § 5.1.1) : plus la table est pleine, plus le médaillon se resserre. */
+function densite(nombre: number): { m: number; cellule: number; colonnes: number; ecart: number; nom: number } {
+  if (nombre <= 8) return { m: 72, cellule: 114, colonnes: 3, ecart: 8, nom: 15 };
+  if (nombre <= 12) return { m: 60, cellule: 85, colonnes: 4, ecart: 6, nom: 15 };
+  return { m: 48, cellule: 68, colonnes: 5, ecart: 4, nom: 14 };
+}
+
+function Sieges({
+  assis,
+  playerId,
+  arrivees,
+  maintenant,
+  cercle,
+  tirage,
+  skin,
+  voix,
+  pupitre,
+}: {
+  assis: readonly PlayerInfo[];
+  playerId: string | null;
+  arrivees: readonly string[];
+  maintenant: number;
+  cercle: boolean;
+  tirage: 'papier' | 'cuivre';
+  skin: string;
+  voix: Voix;
+  pupitre: ReactNode;
+}) {
+  const nombre = assis.length;
+  const etiquette = `Autour de la table, ${pluriel(nombre, 'joueur')}`;
+
+  if (cercle) {
+    // Le cercle du bureau : « moi » à six heures, les autres dans l'ordre des
+    // sièges, tous les 360 / max(n, 6) degrés ; le pupitre au centre.
+    const m = 56;
+    const largeur = 84;
+    const lx = 400;
+    const ly = 540;
+    const [cx, cy, rx, ry] = [lx / 2, ly / 2, 150, 210] as const;
+    const moiRang = Math.max(
+      0,
+      assis.findIndex((joueur) => joueur.id === playerId),
+    );
+    const pas = 360 / Math.max(nombre, MIN_PLAYERS);
+    return (
+      <div className="relative mx-auto" style={{ width: lx, height: ly }} data-cercle="">
+        <ul aria-label={etiquette} className="m-0 list-none p-0">
+          {assis.map((joueur, i) => {
+            const theta = ((90 + (i - moiRang) * pas) * Math.PI) / 180;
+            const x = cx + rx * Math.cos(theta);
+            const y = cy + ry * Math.sin(theta);
+            return (
+              <Jeton
+                key={joueur.id}
+                joueur={joueur}
+                estMoi={joueur.id === playerId}
+                arrive={arrivees.includes(joueur.id)}
+                maintenant={maintenant}
+                m={m}
+                largeur={largeur}
+                nomPx={16}
+                tirage={tirage}
+                skin={skin}
+                voix={voix}
+                style={{ position: 'absolute', left: x - largeur / 2, top: y - (m + 16) / 2 - 4 }}
+              />
+            );
+          })}
+          {Array.from({ length: Math.max(0, MIN_PLAYERS - nombre) }, (_, k) => {
+            const i = nombre + k;
+            const theta = ((90 + (i - moiRang) * pas) * Math.PI) / 180;
+            const x = cx + rx * Math.cos(theta);
+            const y = cy + ry * Math.sin(theta);
+            return (
+              <PlaceLibre
+                key={`libre-${String(k)}`}
+                rang={i + 1}
+                m={m}
+                nomPx={16}
+                style={{ position: 'absolute', width: largeur, left: x - largeur / 2, top: y - (m + 16) / 2 - 4 }}
+              />
+            );
+          })}
+        </ul>
+        <Cuvette className="absolute top-1/2 left-1/2 flex h-32 w-60 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-2 px-4">
+          {pupitre}
+        </Cuvette>
+      </div>
+    );
+  }
+
+  const d = densite(Math.max(nombre, 1));
+  // Sous six, les places qui manquent encore se montrent : la table se dresse.
+  const vides = Math.max(0, MIN_PLAYERS - nombre);
+  return (
+    <ul
+      aria-label={etiquette}
+      className="m-0 grid list-none p-0"
+      style={{
+        gridTemplateColumns: `repeat(${String(d.colonnes)}, minmax(0, 1fr))`,
+        gap: d.ecart,
+      }}
+    >
+      {assis.map((joueur) => (
+        <Jeton
+          key={joueur.id}
+          joueur={joueur}
+          estMoi={joueur.id === playerId}
+          arrive={arrivees.includes(joueur.id)}
+          maintenant={maintenant}
+          m={d.m}
+          largeur={d.cellule}
+          nomPx={d.nom}
+          tirage={tirage}
+          skin={skin}
+          voix={voix}
+        />
+      ))}
+      {Array.from({ length: vides }, (_, i) => (
+        <PlaceLibre key={`libre-${String(i)}`} rang={nombre + i + 1} m={d.m} nomPx={d.nom} />
+      ))}
+    </ul>
+  );
+}
+
+/** Le numéro d'ordre d'une place en toutes lettres : « Sixième place, libre ». */
+const ORDINAUX = ['Première', 'Deuxième', 'Troisième', 'Quatrième', 'Cinquième', 'Sixième'];
+
+function PlaceLibre({ rang, m, nomPx, style }: { rang: number; m: number; nomPx: number; style?: CSSProperties }) {
+  const ordinal = ORDINAUX[rang - 1] ?? `${String(rang)}ᵉ`;
+  return (
+    <li aria-label={`${ordinal} place, libre`} className="flex flex-col items-center" data-place-libre="" style={style}>
+      <span
+        aria-hidden="true"
+        className="block rounded-full"
+        style={{ width: m, height: m, margin: '4px 0', border: '1.4px dashed var(--encre-2)' }}
+      />
+      <span aria-hidden="true" className="block text-center" style={{ fontSize: nomPx, lineHeight: '20px', color: 'var(--encre-2)' }}>
+        {`${String(rang)}ᵉ place`}
+      </span>
+      <span aria-hidden="true" className="t-statut block h-4 text-center">
+        libre
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Un jeton à sa place (SPEC § 5.1) : le médaillon, son couvre-chef — celui du
+ * siège, public et stable, sans rapport avec le rôle —, le nom, et **un seul
+ * mot** d'état. Rien ne trahit un rôle : il n'est même pas encore distribué.
+ *
+ * Priorité du mot : absent·e > a rejoint > vous · hôte > vous > hôte. Tout
+ * est dit aux lecteurs d'écran : le siège, le couvre-chef, l'état.
+ */
+function Jeton({
+  joueur,
+  estMoi,
+  arrive,
+  maintenant,
+  m,
+  largeur,
+  nomPx,
+  tirage,
+  skin,
+  voix,
+  style,
+}: {
+  joueur: PlayerInfo;
+  estMoi: boolean;
+  arrive: boolean;
+  maintenant: number;
+  m: number;
+  largeur: number;
+  nomPx: number;
+  tirage: 'papier' | 'cuivre';
+  skin: string;
+  voix: Voix;
+  style?: CSSProperties;
+}) {
+  const reprise =
+    joueur.disconnectedUntil === null
+      ? null
+      : Math.max(0, Math.ceil((joueur.disconnectedUntil - maintenant) / 1000));
+  const absent = !joueur.connected;
+
+  let statut = '';
+  if (absent) statut = reprise === null || reprise === 0 ? 'absent·e' : `absent·e · ${String(reprise)} s`;
+  else if (arrive) statut = 'a rejoint';
+  else if (estMoi) statut = joueur.isHost ? 'vous · hôte' : 'vous';
+  else if (joueur.isHost) statut = 'hôte';
+  const fort = arrive && !absent;
+
+  const S = m + 16;
+  const disque = m - 8;
+  const buste = 0.75 * m;
+  const cadre = m + 14;
+
+  return (
+    <li
+      className="flex flex-col items-center"
+      style={{ width: largeur, ...style }}
+      data-jeton={joueur.seat + 1}
+      data-moi={estMoi ? '' : undefined}
+    >
+      <span aria-hidden="true" className="relative block" style={{ width: S, height: S, margin: '-4px 0' }}>
+        {estMoi && (
+          <>
+            {/* Le cadre « moi » : deux filets, 1,5 puis 0,75, à 2 px d'écart. */}
+            <span
+              className="absolute block"
+              style={{ left: (S - cadre) / 2, top: (S - cadre) / 2, width: cadre, height: cadre, border: '1.5px solid var(--encre)' }}
+            />
+            <span
+              className="absolute block"
+              style={{
+                left: (S - cadre) / 2 + 2.75,
+                top: (S - cadre) / 2 + 2.75,
+                width: cadre - 5.5,
+                height: cadre - 5.5,
+                border: '0.75px solid var(--encre)',
+              }}
+            />
+          </>
+        )}
+        <span
+          className="absolute block rounded-full"
+          style={{ left: 8, top: 8, width: m, height: m, border: '1.5px solid var(--encre)', background: 'var(--surface)' }}
+        />
+        <span
+          className={`absolute block overflow-hidden rounded-full ${absent ? 'hach-x' : 'hach-1'}`}
+          style={{
+            left: 12,
+            top: 12,
+            width: disque,
+            height: disque,
+            backgroundColor: 'var(--surface)',
+            border: '0.75px solid var(--encre)',
+          }}
+        >
+          {absent ? (
+            <span
+              className="absolute flex items-center justify-center"
+              style={{
+                left: (disque - 0.36 * m - 4) / 2,
+                top: (disque - 0.36 * m - 4) / 2,
+                width: 0.36 * m + 4,
+                height: 0.36 * m + 4,
+                background: 'var(--surface)',
+              }}
+            >
+              <Glyphe nom="absent" taille={Math.round(0.36 * m)} />
+            </span>
+          ) : (
+            <span
+              className="absolute block"
+              style={{ left: (disque - buste) / 2, top: disque / 2 - (buste * 22) / 48, width: buste, height: buste }}
+            >
+              <CouvreChef numero={joueur.seat + 1} taille={m >= 60 ? 72 : 40} skin={skin} tirage={tirage} className="size-full" />
+            </span>
+          )}
+        </span>
+      </span>
+      <span
+        className="block truncate text-center"
+        style={{
+          maxWidth: largeur,
+          fontSize: nomPx,
+          lineHeight: nomPx >= 15 ? '20px' : '16px',
+          fontWeight: estMoi ? 700 : 600,
+        }}
+      >
+        {joueur.name}
+      </span>
+      <span
+        className="t-statut block h-4 text-center whitespace-nowrap"
+        style={{ color: fort ? 'var(--encre)' : undefined, fontWeight: fort ? 600 : undefined }}
+      >
+        {statut}
+      </span>
+      <span className="sr-only">siège {joueur.seat + 1}</span>
+      <span className="sr-only">coiffé : {voix.nomCouvreChef(joueur.seat + 1)}</span>
+    </li>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* La donne                                                            */
+/* ------------------------------------------------------------------ */
+
+/** La composition qui sera jouée à ce nombre de joueurs : celle du moteur ou celle de l'hôte. */
+function compositionEffective(options: GameOptions, nombre: number): { loups: number; roles: readonly ChoosableRoleId[] } {
+  return options.auto ? autoComposition(nombre) : { loups: options.loups, roles: options.roles };
+}
+
+function PanneauDonne({
+  options,
+  nombre,
+  editable,
+  voix,
+  avecUnivers,
+  bas,
+}: {
+  options: GameOptions;
+  nombre: number;
+  editable: boolean;
+  voix: Voix;
+  avecUnivers: boolean;
+  bas: ReactNode;
+}) {
+  const large = useEstLarge();
+  return (
+    <section className="flex flex-col gap-4" aria-label="La donne" data-testid="donne-salon">
+      <div className="flex flex-col gap-1">
+        <TitreChapitre titre="La donne" large={large} />
+        <span className="t-statut">publique pour toute la table — seules les cartes sont secrètes</span>
+      </div>
+      {avecUnivers && <ChoixSkin options={options} editable={editable} />}
+      <Composition options={options} nombre={nombre} editable={editable} voix={voix} />
+      {bas}
+    </section>
+  );
+}
+
+/** Le résumé d'une composition, en petites vignettes de rôle (décor : la phrase le dit en toutes lettres). */
+function Vignettes({ options, nombre }: { options: GameOptions; nombre: number }) {
+  const { loups, roles } = compositionEffective(options, nombre);
+  return (
+    <ul aria-hidden="true" className="m-0 flex list-none flex-wrap gap-2 p-0" data-vignettes="">
+      <Vignette role="loup" fois={loups} />
+      {roles.map((role) => (
+        <Vignette key={role} role={role} />
+      ))}
+    </ul>
+  );
+}
+
+function Vignette({ role, fois }: { role: ChoosableRoleId | 'loup'; fois?: number }) {
+  return (
+    <li
+      className="relative flex flex-col items-center justify-center"
+      style={{ width: 46, height: 64, background: 'var(--creux)', border: '0.75px solid var(--filet-doux)', color: role === 'loup' || role === 'loupBlanc' ? 'var(--camp-meute)' : 'var(--encre)' }}
+    >
+      <SymboleRole role={role} taille={32} decoratif />
+      {fois !== undefined && fois > 1 && (
+        <span className="absolute bottom-0.5 text-[14px] leading-4 font-semibold" style={{ color: 'var(--camp-meute)' }}>
+          ×{fois}
+        </span>
+      )}
+    </li>
+  );
+}
+
+/** « 2 loups · 6 rôles / 4 Villageois·e / pour 12 joueurs » : le résumé de la barre, étape de la donne. */
+function ResumeDonne({ options, nombre, voix }: { options: GameOptions; nombre: number; voix: Voix }) {
+  const { loups, roles } = compositionEffective(options, nombre);
+  const meute = wolvesIn(loups, roles);
+  const speciaux = roles.filter((role) => role !== 'loupBlanc').length;
+  const simples = Math.max(0, nombre - meute - speciaux);
+  return (
+    <div className="flex min-w-0 flex-1 flex-col justify-center" style={{ fontVariantNumeric: 'tabular-nums lining-nums' }}>
+      <span className="t-statut" style={{ color: 'var(--encre)', fontWeight: 600 }}>
+        {voix.compteLoups(meute)} · {pluriel(speciaux, 'rôle')}
+      </span>
+      <span className="t-statut" style={{ color: 'var(--encre)' }}>
+        {simples} {voix.nomRole('villageois')}
+      </span>
+      <span className="t-statut">pour {pluriel(nombre, 'joueur')}</span>
+    </div>
+  );
+}
+
+/** Le récapitulatif, dernière étape : ce que la table va jouer, dit une dernière fois avant de lancer. */
+function Recap({
+  options,
+  nombre,
+  voix,
+  aviser,
+}: {
+  options: GameOptions;
+  nombre: number;
+  voix: Voix;
+  aviser: ReactNode;
+}) {
+  const { loups, roles } = compositionEffective(options, nombre);
+  const charge = peauDuSkin(options.skin).charge;
+  const secondes = (valeur: number): string =>
+    valeur >= 120 && valeur % 60 === 0 ? `${String(valeur / 60)} minutes` : `${String(valeur)} secondes`;
+  const lignes: [string, string][] = [
+    ['La donne', `${phraseComposition(voix, loups, roles)} — les autres joueurs sont de simples ${voix.nomRole('villageois')}.`],
+    [
+      `Le ${charge}`,
+      !options.capitaine
+        ? 'Pas de charge à cette table.'
+        : options.capitaineAvantNuit1
+          ? 'Élu avant la première nuit.'
+          : 'Élu au matin du premier jour.',
+    ],
+    ['Minuteries', `Nuit : ${secondes(options.tempsNuit)} par étape. Jour : ${secondes(options.tempsJour)}.`],
+  ];
+  return (
+    <section className="flex flex-col gap-2" aria-label="Récapitulatif" data-testid="recap-salon">
+      <Rubrique titre="Récapitulatif" aside="réglé par vous" />
+      <dl className="m-0 flex flex-col gap-1.5">
+        {lignes.map(([terme, definition]) => (
+          <div key={terme} className="flex gap-3">
+            <dt className="t-rubrique w-24 flex-none" style={{ color: 'var(--encre-2)' }}>
+              {terme}
+            </dt>
+            <dd className="m-0 min-w-0 flex-1 text-sm leading-5">{definition}</dd>
+          </div>
+        ))}
+      </dl>
+      {aviser}
+    </section>
+  );
+}
 
 /**
  * Qui chasse la nuit : le mode automatique, ou la main de l'hôte.
@@ -439,13 +1068,9 @@ function Composition({
   const reference = autoComposition(nombre);
 
   return (
-    <fieldset className="border-0 p-0">
-      <legend className="flex flex-wrap items-baseline gap-2 pb-2">
-        <span className="text-sm font-bold">La composition</span>
-        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
-          publique pour toute la table — seules les cartes sont secrètes
-        </span>
-      </legend>
+    <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+      <legend className="sr-only">La composition</legend>
+      <Vignettes options={options} nombre={nombre} />
 
       <Interrupteur
         id="auto"
@@ -454,37 +1079,33 @@ function Composition({
         checked={options.auto}
         editable={editable}
         onToggle={(auto) => void reglerOptions({ auto })}
+        separe={false}
       />
 
       {options.auto ? (
-        <p className="mt-2 rounded-lg px-3 py-2.5 text-sm" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
+        <p className="m-0 text-sm leading-5">
           Pour {String(nombre)} joueur{nombre > 1 ? 's' : ''} aujourd'hui :{' '}
           <span className="font-semibold">{phraseComposition(voix, reference.loups, reference.roles)}</span>
-          <span className="block text-xs" style={{ color: 'var(--papier-doux)' }}>
-            recalculée au nombre réel au lancement.
-          </span>
+          <span className="t-statut block">recalculée au nombre réel au lancement.</span>
         </p>
       ) : (
-        <div className="mt-2 flex flex-col gap-4">
-          <p className="rounded-lg px-3 py-2.5 text-sm" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
+        <div className="flex flex-col gap-3">
+          <p className="m-0 text-sm leading-5">
             Composition réglée :{' '}
             <span className="font-semibold" data-testid="composition-reglee">
               {phraseComposition(voix, options.loups, options.roles)}
             </span>
-            <span className="block text-xs" style={{ color: 'var(--papier-doux)' }}>
-              les autres joueurs sont de simples {voix.nomRole('villageois')}.
-            </span>
+            <span className="t-statut block">les autres joueurs sont de simples {voix.nomRole('villageois')}.</span>
           </p>
           {/*
             Les suggestions du moteur : la référence, une chasse, un village
-            outillé. Des boutons cochables plutôt que des cases : on choisit
+            outillé. Des cartouches cochables plutôt que des cases : on choisit
             une composition, on n'active pas une option.
           */}
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Compositions suggérées">
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Compositions suggérées">
             {actives.map((suggestion) => {
               const nomSuggestion = suggestionsDuSkin[brutes.indexOf(suggestion)];
-              const active =
-                options.loups === suggestion.loups && memeRoles(options.roles, suggestion.roles);
+              const active = options.loups === suggestion.loups && memeRoles(options.roles, suggestion.roles);
               return (
                 <button
                   key={phraseComposition(voix, suggestion.loups, suggestion.roles)}
@@ -492,108 +1113,101 @@ function Composition({
                   role="radio"
                   aria-checked={active}
                   disabled={!editable}
-                  title={nomSuggestion?.note}
                   onClick={() => {
                     if (!editable || active) return;
                     void reglerOptions({ auto: false, loups: suggestion.loups, roles: [...suggestion.roles] });
                   }}
-                  className="min-h-11 rounded-lg px-3 py-1.5 text-sm font-semibold transition"
+                  className="flex min-h-11 min-w-[9rem] flex-1 flex-col items-start px-2.5 py-2 text-left"
                   style={{
                     cursor: editable ? 'pointer' : 'default',
-                    background: active ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
-                    boxShadow: active
-                      ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
-                      : 'inset 0 0 0 1px var(--arcade-trait)',
-                    color: active ? 'var(--papier)' : 'var(--papier-doux)',
+                    background: active ? 'var(--surface)' : 'transparent',
+                    border: active ? '1.5px solid var(--filet)' : '1px solid var(--filet-doux)',
+                    boxShadow: active ? 'inset 0 0 0 2px var(--surface), inset 0 0 0 2.75px var(--filet)' : undefined,
+                    color: 'var(--encre)',
                   }}
                 >
-                  {nomSuggestion !== undefined && (
-                    <span className="block text-[11px] font-bold tracking-[0.06em] uppercase">
-                      {nomSuggestion.nom}
-                    </span>
-                  )}
-                  {phraseComposition(voix, suggestion.loups, suggestion.roles)}
+                  {nomSuggestion !== undefined && <span className="t-rubrique">{nomSuggestion.nom}</span>}
+                  {nomSuggestion !== undefined && <span className="t-statut">{nomSuggestion.note}</span>}
+                  <span className="text-[13px] leading-4">{phraseComposition(voix, suggestion.loups, suggestion.roles)}</span>
                 </button>
               );
             })}
-            <button
-              type="button"
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Bouton
+              variante="secondaire"
               disabled={!editable}
+              style={{ minHeight: 44, fontSize: 16 }}
+              title="Le moteur tire des loups et des rôles dans des bornes cohérentes"
               onClick={() => {
                 if (!editable) return;
                 void reglerOptions({ auto: false, ...randomComposition(nombre, hasard) });
               }}
-              className="btn-voisin min-h-11 px-3 py-1.5 text-sm"
-              title="Le moteur tire des loups et des rôles dans des bornes cohérentes"
             >
               Au hasard
-            </button>
-            <button
-              type="button"
+            </Bouton>
+            <Bouton
+              variante="secondaire"
               disabled={!editable}
+              style={{ minHeight: 44, fontSize: 16, lineHeight: '18px' }}
+              title={`Comme « Au hasard », mais le tirage peut aussi sortir des rôles optionnels (dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.ancien)} joueurs ; ${voix.nomRole('loupBlanc')} dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.loupBlanc)})`}
               onClick={() => {
                 if (!editable) return;
                 void reglerOptions({ auto: false, ...randomComposition(nombre, hasard, { optionnels: true }) });
               }}
-              className="btn-voisin min-h-11 px-3 py-1.5 text-sm"
-              title={`Comme « Au hasard », mais le tirage peut aussi sortir des rôles optionnels (dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.ancien)} joueurs ; ${voix.nomRole('loupBlanc')} dès ${String(OPTIONAL_ROLE_MIN_PLAYERS.loupBlanc)})`}
             >
               Au hasard, rôles optionnels compris
-            </button>
+            </Bouton>
           </div>
 
           {/*
             La main mise : les loups au compteur, les rôles un par un. Un de
             chaque au plus — le reste du village prend la carte du Villageois.
           */}
-          <div className="grid gap-3 rounded-lg p-3" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
+          <div className="flex flex-col gap-2 p-2" style={{ border: '1px solid var(--filet-doux)' }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span id="loups-hint" className="text-sm font-bold">
-                {voix.motLoups().replace(/^./, (lettre) => lettre.toUpperCase())}
-                <span className="pl-2 text-xs font-normal" style={{ color: 'var(--papier-doux)' }}>
-                  jamais autant que les autres
+              <span id="loups-hint" className="flex items-center gap-2">
+                <span style={{ color: 'var(--camp-meute)' }}>
+                  <SymboleRole role="loup" taille={24} decoratif />
+                </span>
+                <span>
+                  <span className="block text-[15px] leading-5 font-semibold" style={{ color: 'var(--camp-meute)' }}>
+                    {majuscule(voix.motLoups())}
+                  </span>
+                  <span className="t-statut block">jamais autant que les autres</span>
                 </span>
               </span>
-              <ChampNombre
+              <PasAPas
                 id="loups"
                 label={`Nombre de ${voix.motLoups()}`}
                 valeur={options.loups}
                 min={1}
                 max={Math.max(1, Math.floor((nombre - 1) / 2))}
+                pas={1}
+                nomPas="un loup"
+                largeur={144}
                 editable={editable}
                 onCommit={(loups) => void reglerOptions({ loups })}
               />
             </div>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rôles spéciaux">
-              {SPECIAL_ROLES.map((role) => {
-                const retenu = options.roles.includes(role);
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    aria-pressed={retenu}
-                    disabled={!editable}
-                    onClick={() => {
-                      if (!editable) return;
-                      const roles = retenu
-                        ? options.roles.filter((pris) => pris !== role)
-                        : [...options.roles, role];
-                      void reglerOptions({ roles });
-                    }}
-                    className="min-h-11 rounded-lg px-3 py-1.5 text-sm font-semibold transition"
-                    style={{
-                      cursor: editable ? 'pointer' : 'default',
-                      background: retenu ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
-                      boxShadow: retenu
-                        ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
-                        : 'inset 0 0 0 1px var(--arcade-trait)',
-                      color: retenu ? 'var(--papier)' : 'var(--papier-doux)',
-                    }}
-                  >
-                    {voix.nomRole(role)}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Rôles spéciaux">
+              {SPECIAL_ROLES.map((role) => (
+                <CarteAcocher
+                  key={role}
+                  role={role}
+                  retenu={options.roles.includes(role)}
+                  editable={editable}
+                  voix={voix}
+                  onToggle={() => {
+                    if (!editable) return;
+                    const roles = options.roles.includes(role)
+                      ? options.roles.filter((pris) => pris !== role)
+                      : [...options.roles, role];
+                    void reglerOptions({ roles });
+                  }}
+                />
+              ))}
+              <CarteVillage nombre={nombre} options={options} voix={voix} />
             </div>
             <RolesOptionnels options={options} nombre={nombre} editable={editable} voix={voix} />
           </div>
@@ -603,11 +1217,71 @@ function Composition({
   );
 }
 
+/** Une petite carte de rôle à cocher : le symbole, le nom, et — pour les optionnels — le mot « optionnel ». */
+function CarteAcocher({
+  role,
+  retenu,
+  editable,
+  voix,
+  onToggle,
+  optionnel = false,
+}: {
+  role: ChoosableRoleId;
+  retenu: boolean;
+  editable: boolean;
+  voix: Voix;
+  onToggle: () => void;
+  optionnel?: boolean;
+}) {
+  const meute = role === 'loupBlanc';
+  const couleur = retenu ? 'var(--action-texte)' : meute ? 'var(--camp-meute)' : 'var(--encre)';
+  return (
+    <button
+      type="button"
+      aria-pressed={retenu}
+      disabled={!editable}
+      onClick={onToggle}
+      className="flex min-h-[84px] min-w-0 flex-col items-start gap-0.5 px-1.5 pt-1.5 pb-1 text-left"
+      style={{
+        cursor: editable ? 'pointer' : 'default',
+        background: retenu ? 'var(--action-fond)' : 'transparent',
+        border: retenu ? '1.5px solid var(--filet)' : '1px solid var(--filet-doux)',
+        color: couleur,
+      }}
+    >
+      <SymboleRole role={role} taille={24} decoratif />
+      <span className="block text-[14px] leading-4 font-semibold" style={{ overflowWrap: 'anywhere' }}>
+        {majuscule(voix.nomRole(role))}
+      </span>
+      {optionnel ? <span className="t-statut" style={{ color: retenu ? 'var(--action-texte)' : undefined }}>optionnel</span> : null}
+    </button>
+  );
+}
+
+/** La carte du reste du village : pas un choix, un compte (le Villageois prend les sièges que personne n'a pris). */
+function CarteVillage({ nombre, options, voix }: { nombre: number; options: GameOptions; voix: Voix }) {
+  const meute = wolvesIn(options.loups, options.roles);
+  const simples = Math.max(0, nombre - meute - options.roles.filter((role) => role !== 'loupBlanc').length);
+  return (
+    <div
+      className="flex min-h-[84px] min-w-0 flex-col items-start gap-0.5 px-1.5 pt-1.5 pb-1"
+      style={{ background: 'var(--creux)' }}
+      data-carte-village=""
+    >
+      <SymboleRole role="villageois" taille={24} decoratif />
+      <span className="block text-[14px] leading-4 font-semibold" style={{ overflowWrap: 'anywhere' }}>
+        {voix.nomRole('villageois')}
+      </span>
+      <span className="t-statut">× {simples}, le reste</span>
+    </div>
+  );
+}
+
 /**
  * La seconde rangée : les rôles optionnels de la v2 (R90). Hors de la
  * référence et des suggestions, l'hôte les coche à toute table — le moteur
  * n'en refuse que ce que R13 refuse, et le bouton de lancement dit pourquoi.
- * Sous le seuil conseillé (R100), la carte avertit sans interdire.
+ * Sous le seuil conseillé (R100), la table avertit sans interdire.
  */
 function RolesOptionnels({
   options,
@@ -620,23 +1294,22 @@ function RolesOptionnels({
   editable: boolean;
   voix: Voix;
 }) {
+  const sousSeuil = OPTIONAL_ROLES.filter((role) => nombre < OPTIONAL_ROLE_MIN_PLAYERS[role]);
   return (
-    <div className="flex flex-col gap-2" data-testid="roles-optionnels">
-      <p className="text-sm font-bold">
+    <div className="flex flex-col gap-1.5" data-testid="roles-optionnels">
+      <p className="m-0 text-sm font-bold">
         Rôles optionnels
-        <span className="pl-2 text-xs font-normal" style={{ color: 'var(--papier-doux)' }}>
-          pour aller plus loin — jamais dans la composition automatique
-        </span>
+        <span className="t-statut pl-2 font-normal">pour aller plus loin — jamais dans la composition automatique</span>
       </p>
-      <div className="grid gap-1.5 sm:grid-cols-2" role="group" aria-label="Rôles optionnels">
+      <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Rôles optionnels">
         {OPTIONAL_ROLES.map((role) => (
-          <CaseRoleOptionnel
+          <CarteAcocher
             key={role}
             role={role}
             retenu={options.roles.includes(role)}
-            nombre={nombre}
             editable={editable}
             voix={voix}
+            optionnel
             onToggle={() => {
               if (!editable) return;
               const roles = options.roles.includes(role)
@@ -647,68 +1320,59 @@ function RolesOptionnels({
           />
         ))}
       </div>
+      {/* Le seuil conseillé (R100) : dit sans interdire, rôle par rôle. */}
+      {sousSeuil.map((role) => (
+        <SeuilConseille key={role} role={role} nombre={nombre} voix={voix} />
+      ))}
     </div>
   );
 }
 
-function CaseRoleOptionnel({
-  role,
-  retenu,
-  nombre,
-  editable,
-  voix,
-  onToggle,
-}: {
-  role: OptionalRoleId;
-  retenu: boolean;
-  nombre: number;
-  editable: boolean;
-  voix: Voix;
-  onToggle: () => void;
-}) {
+function SeuilConseille({ role, nombre, voix }: { role: OptionalRoleId; nombre: number; voix: Voix }) {
   const seuil = OPTIONAL_ROLE_MIN_PLAYERS[role];
-  const sousSeuil = nombre < seuil;
   return (
-    <button
-      type="button"
-      aria-pressed={retenu}
-      disabled={!editable}
-      onClick={onToggle}
-      className="flex min-h-11 gap-3 rounded-lg p-3 text-left transition"
-      style={{
-        cursor: editable ? 'pointer' : 'default',
-        background: retenu ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
-        boxShadow: retenu
-          ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
-          : 'inset 0 0 0 1px var(--arcade-trait)',
-        color: retenu ? 'var(--papier)' : 'var(--papier-doux)',
-      }}
-    >
-      <span className="shrink-0">
-        <SymboleRole role={role} taille={28} />
-      </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-semibold">{majuscule(voix.nomRole(role))}</span>
-        <span className="text-xs leading-snug font-normal">{voix.descriptionRole(role)}</span>
-        {sousSeuil ? (
-          <span
-            className="text-[11px] font-semibold"
-            style={{ color: 'var(--lanterne)' }}
-            data-testid={`seuil-${role}`}
-          >
-            Conseillé dès {String(seuil)} joueurs — la table en compte {String(nombre)}.
-          </span>
-        ) : (
-          <span className="text-[11px] font-normal">Conseillé dès {String(seuil)} joueurs.</span>
-        )}
-      </span>
-    </button>
+    <p className="t-statut m-0" data-testid={`seuil-${role}`} style={{ color: 'var(--encre)' }}>
+      {majuscule(voix.nomRole(role))} : Conseillé dès {String(seuil)} joueurs — la table en compte {String(nombre)}.
+    </p>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Les minuteries                                                      */
+/* Les règles : minuteries, maison, univers                            */
 /* ------------------------------------------------------------------ */
+
+function PanneauRegles({
+  options,
+  nombre,
+  editable,
+  voix,
+  avecUnivers,
+  recap,
+}: {
+  options: GameOptions;
+  nombre: number;
+  editable: boolean;
+  voix: Voix;
+  avecUnivers: boolean;
+  recap: ReactNode;
+}) {
+  const large = useEstLarge();
+  return (
+    <section className="flex flex-col gap-5" aria-label="Les règles de la table" data-testid="regles-salon">
+      <TitreChapitre titre="Les règles" aside={editable ? 'vous décidez' : 'réglées par l’hôte'} large={large} />
+      {avecUnivers && <ChoixSkin options={options} editable={editable} />}
+      <Minuteries options={options} editable={editable} />
+      <Interrupteurs options={options} editable={editable} voix={voix} />
+      {!editable && (
+        <p className="t-statut m-0">
+          Seul l'hôte peut modifier les règles. Elles se figent au lancement de la partie et ne bougent
+          plus jusqu'au bout de la nuit.
+        </p>
+      )}
+      {recap}
+    </section>
+  );
+}
 
 /**
  * Les minuteries, bornées par le moteur.
@@ -720,14 +1384,11 @@ function CaseRoleOptionnel({
  */
 function Minuteries({ options, editable }: { options: GameOptions; editable: boolean }) {
   return (
-    <fieldset className="border-0 p-0">
-      <legend className="flex flex-wrap items-baseline gap-2 pb-2">
-        <span className="text-sm font-bold">Les minuteries</span>
-        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
-          la nuit compte ses étapes, le jour son débat et son vote
-        </span>
+    <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+      <legend className="p-0">
+        <Rubrique titre="Les minuteries" aside="la nuit compte ses étapes, le jour son débat et son vote" />
       </legend>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 max-[22rem]:grid-cols-1">
         <BrancheMinuteur
           id="tempsNuit"
           label="Temps de la nuit"
@@ -735,6 +1396,7 @@ function Minuteries({ options, editable }: { options: GameOptions; editable: boo
           valeur={options.tempsNuit}
           min={NIGHT_SECONDS.min}
           max={NIGHT_SECONDS.max}
+          pas={5}
           editable={editable}
           onCommit={(tempsNuit) => void reglerOptions({ tempsNuit })}
         />
@@ -745,6 +1407,7 @@ function Minuteries({ options, editable }: { options: GameOptions; editable: boo
           valeur={options.tempsJour}
           min={DAY_SECONDS.min}
           max={DAY_SECONDS.max}
+          pas={15}
           editable={editable}
           onCommit={(tempsJour) => void reglerOptions({ tempsJour })}
         />
@@ -760,6 +1423,7 @@ function BrancheMinuteur({
   valeur,
   min,
   max,
+  pas,
   editable,
   onCommit,
 }: {
@@ -769,23 +1433,25 @@ function BrancheMinuteur({
   valeur: number;
   min: number;
   max: number;
+  pas: number;
   editable: boolean;
   onCommit: (valeur: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg p-3" style={{ boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}>
-      <span id={`${id}-label`} className="text-sm font-bold">
+    <div className="flex min-w-0 flex-col gap-1">
+      <span id={`${id}-label`} className="text-[15px] leading-5 font-semibold">
         {label}
-        <span className="block text-xs font-normal" style={{ color: 'var(--papier-doux)' }}>
-          {lead}
-        </span>
       </span>
-      <ChampNombre
+      <span className="t-statut block min-h-8">{lead}</span>
+      <PasAPas
         id={id}
         label={label}
         valeur={valeur}
         min={min}
         max={max}
+        pas={pas}
+        nomPas={`${String(pas)} secondes`}
+        unite="s"
         editable={editable}
         onCommit={onCommit}
         decritPar={`${id}-label`}
@@ -795,18 +1461,23 @@ function BrancheMinuteur({
 }
 
 /**
- * Un nombre borné, patient avec la frappe.
+ * Un nombre borné, pas à pas : « − » et « + » de 48, et au milieu un champ
+ * patient avec la frappe.
  *
  * La valeur affichée est un brouillon tant que le champ a le focus : ce
  * n'est qu'en le quittant — ou à l'appui sur Entrée — que la valeur bornée
  * part au serveur. Effacer pour retaper ne doit envoyer rien du tout.
  */
-function ChampNombre({
+function PasAPas({
   id,
   label,
   valeur,
   min,
   max,
+  pas,
+  nomPas,
+  unite,
+  largeur,
   editable,
   onCommit,
   decritPar,
@@ -816,61 +1487,107 @@ function ChampNombre({
   valeur: number;
   min: number;
   max: number;
+  pas: number;
+  nomPas: string;
+  unite?: string;
+  largeur?: number;
   editable: boolean;
   onCommit: (valeur: number) => void;
   decritPar?: string;
 }) {
   const [brouillon, setBrouillon] = useState<string | null>(null);
   const affiche = brouillon ?? String(valeur);
+  const borne = (n: number): number => Math.min(max, Math.max(min, n));
 
   const valider = () => {
     if (brouillon === null) return;
     setBrouillon(null);
     const entier = Math.round(Number.parseInt(brouillon, 10));
     if (Number.isNaN(entier) || entier === valeur) return;
-    onCommit(Math.min(max, Math.max(min, entier)));
+    onCommit(borne(entier));
+  };
+
+  const bouton = (sens: -1 | 1) => {
+    const eteint = !editable || (sens < 0 ? valeur <= min : valeur >= max);
+    return (
+      <button
+        type="button"
+        disabled={eteint}
+        aria-label={`${label} : ${sens < 0 ? 'moins' : 'plus'} ${nomPas}`}
+        onClick={() => {
+          setBrouillon(null);
+          onCommit(borne(valeur + sens * pas));
+        }}
+        className="grid size-12 flex-none place-items-center p-0"
+        style={{
+          background: 'transparent',
+          color: eteint ? 'var(--encre-2)' : 'var(--encre)',
+          border: eteint ? '1.5px dashed var(--filet-doux)' : '1.5px solid var(--filet)',
+          cursor: eteint ? 'default' : 'pointer',
+        }}
+      >
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
+          <path d={sens < 0 ? 'M6 12h12' : 'M6 12h12M12 6v12'} />
+        </svg>
+      </button>
+    );
   };
 
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <input
-        type="number"
-        inputMode="numeric"
-        id={id}
-        value={affiche}
-        min={min}
-        max={max}
-        step={5}
-        disabled={!editable}
-        aria-label={label}
-        aria-describedby={decritPar}
-        onChange={(event) => {
-          if (editable) setBrouillon(event.target.value);
-        }}
-        onBlur={valider}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') valider();
-        }}
-        className="champ w-24 py-1.5 text-center font-mono text-base font-bold tabular-nums"
-      />
-      <span aria-hidden="true" className="font-mono text-sm" style={{ color: 'var(--papier-doux)' }}>
-        s
+    <div role="group" aria-label={label} className="flex min-w-0" style={largeur === undefined ? undefined : { width: largeur }}>
+      {bouton(-1)}
+      <span className="relative flex min-w-0 flex-1">
+        <input
+          type="number"
+          inputMode="numeric"
+          id={id}
+          value={affiche}
+          min={min}
+          max={max}
+          step={pas}
+          disabled={!editable}
+          aria-label={label}
+          aria-describedby={decritPar}
+          onChange={(event) => {
+            if (editable) setBrouillon(event.target.value);
+          }}
+          onBlur={valider}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') valider();
+          }}
+          className="champ h-12 min-w-0 px-0 text-center text-xl font-semibold tabular-nums"
+          style={{ minHeight: 48, color: editable ? undefined : 'var(--encre-2)', MozAppearance: 'textfield' }}
+        />
+        {unite !== undefined && (
+          <span aria-hidden="true" className="t-statut pointer-events-none absolute top-1/2 right-1 -translate-y-1/2">
+            {unite}
+          </span>
+        )}
       </span>
-    </span>
+      {bouton(1)}
+    </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Les interrupteurs                                                   */
+/* Les cases                                                           */
 /* ------------------------------------------------------------------ */
 
 type CleInterrupteur = Extract<
   keyof GameOptions,
-  'capitaine' | 'capitaineAvantNuit1' | 'chasseurEmpoisonne' | 'sorciereSeSauve' | 'ancienRancunier' | 'chat' | 'revelerRoles' | 'mortsVoientTout'
+  | 'capitaine'
+  | 'capitaineAvantNuit1'
+  | 'chasseurEmpoisonne'
+  | 'sorciereSeSauve'
+  | 'ancienRancunier'
+  | 'chat'
+  | 'revelerRoles'
+  | 'mortsVoientTout'
+  | 'abandon'
 >;
 
 /**
- * Les interrupteurs de la table, chacun avec la phrase de ce qu'il change.
+ * Les cases de la table, chacune avec la phrase de ce qu'elle change.
  * Les noms de rôles viennent de la voix du skin : aucun n'est écrit en dur.
  */
 const REGLAGES: readonly {
@@ -926,6 +1643,13 @@ const REGLAGES: readonly {
     hint: () =>
       'Les morts connaissent les rôles de tous et lisent les canaux secrets : la partie est finie pour eux.',
   },
+  {
+    // R101 : l'option moteur `abandon`, longtemps sans case au salon.
+    cle: 'abandon',
+    label: () => 'Mort d’abandon',
+    hint: () =>
+      'Un vivant absent depuis cinq minutes meurt d’abandon à la fin de la phase, sans pouvoir : ni tir, ni rancune. Désactivé, la table attend ses absents.',
+  },
 ];
 
 /** « de l’Ancien », « du Corbeau », « de la Petite Fille » : le nom du skin porte déjà son article. */
@@ -933,10 +1657,6 @@ function deNom(nom: string): string {
   if (/^le /i.test(nom)) return `du ${nom.slice(3)}`;
   if (/^les /i.test(nom)) return `des ${nom.slice(4)}`;
   return `de ${nom}`;
-}
-
-function majuscule(texte: string): string {
-  return texte.replace(/^./, (lettre) => lettre.toUpperCase());
 }
 
 function Interrupteurs({
@@ -955,18 +1675,16 @@ function Interrupteurs({
   // L'Ancien n'entre jamais dans la composition automatique (R90).
   const ancienEnJeu = !options.auto && options.roles.includes('ancien');
   return (
-    <fieldset className="border-0 p-0">
-      <legend className="flex flex-wrap items-baseline gap-2 pb-2">
-        <span className="text-sm font-bold">La maison</span>
-        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
-          les règles qui changent vraiment la partie, dites en toutes lettres
-        </span>
+    <fieldset className="m-0 flex min-w-0 flex-col border-0 p-0">
+      <legend className="p-0 pb-1">
+        <Rubrique titre="La maison" aside="les règles qui changent vraiment la partie, dites en toutes lettres" />
       </legend>
-      <div className="grid gap-2 lg:grid-cols-2">
-        {REGLAGES.map((reglage) => (
+      <div className="flex flex-col">
+        {REGLAGES.map((reglage, rang) => (
           <Interrupteur
             key={reglage.cle}
             id={reglage.cle}
+            separe={rang > 0}
             label={reglage.label(voix, charge)}
             hint={
               reglage.cle === 'capitaineAvantNuit1' && !options.capitaine
@@ -996,23 +1714,36 @@ function Interrupteurs({
 /* Le skin                                                             */
 /* ------------------------------------------------------------------ */
 
+/** Une miniature d'univers (32 × 32) : les toits de Thiercelieux, ou le Mur de Shiganshina. */
+function MiniUnivers({ skin }: { skin: string }) {
+  const toits = skin !== 'shiganshina';
+  const d = toits
+    ? 'M0 32 V22 L6 17 L12 22 V20 L17 15 L22 20 V8 L25 4 L28 8 V32 Z'
+    : 'M0 32 V14 H4 V11 H8 V14 H12 V11 H16 V14 H20 V11 H24 V14 H28 V11 H32 V32 Z';
+  return (
+    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 32 32" className="flex-none" style={{ display: 'block' }}>
+      <rect width="32" height="32" fill="url(#hach-h-e)" opacity=".5" />
+      <path d={d} fill="var(--surface)" stroke="var(--encre)" strokeWidth="1" />
+      <path d={d} fill={toits ? 'url(#hach-2-e)' : 'url(#hach-x-e)'} />
+      {toits ? <rect x="24" y="11" width="2" height="3" fill="var(--encre)" /> : <path d="M12 32 V24 A4 4 0 0 1 20 24 V32" fill="var(--encre)" />}
+    </svg>
+  );
+}
+
 /**
  * L'univers de la table : l'hôte choisit, les autres lisent.
  *
  * Le skin ne change rien à la mécanique (D6) : seulement les noms, les
- * phrases et l'habit. Chaque univers se présente par son nom et par ce qu'on
- * y croisera — ses rôles, dans sa propre voix.
+ * phrases et l'habit. Chaque univers se présente par sa petite planche, son
+ * nom et ce qu'on y croisera — ses rôles, dans sa propre voix.
  */
 function ChoixSkin({ options, editable }: { options: GameOptions; editable: boolean }) {
   return (
-    <fieldset className="border-0 p-0">
-      <legend className="flex flex-wrap items-baseline gap-2 pb-2">
-        <span className="text-sm font-bold">L’univers</span>
-        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
-          change les noms et l’ambiance, jamais les règles
-        </span>
+    <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+      <legend className="p-0 pb-1">
+        <Rubrique titre="L’univers" aside="change les noms et l’ambiance, jamais les règles" />
       </legend>
-      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Univers de la table">
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Univers de la table">
         {SKINS.map((skin) => {
           const actif = options.skin === skin.id || (!SKINS.some((autre) => autre.id === options.skin) && skin === SKINS[0]);
           const apercu = [skin.roles.loup.nom, skin.roles.voyante.nom, skin.roles.sorciere.nom, skin.roles.chasseur.nom];
@@ -1027,18 +1758,22 @@ function ChoixSkin({ options, editable }: { options: GameOptions; editable: bool
                 if (!editable || actif) return;
                 void reglerOptions({ skin: skin.id });
               }}
-              className="flex min-h-11 flex-col gap-0.5 rounded-lg p-3 text-left transition"
+              className="relative flex min-h-12 min-w-[9rem] flex-1 items-center gap-2 px-2 py-1.5 text-left"
               style={{
                 cursor: editable ? 'pointer' : 'default',
-                background: actif ? 'color-mix(in srgb, var(--lanterne) 12%, transparent)' : 'transparent',
-                boxShadow: actif
-                  ? 'inset 0 0 0 1px color-mix(in srgb, var(--lanterne) 55%, transparent)'
-                  : 'inset 0 0 0 1px var(--arcade-trait)',
-                color: actif ? 'var(--papier)' : 'var(--papier-doux)',
+                background: actif ? 'var(--surface)' : 'transparent',
+                border: actif ? '1.5px solid var(--filet)' : '1px solid var(--filet-doux)',
+                color: 'var(--encre)',
               }}
             >
-              <span className="font-identite text-lg leading-tight font-bold">{skin.univers}</span>
-              <span className="text-xs leading-snug">{apercu.join(' · ')}…</span>
+              {actif && (
+                <span aria-hidden="true" className="pointer-events-none absolute inset-0.5 block" style={{ border: '0.75px solid var(--filet)' }} />
+              )}
+              <MiniUnivers skin={skin.id} />
+              <span className="block min-w-0">
+                <span className="block text-[14px] leading-4 font-semibold">{skin.univers}</span>
+                <span className="t-statut block">{apercu.join(' · ')}…</span>
+              </span>
             </button>
           );
         })}
@@ -1047,33 +1782,3 @@ function ChoixSkin({ options, editable }: { options: GameOptions; editable: bool
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Le meuble commun                                                    */
-/* ------------------------------------------------------------------ */
-
-function TitreSection({
-  title,
-  aside,
-  children,
-}: {
-  title: string;
-  aside?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div
-      className="flex flex-wrap items-baseline justify-between gap-3 border-b pb-2"
-      style={{ borderColor: 'var(--arcade-trait)' }}
-    >
-      <h2 className="text-base font-bold tracking-tight">{title}</h2>
-      <span className="flex items-center gap-3">
-        {aside !== undefined && (
-          <span className="text-[11px] font-semibold" style={{ color: 'var(--papier-doux)' }}>
-            {aside}
-          </span>
-        )}
-        {children}
-      </span>
-    </div>
-  );
-}

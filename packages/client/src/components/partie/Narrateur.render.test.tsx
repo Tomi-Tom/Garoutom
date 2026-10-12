@@ -67,7 +67,8 @@ describe('<Narrateur /> — reprise et abandon', () => {
       ),
     });
     rerender(<Narrateur />);
-    expect(screen.getByTestId('crieur').querySelectorAll('p')).toHaveLength(MAX_RESUME + 1);
+    expect(screen.getByTestId('crieur').querySelectorAll('[data-ligne]')).toHaveLength(MAX_RESUME);
+    expect(screen.getByTestId('crieur-rubrique')).toHaveTextContent(PENDANT_ABSENCE);
   });
 
   it('dit la mort d’abandon dans la voix du skin, et la range dans la nuit qu’elle clôt', async () => {
@@ -85,9 +86,10 @@ describe('<Narrateur /> — reprise et abandon', () => {
     expect(screen.getByTestId('crieur')).toHaveTextContent('Joueur 5 a quitté le village sans un mot.');
     expect(screen.getByTestId('crieur')).not.toHaveAttribute('data-resume');
 
-    await utilisateur.click(screen.getByRole('button', { name: 'Journal' }));
-    const chapitres = screen.getByTestId('journal').querySelectorAll('section');
-    const nuit = [...chapitres].find((section) => section.querySelector('h3')?.textContent === 'Nuit 2');
+    // Un toucher du crieur ouvre le registre : la mort reste dans la nuit qu'elle clôt.
+    await utilisateur.click(screen.getByRole('button', { name: 'Le crieur — ouvrir le registre' }));
+    const blocs = screen.getByTestId('registre').querySelectorAll('[data-heure]');
+    const nuit = [...blocs].find((bloc) => bloc.querySelector('h3')?.textContent === 'Nuit 2');
     expect(nuit).toHaveTextContent('a quitté le village');
   });
 });

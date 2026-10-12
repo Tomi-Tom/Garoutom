@@ -9,15 +9,20 @@
  *
  * Deux surfaces :
  *
- * - **le crieur** : la dernière annonce — les évènements arrivés ensemble,
- *   ceux d'une même action ou d'une même clôture —, posée sous l'en-tête avec
- *   une entrée discrète. Une simple bascule d'étape de nuit (« la nuit se
- *   poursuit ») ne le remplace pas : elle n'apprend rien, et l'annonce qu'elle
- *   chasserait — le vote du soir — est celle qu'on veut encore lire. La nuit,
- *   le crieur se fait discret et tait les phrases d'heure : l'écran du village
- *   qui dort les dit déjà en grand ;
- * - **le journal** : tout ce qui a été crié depuis le début de la partie,
- *   dépliable, groupé par nuit et par jour avec les titres du récit du skin.
+ * - **le crieur** (SPEC § 5.8) : une zone fixe de 56 px sous l'en-tête — la
+ *   rubrique de l'heure (« Aube 2 ») en tête de ligne, puis la dernière
+ *   annonce, deux lignes au plus ; elle « s'écrit » un mot toutes les 40 ms
+ *   (1,2 s au plus), une mort se précède de la chandelle soufflée, et un
+ *   toucher ouvre le registre. Quand il n'a rien à dire, le graveur y pose
+ *   sa légende du moment. La dernière annonce : les évènements arrivés
+ *   ensemble, ceux d'une même action ou d'une même clôture. Une simple
+ *   bascule d'étape de nuit (« la nuit se poursuit ») ne le remplace pas :
+ *   elle n'apprend rien, et l'annonce qu'elle chasserait — le vote du soir —
+ *   est celle qu'on veut encore lire. Les phrases d'heure (« le jour se
+ *   lève ») se taisent dès qu'il y a une nouvelle : la frise dit l'heure ; la
+ *   nuit, elles se taisent toujours ;
+ * - **le registre** (`Registre.tsx`, la feuille basse du § 5.9) : tout ce
+ *   qui a été crié depuis le début de la partie, par nuit et par jour.
  *
  * Chaque annonce part une fois, et une seule, à la région vocale de
  * l'application (`annoncer`) : un lecteur d'écran entend l'aube comme les
@@ -38,15 +43,17 @@
  *   du skin (`morts.abandon`), qui ne dit jamais pourquoi.
  */
 
-import { AnimatePresence, motion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
-import type { GameEvent } from '@garoutom/engine';
+import type { GameEvent, PhaseKind } from '@garoutom/engine';
 
-import { RESSORT_CARTE } from '../../anim/tokens.js';
+import { CRIEUR } from '../../anim/tokens.js';
 import { useGame, useNoms, useSkinId, useVoix } from '../../lib/partie.js';
 import { useStore, type EvenementRecu } from '../../lib/store.js';
-import { peauDuSkin, resoudre, type Skin, type Voix } from '../../skins/registre.js';
+import { peauDuSkin, resoudre, type CleLegendeEcran, type Skin, type Voix } from '../../skins/registre.js';
+import { Icone } from '../habit/Icone.js';
+import { Registre } from './Registre.js';
 
 /** Le ton d'une ligne : la teinte de son liseré. */
 type Ton = 'lune' | 'sang' | 'lanterne';
@@ -210,12 +217,14 @@ function phraseDePhase(event: Extract<GameEvent, { type: 'phase' }>, voix: Voix,
 }
 
 /** Un chapitre du journal : une nuit ou un jour. */
-interface Chapitre {
+export interface Chapitre {
   cle: string;
   /** L'heure du chapitre — `nuit-2`, `jour-3` — pour savoir s'il faut en ouvrir un autre. */
   heure: string;
   titre: string;
   lignes: Ligne[];
+  /** Les évènements du chapitre. */
+  ids: number[];
 }
 
 /**
@@ -224,7 +233,7 @@ interface Chapitre {
  * de son heure : les morts de l'aube restent ainsi dans la nuit qui les a
  * faits, le dépouillement dans le jour qui l'a voté.
  */
-function chapitres(chronique: readonly EvenementRecu[], voix: Voix, peau: Skin, nom: (seat: number) => string): Chapitre[] {
+export function chapitres(chronique: readonly EvenementRecu[], voix: Voix, peau: Skin, nom: (seat: number) => string): Chapitre[] {
   const resultat: Chapitre[] = [];
   for (const recu of chronique) {
     const event = recu.event;
@@ -243,10 +252,11 @@ function chapitres(chronique: readonly EvenementRecu[], voix: Voix, peau: Skin, 
       if (resultat[resultat.length - 1]?.heure !== heure) {
         const titre = dire(peau.recit[ouverture.heure], { n: String(ouverture.numero) });
         // Le rang rend la clé unique, même si une même heure revenait plus loin.
-        resultat.push({ cle: `${heure}-${String(resultat.length)}`, heure, titre, lignes: [] });
+        resultat.push({ cle: `${heure}-${String(resultat.length)}`, heure, titre, lignes: [], ids: [] });
       }
     }
     resultat[resultat.length - 1]?.lignes.push(...raconter(recu, voix, peau, nom));
+    resultat[resultat.length - 1]?.ids.push(recu.id);
   }
   return resultat;
 }
@@ -292,12 +302,100 @@ export function resumer(lignes: readonly Ligne[]): Ligne[] {
   return lignes.filter((ligne) => ligne.heure !== true).slice(-MAX_RESUME);
 }
 
-export function Narrateur({ className = '' }: { className?: string }) {
+
+/** La légende du graveur quand le crieur n'a rien à dire : celle du moment (§ 6.4). */
+export function cleLegendeDuMoment(phase: PhaseKind | undefined): CleLegendeEcran {
+  switch (phase) {
+    case 'revelation':
+      return 'revelation';
+    case 'election':
+      return 'election';
+    case 'jour':
+      return 'vote';
+    case 'chasseur':
+      return 'chasseurAttente';
+    case 'succession':
+      return 'succession';
+    case 'bouc':
+      return 'boucDernierMot';
+    case 'fin':
+      return 'fin';
+    default:
+      // La nuit, le frontispice : « Le sommeil de la raison engendre des loups. »
+      return 'accueil';
+  }
+}
+
+/**
+ * La rubrique du lot : « Pendant votre absence » pour un résumé ; « Aube 2 »
+ * quand l'aube crie ses morts (ou sa paix) ; sinon le titre de l'heure où
+ * l'annonce s'est faite — le vote du soir reste « Jour 1 » pendant la nuit 2.
+ */
+function rubriqueDuLot(
+  lot: Lot,
+  chronique: readonly EvenementRecu[],
+  premiere: number | undefined,
+  voix: Voix,
+  peau: Skin,
+  nom: (seat: number) => string,
+): string {
+  if (lot.resume) return PENDANT_ABSENCE;
+  // L'aube : la première ligne dite est une mort (ou la paix) que suit, dans
+  // le même lot, le lever du jour.
+  const recus = chronique.filter((recu) => lot.ids.includes(recu.id));
+  const rangPremier = recus.findIndex((recu) => recu.id === premiere);
+  const premier = recus[rangPremier]?.event;
+  const lever = recus
+    .slice(rangPremier + 1)
+    .map((recu) => recu.event)
+    .find(
+      (event): event is Extract<GameEvent, { type: 'phase' }> =>
+        event.type === 'phase' && (event.phase === 'jour' || event.phase === 'election'),
+    );
+  if (lever !== undefined && (premier?.type === 'morts' || premier?.type === 'aube-paisible')) {
+    return `Aube ${String(lever.day)}`;
+  }
+  const chapitre = chapitres(chronique, voix, peau, nom).find((c) => premiere !== undefined && c.ids.includes(premiere));
+  return chapitre?.titre ?? '';
+}
+
+/** Une phrase d'heure qui ouvre une scène (le Chasseur, la succession, le Bouc, l'élection). */
+function estScene(event: GameEvent): boolean {
+  return (
+    event.type === 'phase' &&
+    (event.phase === 'chasseur' || event.phase === 'succession' || event.phase === 'bouc' || event.phase === 'election')
+  );
+}
+
+/** Les mots qui « s'écrivent » : un toutes les 40 ms, 1,2 s au plus ; d'un coup si l'on demande le calme. */
+function useEcriture(cle: number, mots: number, immediat: boolean): [number, () => void] {
+  const [ecrits, setEcrits] = useState<{ cle: number; n: number }>({ cle, n: immediat ? mots : 0 });
+  const courant = immediat ? mots : ecrits.cle === cle ? ecrits.n : 0;
+  if (ecrits.cle !== cle) setEcrits({ cle, n: courant });
+  useEffect(() => {
+    if (immediat || mots === 0) return;
+    const pas = Math.max(8, Math.min(CRIEUR.motMs, Math.floor(CRIEUR.maxMs / mots)));
+    const minuteur = setInterval(() => {
+      setEcrits((avant) => {
+        const n = Math.min(mots, (avant.cle === cle ? avant.n : 0) + 1);
+        if (n >= mots) clearInterval(minuteur);
+        return { cle, n };
+      });
+    }, pas);
+    return () => clearInterval(minuteur);
+  }, [cle, mots, immediat]);
+  return [courant, () => setEcrits({ cle, n: mots })];
+}
+
+export function Narrateur({ className = '', uneLigne = false }: { className?: string; uneLigne?: boolean }) {
   const chronique = useStore((state) => state.chronique);
-  const nuit = useGame()?.phase === 'nuit';
+  const phase = useGame()?.phase;
+  const nuit = phase === 'nuit';
   const voix = useVoix();
   const peau = peauDuSkin(useSkinId());
   const nom = useNoms();
+  const calme = useReducedMotion() === true;
+  const [registre, setRegistre] = useState(false);
 
   /*
     Le lot du crieur : les évènements arrivés ensemble. On retient
@@ -305,11 +403,7 @@ export function Narrateur({ className = '' }: { className?: string }) {
     suivant forme le nouveau lot — sauf s'il ne contient qu'une bascule
     d'étape, auquel cas l'annonce d'avant reste affichée. Au premier montage,
     on ne reprend que la queue de la chronique — le crieur annonce, il ne
-    récite pas.
-
-    Le lot se déduit pendant le rendu, pas dans un effet : sinon l'ancien
-    lot se peindrait une fois sous la nouvelle heure (au matin, avec ses
-    phrases de nuit qu'on taisait), puis resterait le temps de sa sortie.
+    récite pas. Le lot se déduit pendant le rendu, pas dans un effet.
   */
   const dernierId = chronique[chronique.length - 1]?.id ?? 0;
   const [crieur, setCrieur] = useState<{ vu: number; lot: Lot | null }>(() => ({
@@ -317,21 +411,17 @@ export function Narrateur({ className = '' }: { className?: string }) {
     lot: lotDe(chronique.filter((recu) => !estBascule(recu.event)).slice(-LOT_INITIAL)),
   }));
   if (dernierId !== crieur.vu) {
-    // Les identifiants ne font que croître : ce qui dépasse le dernier vu est
-    // neuf. Une chronique vidée (retour au salon) éteint le crieur.
     const nouveau = dernierId === 0 ? null : lotDe(chronique.filter((recu) => recu.id > crieur.vu));
     setCrieur({ vu: dernierId, lot: dernierId === 0 ? null : (nouveau ?? crieur.lot) });
   }
   const lot = crieur.lot;
 
   useEffect(() => {
-    // La région vocale : une fois par évènement, jamais deux. Au tout premier
-    // montage, seule la queue de la chronique est dite.
+    // La région vocale : une fois par évènement, jamais deux.
     const inedits = chronique.filter((recu) => recu.id > dernierAnnonce);
     const aDire = dernierAnnonce === 0 ? inedits.slice(-LOT_INITIAL) : inedits;
     if (aDire.length > 0) {
       dernierAnnonce = Math.max(...aDire.map((recu) => recu.id));
-      // Les évènements rejoués se disent en résumé, sous leur intitulé.
       const rejoues = resumer(
         aDire.filter((recu) => recu.rejoue === true).flatMap((recu) => raconter(recu, voix, peau, nom)),
       ).map((ligne) => ligne.texte);
@@ -344,143 +434,105 @@ export function Narrateur({ className = '' }: { className?: string }) {
     }
   }, [chronique, voix, peau, nom]);
 
-  const lignesDuLot = useMemo(() => {
-    if (lot === null) return [];
-    const lignes = chronique
-      .filter((recu) => lot.ids.includes(recu.id))
-      .flatMap((recu) => raconter(recu, voix, peau, nom));
-    return lot.resume ? resumer(lignes) : lignes;
-  }, [lot, chronique, voix, peau, nom]);
+  const { lignes, premiere } = useMemo(() => {
+    if (lot === null) return { lignes: [] as Ligne[], premiere: undefined };
+    const recus = chronique.filter((recu) => lot.ids.includes(recu.id));
+    const toutes = recus.flatMap((recu) =>
+      raconter(recu, voix, peau, nom).map((ligne) => ({
+        ligne,
+        id: recu.id,
+        scene: estScene(recu.event),
+        devant: estScene(recu.event) && !(recu.event.type === 'phase' && recu.event.phase === 'election'),
+      })),
+    );
+    // Les phrases d'heure nues (« le jour se lève », « la nuit tombe ») se
+    // taisent la nuit, et le jour dès qu'il y a une nouvelle : la frise dit
+    // l'heure. Celles qui ouvrent une scène (le Chasseur, la succession, le
+    // Bouc, l'élection) parlent, et en premier : c'est ce qu'on attend.
+    const nouvelles = toutes.filter(({ ligne, scene }) => ligne.heure !== true || (scene && !nuit));
+    const choisies = lot.resume
+      ? toutes.filter(({ ligne }) => ligne.heure !== true).slice(-MAX_RESUME)
+      : nuit
+        ? toutes.filter(({ ligne }) => ligne.heure !== true)
+        : nouvelles.length > 0
+          ? [...nouvelles.filter(({ devant }) => devant), ...nouvelles.filter(({ devant }) => !devant)]
+          : toutes;
+    return { lignes: choisies.map(({ ligne }) => ligne), premiere: choisies[0]?.id };
+  }, [lot, chronique, voix, peau, nom, nuit]);
 
-  const [journalOuvert, setJournalOuvert] = useState(false);
-  const journal = useMemo(
-    () => (journalOuvert ? chapitres(chronique, voix, peau, nom) : []),
-    [journalOuvert, chronique, voix, peau, nom],
-  );
+  const rubrique = lot === null || lignes.length === 0 ? '' : rubriqueDuLot(lot, chronique, premiere, voix, peau, nom);
+  const mots = lignes.map((ligne) => ligne.texte.split(/\s+/).filter((mot) => mot !== ''));
+  const total = mots.reduce((somme, liste) => somme + liste.length, 0);
+  const [ecrits, toutEcrire] = useEcriture(lot?.cle ?? 0, total, calme || lot?.resume === true);
 
-  if (chronique.length === 0) return null;
-
-  // La nuit, les phrases d'heure se taisent : le village qui dort et l'en-tête
-  // les disent déjà. Reste ce qui s'est passé au crépuscule — le vote, ses morts.
-  const lignes = nuit ? lignesDuLot.filter((ligne) => ligne.heure !== true) : lignesDuLot;
-  const derniere = lignes[lignes.length - 1];
-  const tonDuLot: Ton = lignes.some((ligne) => ligne.ton === 'sang') ? 'sang' : (derniere?.ton ?? 'lune');
-
-  const boutonJournal = (
-    <button
-      type="button"
-      className="btn-voisin shrink-0 text-sm"
-      // `.btn-voisin` est hors des couches de Tailwind : un `px-3` n'y suffirait pas.
-      style={{ paddingInline: '0.75rem' }}
-      aria-expanded={journalOuvert}
-      aria-controls="journal-partie"
-      onClick={() => setJournalOuvert((ouvert) => !ouvert)}
-    >
-      {journalOuvert ? 'Fermer le journal' : 'Journal'}
-    </button>
-  );
+  let rang = 0;
+  const vide = lignes.length === 0;
+  const lignesMax = uneLigne ? 'line-clamp-1' : 'line-clamp-2 max-[359px]:line-clamp-1';
 
   return (
     <section
       aria-label="Le narrateur"
       data-testid="narrateur"
       data-discret={nuit ? '' : undefined}
-      className={`flex flex-col gap-2 ${className}`}
+      className={`h-full ${className}`}
     >
-      {lignes.length === 0 ? (
-        // Rien à crier : la nuit garde le silence, le journal reste à portée.
-        <div className="flex justify-end">{boutonJournal}</div>
-      ) : (
-        <div
-          className={`carte flex items-start gap-3 sm:px-4 ${nuit ? 'px-3 py-1.5' : 'px-3 py-2.5'}`}
-          style={{ borderLeft: `3px solid var(--${tonDuLot})` }}
-        >
-          {/* Le crieur : aria-hidden, parce que la région vocale le dit déjà. */}
-          <div aria-hidden="true" className="min-w-0 flex-1 self-center">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={lot?.cle ?? 0}
-                // Un résumé de reprise se pose sans entrée : on ne rejoue pas
-                // l'animation d'une nouvelle qu'on lit après coup.
-                initial={lot?.resume === true ? false : { y: -6, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={lot?.resume === true ? undefined : { opacity: 0 }}
-                transition={RESSORT_CARTE}
-                data-testid="crieur"
-                data-resume={lot?.resume === true ? '' : undefined}
-                className={`flex flex-col gap-1 overflow-y-auto sm:max-h-none ${nuit ? 'max-h-20' : 'max-h-28'}`}
-              >
-                {lot?.resume === true && (
-                  <p className="font-mono text-[11px] tracking-[0.12em] uppercase" style={{ color: 'var(--lune)' }}>
-                    {PENDANT_ABSENCE}
-                  </p>
-                )}
-                {lignes.map((ligne, rang) => (
-                  <LigneDite
-                    key={ligne.cle}
-                    ligne={ligne}
-                    // Les morts se lisent en grand, même quand l'heure parle
-                    // après elles (« le jour se lève » suit les morts de l'aube).
-                    // La nuit, tout reste en petit : le crieur s'efface.
-                    principale={!nuit && (rang === lignes.length - 1 || ligne.ton === 'sang')}
-                  />
-                ))}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-          {boutonJournal}
-        </div>
-      )}
-
-      {journalOuvert && (
-        <div
-          id="journal-partie"
-          data-testid="journal"
-          className="carte max-h-[40vh] overflow-y-auto px-3 py-3 sm:px-4"
-        >
-          {journal.map((chapitre) => (
-            <section key={chapitre.cle} className="mb-3 last:mb-0">
-              <h3 className="font-identite text-lg font-bold" style={{ color: 'var(--lune)' }}>
-                {chapitre.titre}
-              </h3>
-              <ol className="mt-1 flex list-none flex-col gap-1 p-0">
-                {chapitre.lignes.map((ligne) => (
-                  <li key={ligne.cle}>
-                    <LigneDite ligne={ligne} principale={false} />
-                  </li>
-                ))}
-              </ol>
-            </section>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** Une ligne du narrateur, avec son dépouillement quand c'est un vote. */
-function LigneDite({ ligne, principale }: { ligne: Ligne; principale: boolean }) {
-  return (
-    <div className="min-w-0">
-      <p
-        className={principale ? 'text-base leading-snug' : 'text-sm leading-snug'}
-        style={{ color: principale ? 'var(--papier)' : 'var(--papier-doux)' }}
+      <button
+        type="button"
+        aria-label="Le crieur — ouvrir le registre"
+        aria-haspopup="dialog"
+        onClick={() => {
+          toutEcrire();
+          setRegistre(true);
+        }}
+        className="box-border flex h-full w-full cursor-pointer items-center border-0 border-y border-solid border-[var(--filet-doux)] bg-transparent px-[var(--gouttiere)] py-[3px] text-left font-[inherit] text-[var(--encre)]"
       >
-        {ligne.texte}
-      </p>
-      {ligne.depouillement !== undefined && ligne.depouillement.length > 0 && (
-        <ul className="mt-1 flex list-none flex-wrap gap-1.5 p-0" aria-label="Le dépouillement">
-          {ligne.depouillement.map((compte) => (
-            <li
-              key={compte.seat}
-              className="rounded-full px-2 py-0.5 text-xs"
-              style={{ background: 'var(--nuit-creux)', color: 'var(--papier-doux)' }}
-            >
-              {compte.nom} <span className="font-mono" style={{ color: 'var(--papier)' }}>{String(compte.voix)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        {vide ? (
+          // Rien à crier : la légende du graveur, manuscrite.
+          <span
+            aria-hidden="true"
+            data-testid="crieur-legende"
+            className={`t-legende block w-full overflow-hidden text-center text-[var(--encre-narrateur)] ${lignesMax}`}
+          >
+            « {voix.legendeEcran(cleLegendeDuMoment(phase))} »
+          </span>
+        ) : (
+          <span
+            aria-hidden="true"
+            data-testid="crieur"
+            data-resume={lot?.resume === true ? '' : undefined}
+            className={`block w-full overflow-hidden text-[16px] leading-6 ${lignesMax}`}
+          >
+            {rubrique !== '' && (
+              <span data-testid="crieur-rubrique" className="t-rubrique mr-2 text-[var(--encre-2)]">
+                {rubrique}
+              </span>
+            )}
+            {lignes.map((ligne, i) => {
+              const mort = ligne.ton === 'sang';
+              const liste = mots[i] ?? [];
+              return (
+                <span key={ligne.cle} data-ligne="" data-mort={mort ? '' : undefined}>
+                  {mort && (
+                    <span className="mr-1 inline-flex size-4 align-[-2px] [&>svg]:size-4">
+                      <Icone nom="chandelle" />
+                    </span>
+                  )}
+                  {liste.map((mot, j) => {
+                    rang += 1;
+                    return (
+                      <span key={j} className={rang > ecrits ? 'invisible' : undefined}>
+                        {j < liste.length - 1 ? `${mot} ` : mot}
+                      </span>
+                    );
+                  })}
+                  {i < lignes.length - 1 ? ' ' : ''}
+                </span>
+              );
+            })}
+          </span>
+        )}
+      </button>
+      {registre && <Registre onFermer={() => setRegistre(false)} />}
+    </section>
   );
 }

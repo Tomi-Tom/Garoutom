@@ -9,7 +9,7 @@
  * loup, et la mention des pouvoirs éteints avec l'Ancien.
  */
 
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -57,14 +57,24 @@ vi.mock('./Place.js', () => ({
 
 vi.mock('./Fil.js', () => ({
   Fil: (props: import('./Fil.js').FilProps) => (
-    <div data-testid="fil" data-mode={props.mode} data-canaux={props.canaux?.join(',')} />
+    <div data-testid="fil" data-mode={props.mode} data-etendue={props.etendue} data-canaux={props.canaux?.join(',')} />
   ),
 }));
 
-vi.mock('../habit/Symbole.js', () => ({ SymboleRole: () => <span data-testid="symbole" /> }));
-vi.mock('../habit/Decor.js', () => ({ Decor: () => <div data-testid="decor" /> }));
-
 const jouerMock = vi.mocked(jouer);
+
+/** Une zone du gabarit. */
+function zone(container: HTMLElement, nomZone: string): HTMLElement {
+  const element = container.querySelector<HTMLElement>(`[data-zone="${nomZone}"]`);
+  if (element === null) throw new Error(`Pas de zone « ${nomZone} »`);
+  return element;
+}
+
+/** Le geste en deux temps : un toucher arme, le second confirme. */
+async function armerPuisConfirmer(utilisateur: ReturnType<typeof userEvent.setup>, nomBouton: string | RegExp) {
+  await utilisateur.click(screen.getByRole('button', { name: nomBouton }));
+  await utilisateur.click(screen.getByRole('button', { name: /^Confirmer/ }));
+}
 
 function nom(seat: number): string {
   return `Joueur ${String(seat)}`;
@@ -106,10 +116,12 @@ describe('<Nuit /> — les rôles optionnels', () => {
     expect(screen.getByRole('button', { name: `siège ${String(corbeau)}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `siège ${String(loup)}` })).toBeInTheDocument();
 
-    // Rien ne part avant la confirmation.
+    // Rien ne part avant la confirmation : le jeton choisit, la barre arme, puis confirme.
     await utilisateur.click(screen.getByRole('button', { name: `siège ${String(corbeau)}` }));
     expect(jouerMock).not.toHaveBeenCalled();
     await utilisateur.click(screen.getByRole('button', { name: `Marquer ${nom(corbeau)}` }));
+    expect(jouerMock).not.toHaveBeenCalled();
+    await utilisateur.click(screen.getByRole('button', { name: `Confirmer : marquer ${nom(corbeau)}` }));
     expect(jouerMock).toHaveBeenLastCalledWith({ type: 'marquer', target: corbeau });
     sansIdentifiantBrut(vue.container);
     vue.unmount();
@@ -118,11 +130,11 @@ describe('<Nuit /> — les rôles optionnels', () => {
     agir(banc, corbeau, { type: 'marquer', target: loup });
     installe(banc, corbeau);
     render(<Nuit />);
-    expect(screen.getByRole('status')).toHaveTextContent('l’aube dira la marque, jamais votre main');
-    await utilisateur.click(screen.getByRole('button', { name: 'Changer d’avis' }));
-    await utilisateur.click(screen.getByRole('button', { name: 'Ne marquer personne' }));
+    expect(screen.getByTestId('consigne-nuit')).toHaveTextContent('l’aube dira la marque, jamais votre main');
+    await utilisateur.click(screen.getByRole('button', { name: 'Changer' }));
+    await armerPuisConfirmer(utilisateur, 'Ne marquer personne');
     expect(jouerMock).toHaveBeenLastCalledWith({ type: 'marquer', target: null });
-    expect(screen.getByRole('status')).toHaveTextContent('Vous ne marquez personne cette nuit.');
+    expect(screen.getByTestId('consigne-nuit')).toHaveTextContent('Vous ne marquez personne cette nuit.');
   });
 
   it('le Loup Blanc, seul en scène une nuit paire, ne peut dévorer qu’un autre loup — ou épargner la meute', async () => {
@@ -146,20 +158,33 @@ describe('<Nuit /> — les rôles optionnels', () => {
     expect(screen.getByTestId('nuit-loup-blanc')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'le Loup Blanc' })).toBeInTheDocument();
     expect(screen.getByText(/Dévorez l’un de ses loups/)).toBeInTheDocument();
-    expect(screen.getByTestId('place')).toHaveAttribute('data-teinte', 'sang');
+    // Aucune teinte de sang (N2) : le choix ne se colore jamais.
+    expect(screen.getByTestId('place')).not.toHaveAttribute('data-teinte', 'sang');
     // Seuls les autres loups se touchent : ni lui, ni le village.
     const touchables = screen
       .getAllByRole('button', { name: /^siège / })
       .map((bouton) => Number(bouton.textContent?.replace('siège ', '')));
     expect(touchables.sort((a, b) => a - b)).toEqual([loupA, loupB].sort((a, b) => a - b));
     expect(screen.queryByRole('button', { name: `siège ${String(villageois)}` })).toBeNull();
-    // La meute dort : ni son canal, ni ses voix.
-    expect(screen.queryByTestId('fil')).toBeNull();
+    // La meute dort : ni son canal derrière le pli, ni ses voix sur la place.
+    expect(within(zone(vue.container, 'pli')).getByRole('button')).not.toHaveTextContent('La meute');
+    expect(screen.getByTestId('fil')).not.toHaveAttribute('data-canaux', 'loups');
+    expect(screen.queryByTestId(/^annotation-/)).toBeNull();
 
+    // Rien de touché : le principal propose d'épargner la meute.
+    expect(within(zone(vue.container, 'barre')).getAllByRole('button').map((bouton) => bouton.textContent)).toEqual([
+      'Gardez le pouce : ma carte',
+      'Épargner la meute',
+    ]);
+    // Son choix clôt l'étape : le libellé armé le dit, « sans retour ».
     await utilisateur.click(screen.getByRole('button', { name: `siège ${String(loupA)}` }));
     await utilisateur.click(screen.getByRole('button', { name: `Dévorer ${nom(loupA)}` }));
+    await utilisateur.click(screen.getByRole('button', { name: `Confirmer — sans retour : dévorer ${nom(loupA)}` }));
     expect(jouerMock).toHaveBeenLastCalledWith({ type: 'trahir', target: loupA });
+    // Le jeton touché à nouveau : le principal revient au silence.
+    await utilisateur.click(screen.getByRole('button', { name: `siège ${String(loupA)}` }));
     await utilisateur.click(screen.getByRole('button', { name: 'Épargner la meute' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Confirmer — sans retour : épargner la meute' }));
     expect(jouerMock).toHaveBeenLastCalledWith({ type: 'trahir', target: null });
     sansIdentifiantBrut(vue.container);
     vue.unmount();
@@ -201,10 +226,14 @@ describe('<Nuit /> — les rôles optionnels', () => {
 
     // Elle n'a pas de consigne : c'est le village qui dort, porte entrouverte.
     expect(screen.getByTestId('village-dort')).toBeInTheDocument();
-    expect(screen.getByTestId('porte-entrouverte')).toHaveTextContent('Vous entrouvrez la porte…');
-    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('×1');
-    // Rien à toucher que le fil replié de tous (D23) : elle regarde, elle n'agit pas.
-    expect(screen.getAllByRole('button').map((bouton) => bouton.textContent)).toEqual(['Fil+']);
+    expect(screen.getByTestId('porte-entrouverte')).toHaveTextContent('Porte entrouverte');
+    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('visé·e par 1');
+    // Elle regarde, elle n'agit pas : la place ne répond pas, la barre est celle du dormeur (N1).
+    expect(within(zone(container, 'place')).queryAllByRole('button')).toEqual([]);
+    expect(within(zone(container, 'barre')).getAllByRole('button').map((bouton) => bouton.textContent)).toEqual([
+      'Gardez le pouce : ma carte',
+      'Fermer les yeux',
+    ]);
 
     const aucunLoupNomme = () => {
       const texte = container.textContent ?? '';
@@ -218,7 +247,7 @@ describe('<Nuit /> — les rôles optionnels', () => {
       agir(banc, loupB, { type: 'devorer', target: proie });
       installe(banc, petite);
     });
-    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('×2');
+    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('visé·e par 2');
     aucunLoupNomme();
 
     // Un loup change d'avis : les chiffres suivent.
@@ -226,8 +255,8 @@ describe('<Nuit /> — les rôles optionnels', () => {
       agir(banc, loupA, { type: 'devorer', target: autre });
       installe(banc, petite);
     });
-    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('×1');
-    expect(screen.getByTestId(`annotation-${String(autre)}`)).toHaveTextContent('×1');
+    expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('visé·e par 1');
+    expect(screen.getByTestId(`annotation-${String(autre)}`)).toHaveTextContent('visé·e par 1');
     // Jamais une pastille sur un loup.
     expect(screen.queryByTestId(`annotation-${String(loupA)}`)).toBeNull();
     expect(screen.queryByTestId(`annotation-${String(loupB)}`)).toBeNull();

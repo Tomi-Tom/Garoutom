@@ -17,42 +17,28 @@ import {
   type OptionalRoleId,
   type RoleId,
 } from '@garoutom/engine';
-import { useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { useRoom, useSkinId, useVoix } from '../lib/partie.js';
 import { peauDuSkin, type Voix } from '../skins/registre.js';
-import { SymboleRole } from './habit/Symbole.js';
+import { Bouton } from './caprices/index.js';
+import { CarteRole } from './habit/CarteRole.js';
 import { Panneau } from './Panneau.js';
 
+/** L'outil « Règles » de la frise : 44 × 44, l'icône du recueil, la feuille basse derrière. */
 export function BoutonRegles({ className }: { className?: string }) {
   const [ouvert, setOuvert] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <Bouton
+        variante="outil"
+        icone="regles"
         onClick={() => setOuvert(true)}
         aria-label="Règles"
         aria-haspopup="dialog"
         title="Règles"
-        className={`btn-voisin inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold ${className ?? ''}`}
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
-          <path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" />
-          <path d="M9 8h7M9 12h5" />
-        </svg>
-        <span className="max-sm:sr-only">Règles</span>
-      </button>
+        className={className}
+      />
       {ouvert && <PanneauRegles onFermer={() => setOuvert(false)} />}
     </>
   );
@@ -95,103 +81,186 @@ function majuscule(texte: string): string {
   return texte.replace(/^./, (lettre) => lettre.toUpperCase());
 }
 
+type Chapitre = 'but' | 'manche' | 'roles' | 'table';
+
+/** Le rang voisin d'un onglet au clavier : flèches, début et fin (motif des onglets, WAI-ARIA). */
+function chapitreVoisin(touche: string, rang: number, total: number): number | null {
+  switch (touche) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      return (rang + 1) % total;
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      return (rang - 1 + total) % total;
+    case 'Home':
+      return 0;
+    case 'End':
+      return total - 1;
+    default:
+      return null;
+  }
+}
+
 function PanneauRegles({ onFermer }: { onFermer: () => void }) {
   const voix = useVoix();
   const skin = peauDuSkin(useSkinId());
   const room = useRoom();
+  const idBase = useId();
   const village = voix.nomCamp('village');
   const loups = voix.nomCamp('loups');
   const charge = skin.charge;
   const blancEnJeu = room !== null && !room.options.auto && room.options.roles.includes('loupBlanc');
 
+  const chapitres: readonly { cle: Chapitre; titre: string }[] = [
+    { cle: 'but', titre: 'Le but' },
+    { cle: 'manche', titre: 'Une manche' },
+    { cle: 'roles', titre: 'Les rôles' },
+    ...(room !== null ? [{ cle: 'table' as const, titre: 'Cette table' }] : []),
+  ];
+  const [actif, setActif] = useState<Chapitre>('but');
+  const onglets = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const surTouche = (evenement: KeyboardEvent<HTMLButtonElement>, rang: number) => {
+    const suivant = chapitreVoisin(evenement.key, rang, chapitres.length);
+    const chapitre = suivant === null ? undefined : chapitres[suivant];
+    if (suivant === null || chapitre === undefined) return;
+    evenement.preventDefault();
+    setActif(chapitre.cle);
+    onglets.current[suivant]?.focus();
+  };
+
   return (
     <Panneau titre="Règles" onFermer={onFermer} testid="panneau-regles">
-      <div className="flex flex-col gap-6 text-sm leading-relaxed">
-        <Section titre="Le but">
-          <p>
-            Deux camps : {village} et {loups}. Chaque joueur reçoit une carte secrète. {village}{' '}
-            gagne quand il ne reste plus un seul {voix.compteLoups(1).replace(/^1 /, '')} ; {loups}{' '}
-            gagne quand il ne reste que lui.
-          </p>
-          <p>
-            Cupidon peut lier deux joueurs en amoureux, même de camps opposés. Si ce couple mixte
-            finit seul, les deux derniers survivants, il gagne à lui seul. Si tout le monde meurt en
-            même temps, la partie n’est à personne.
-          </p>
-          {blancEnJeu && (
+      <div role="tablist" aria-label="Chapitres des règles" className="mb-4 flex gap-1">
+        {chapitres.map(({ cle, titre }, rang) => {
+          const choisi = cle === actif;
+          return (
+            <button
+              key={cle}
+              ref={(el) => {
+                onglets.current[rang] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`${idBase}-onglet-${cle}`}
+              aria-selected={choisi}
+              aria-controls={`${idBase}-panneau-${cle}`}
+              tabIndex={choisi ? 0 : -1}
+              onClick={() => setActif(cle)}
+              onKeyDown={(evenement) => surTouche(evenement, rang)}
+              className="min-h-11 min-w-0 flex-1 px-1 text-[15px] leading-5"
+              style={{
+                background: choisi ? 'var(--action-fond)' : 'transparent',
+                color: choisi ? 'var(--action-texte)' : 'var(--encre)',
+                border: '1.5px solid var(--filet)',
+                fontWeight: choisi ? 600 : 400,
+              }}
+            >
+              {titre}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tabpanel"
+        id={`${idBase}-panneau-${actif}`}
+        aria-labelledby={`${idBase}-onglet-${actif}`}
+        className="flex flex-col gap-4 text-[16px] leading-6"
+      >
+        {actif === 'but' && (
+          <Section titre="Le but">
             <p>
-              {majuscule(voix.nomRole('loupBlanc'))} est de la meute, mais joue pour lui seul : il ne
-              gagne que s’il reste le dernier en vie, contre {village} comme contre {loups}. S’il ne reste que
-              {loups}, lui compris, la partie continue — trois nuits sans mort la closent sur la victoire des {voix.motLoups()}.
+              Deux camps : {village} et {loups}. Chaque joueur reçoit une carte secrète. {village}{' '}
+              gagne quand il ne reste plus un seul {voix.compteLoups(1).replace(/^1 /, '')} ; {loups}{' '}
+              gagne quand il ne reste que lui.
             </p>
-          )}
-        </Section>
+            <p>
+              Cupidon peut lier deux joueurs en amoureux, même de camps opposés. Si ce couple mixte
+              finit seul, les deux derniers survivants, il gagne à lui seul. Si tout le monde meurt en
+              même temps, la partie n’est à personne.
+            </p>
+            {blancEnJeu && (
+              <p>
+                {majuscule(voix.nomRole('loupBlanc'))} est de la meute, mais joue pour lui seul : il ne
+                gagne que s’il reste le dernier en vie, contre {village} comme contre {loups}. S’il ne reste que{' '}
+                {loups}, lui compris, la partie continue — trois nuits sans mort la closent sur la victoire des {voix.motLoups()}.
+              </p>
+            )}
+          </Section>
+        )}
 
-        <Section titre="Une manche">
-          <ol className="flex list-decimal flex-col gap-1.5 pl-5">
-            <li>
-              <b>Révélation.</b> Chacun découvre sa carte et confirme, pendant 25 secondes. Le temps
-              écoulé ouvre la nuit, confirmé ou non.
-            </li>
-            <li>
-              <b>Élection du {charge}</b>, si la table en a un : au matin du premier jour par défaut,
-              ou avant la première nuit selon les réglages. Chaque vivant vote pour un vivant ou
-              s’abstient ; la majorité l’emporte, une égalité est tranchée au sort, sans voix il n’y
-              a personne — et l’élection ne revient pas.
-            </li>
-            <li>
-              <b>Nuit.</b> Les rôles de nuit jouent en même temps, chacun de son côté. {loups} désigne
-              une victime : la majorité l’emporte, une égalité se tranche au sort, sans voix il n’y a
-              pas de victime. Puis {voix.nomRole('sorciere')} joue seule — même morte, pour ne rien
-              trahir.
-            </li>
-            <li>
-              <b>Aube.</b> Les morts de la nuit sont annoncés d’un bloc, avec leur cause. Aucune mort :
-              l’aube est paisible. Quand un amoureux meurt, l’autre meurt de chagrin aussitôt.
-            </li>
-            <li>
-              <b>Déclencheurs.</b> {voix.nomRole('chasseur')} mort abat quelqu’un (30 secondes, sinon
-              il emporte sa balle) ; le {charge} mort désigne son successeur (30 secondes, sinon le
-              hasard choisit). Un tir peut tout renverser : la victoire ne se regarde qu’ensuite.
-            </li>
-            <li>
-              <b>Jour.</b> On débat, puis chaque vivant qui peut voter désigne un autre joueur ou
-              s’abstient, et peut changer d’avis jusqu’au bout. La voix du {charge} compte double. Il
-              faut une majorité stricte : en cas d’égalité, ou sans voix, personne n’est exécuté.
-              Condamné, {voix.nomRole('idiot')} est gracié : sa carte est montrée, il reste en vie
-              mais ne vote plus jamais.
-            </li>
-            <li>
-              <b>Nuit suivante.</b> Et tout recommence jusqu’à la victoire d’un camp.
-            </li>
-          </ol>
-          <p style={{ color: 'var(--papier-doux)' }}>
-            Qui n’a pas agi quand le temps est écoulé n’agit pas : un loup muet ne vote pour personne,
-            un village silencieux n’exécute personne.
-          </p>
-        </Section>
+        {actif === 'manche' && (
+          <Section titre="Une manche">
+            <ol className="flex list-decimal flex-col gap-2 pl-5">
+              <li>
+                <b>Révélation.</b> Chacun découvre sa carte et confirme, pendant 25 secondes. Le temps
+                écoulé ouvre la nuit, confirmé ou non.
+              </li>
+              <li>
+                <b>Élection du {charge}</b>, si la table en a un : au matin du premier jour par défaut,
+                ou avant la première nuit selon les réglages. Chaque vivant vote pour un vivant ou
+                s’abstient ; la majorité l’emporte, une égalité est tranchée au sort, sans voix il n’y
+                a personne — et l’élection ne revient pas.
+              </li>
+              <li>
+                <b>Nuit.</b> Les rôles de nuit jouent en même temps, chacun de son côté. {loups} désigne
+                une victime : la majorité l’emporte, une égalité se tranche au sort, sans voix il n’y a
+                pas de victime. Puis {voix.nomRole('sorciere')} joue seule — même morte, pour ne rien
+                trahir.
+              </li>
+              <li>
+                <b>Aube.</b> Les morts de la nuit sont annoncés d’un bloc, avec leur cause. Aucune mort :
+                l’aube est paisible. Quand un amoureux meurt, l’autre meurt de chagrin aussitôt.
+              </li>
+              <li>
+                <b>Déclencheurs.</b> {voix.nomRole('chasseur')} mort abat quelqu’un (30 secondes, sinon
+                il emporte sa balle) ; le {charge} mort désigne son successeur (30 secondes, sinon le
+                hasard choisit). Un tir peut tout renverser : la victoire ne se regarde qu’ensuite.
+              </li>
+              <li>
+                <b>Jour.</b> On débat, puis chaque vivant qui peut voter désigne un autre joueur ou
+                s’abstient, et peut changer d’avis jusqu’au bout. La voix du {charge} compte double. Il
+                faut une majorité stricte : en cas d’égalité, ou sans voix, personne n’est exécuté.
+                Condamné, {voix.nomRole('idiot')} est gracié : sa carte est montrée, il reste en vie
+                mais ne vote plus jamais.
+              </li>
+              <li>
+                <b>Nuit suivante.</b> Et tout recommence jusqu’à la victoire d’un camp.
+              </li>
+            </ol>
+            <p className="t-statut">
+              Qui n’a pas agi quand le temps est écoulé n’agit pas : un loup muet ne vote pour personne,
+              un village silencieux n’exécute personne.
+            </p>
+          </Section>
+        )}
 
-        <Section titre={`Les rôles — ${voix.nomUnivers()}`}>
-          <ul className="flex flex-col gap-2">
-            {ROLES.filter((role) => !OPTIONAL_ROLES.some((optionnel) => optionnel === role)).map((role) => (
-              <LigneRole key={role} role={role} voix={voix} />
-            ))}
-          </ul>
-        </Section>
+        {actif === 'roles' && (
+          <>
+            <Section titre={`Les rôles — ${voix.nomUnivers()}`}>
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {ROLES.filter((role) => !OPTIONAL_ROLES.some((optionnel) => optionnel === role)).map((role) => (
+                  <LigneRole key={role} role={role} voix={voix} />
+                ))}
+              </ul>
+            </Section>
 
-        <Section titre="Rôles optionnels">
-          <p style={{ color: 'var(--papier-doux)' }}>
-            Absents de la composition automatique : l’hôte les ajoute à la main, ou le tirage au hasard
-            peut les sortir. Un exemplaire au plus de chacun.
-          </p>
-          <ul className="flex flex-col gap-2">
-            {OPTIONAL_ROLES.map((role) => (
-              <LigneRole key={role} role={role} voix={voix} detail={DETAIL[role]} />
-            ))}
-          </ul>
-        </Section>
+            <Section titre="Rôles optionnels">
+              <p className="t-statut">
+                Absents de la composition automatique : l’hôte les ajoute à la main, ou le tirage au hasard
+                peut les sortir. Un exemplaire au plus de chacun.
+              </p>
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {OPTIONAL_ROLES.map((role) => (
+                  <LigneRole key={role} role={role} voix={voix} detail={DETAIL[role]} />
+                ))}
+              </ul>
+            </Section>
+          </>
+        )}
 
-        {room !== null && (
+        {actif === 'table' && room !== null && (
           <Section titre="Les réglages de cette table">
             <ReglagesTable options={room.options} nombre={room.players.length} voix={voix} charge={charge} />
           </Section>
@@ -201,10 +270,14 @@ function PanneauRegles({ onFermer }: { onFermer: () => void }) {
   );
 }
 
+/** Une rubrique du chapitre : un titre en petites capitales, un filet, puis le texte. */
 function Section({ titre, children }: { titre: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="border-b pb-1 text-base font-bold" style={{ borderColor: 'var(--arcade-trait)' }}>
+      <h3
+        className="t-rubrique m-0 pb-1"
+        style={{ borderBottom: '0.75px solid var(--filet-doux)', color: 'var(--encre-2)' }}
+      >
         {titre}
       </h3>
       {children}
@@ -212,26 +285,29 @@ function Section({ titre, children }: { titre: string; children: ReactNode }) {
   );
 }
 
+/**
+ * Un rôle : sa petite carte (96 × 134), puis ce qu'il fait, quand il agit
+ * et — en italique, de la main du graveur — sa légende.
+ */
 function LigneRole({ role, voix, detail }: { role: RoleId; voix: Voix; detail?: string }) {
+  const legende = voix.legendeRole(role);
   return (
-    <li
-      className="flex gap-3 rounded-lg p-3"
-      style={{ background: 'var(--nuit-creux)', boxShadow: 'inset 0 0 0 1px var(--arcade-trait)' }}
-    >
-      <span className="shrink-0">
-        <SymboleRole role={role} taille={32} />
-      </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="font-identite text-lg leading-tight font-bold">{voix.nomRole(role)}</span>
-        <span>{voix.descriptionRole(role)}</span>
-        {detail !== undefined && <span>{detail}</span>}
-        <span className="text-xs" style={{ color: 'var(--papier-doux)' }}>
-          {QUAND[role]}
-        </span>
-      </span>
+    <li className="flex items-start gap-3" data-role-regle="">
+      <CarteRole role={role} retournee taille="petite" avecDescription={false} avecLegende={false} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="m-0">{voix.descriptionRole(role)}</p>
+        {detail !== undefined && <p className="m-0">{detail}</p>}
+        <p className="t-statut m-0">{QUAND[role]}</p>
+        {legende !== '' && (
+          <p className="t-legende m-0" style={{ fontSize: 16, lineHeight: '22px' }}>
+            {legende}
+          </p>
+        )}
+      </div>
     </li>
   );
 }
+
 
 function secondes(valeur: number): string {
   if (valeur >= 120 && valeur % 60 === 0) return `${String(valeur / 60)} minutes`;
@@ -327,15 +403,23 @@ function ReglagesTable({
         ? `${voix.libelleCanal('village')} discute par écrit le jour ; ${voix.libelleCanal('loups')} a son canal la nuit.`
         : `Pas de fil écrit le jour ; seul ${voix.libelleCanal('loups')} a son canal la nuit.`,
     ],
+    [
+      'Absents',
+      options.abandon
+        ? 'Un vivant absent depuis cinq minutes meurt d’abandon, sans pouvoir.'
+        : 'La table attend ses absents : personne ne meurt d’abandon.',
+    ],
     ['Minuteries', `Nuit : ${secondes(options.tempsNuit)} par étape. Jour : ${secondes(options.tempsJour)}.`],
   );
 
   return (
-    <dl className="flex flex-col gap-2">
+    <dl className="m-0 flex flex-col gap-3">
       {lignes.map(([terme, definition]) => (
         <div key={terme} className="flex flex-col gap-0.5">
-          <dt className="font-bold">{terme}</dt>
-          <dd style={{ color: 'var(--papier-doux)' }}>{definition}</dd>
+          <dt className="t-rubrique" style={{ color: 'var(--encre-2)' }}>
+            {terme}
+          </dt>
+          <dd className="m-0">{definition}</dd>
         </div>
       ))}
     </dl>

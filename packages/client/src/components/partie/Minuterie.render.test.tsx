@@ -12,7 +12,7 @@ import { DEFAULT_OPTIONS, type RoomView, type SyncPayload } from '@garoutom/engi
 import { Partie } from '../../screens/Partie.js';
 import { useStore } from '../../lib/store.js';
 import { installe, nouvellePartie, salle as salleDuBanc, tousPrets } from './nuit/banc.js';
-import { Minuterie } from './Minuterie.js';
+import { CRANS, Minuterie } from './Minuterie.js';
 
 function salle(ecarts: Partial<RoomView>): RoomView {
   return {
@@ -43,14 +43,40 @@ describe('<Minuterie />', () => {
     vi.useRealTimers();
   });
 
-  it('sans échéance : un cadre vide, muet, de la même forme', () => {
+  it('sans échéance : le cadre vide, muet, exactement de la forme de la règle', () => {
     useStore.setState({ room: salle({}) });
-    render(<Minuterie />);
+    const vide = render(<Minuterie />);
     const cadre = screen.getByTestId('minuterie-cadre');
-    expect(cadre).toBeEmptyDOMElement();
     expect(cadre).toHaveAttribute('aria-hidden', 'true');
-    expect(cadre.className).toContain('h-5');
+    expect(cadre.className).toContain('h-6');
     expect(screen.queryByRole('timer')).toBeNull();
+    // 24 crans en contour, aucun plein, et un tiret long à la place du chiffre.
+    expect(cadre.querySelectorAll('rect')).toHaveLength(CRANS);
+    expect(cadre.querySelector('[data-crans-pleins]')).toHaveAttribute('data-crans-pleins', '0');
+    expect(cadre).toHaveTextContent('—');
+    const classes = cadre.className;
+    vide.unmount();
+
+    // Une échéance en main : la règle prend exactement le cadre.
+    const debut = Date.now();
+    act(() => useStore.getState().applySync(sync(salle({ deadline: debut + 30_000, deadlineDurationMs: 60_000 }), debut)));
+    render(<Minuterie />);
+    const regle = screen.getByRole('timer');
+    expect(regle.className).toBe(classes);
+    expect(regle.querySelectorAll('rect')).toHaveLength(CRANS);
+    expect(regle.querySelector('[data-crans-pleins]')).toHaveAttribute('data-crans-pleins', '12');
+  });
+
+  it('l’urgence se dit par la texture et le sablier retourné, jamais par une couleur', () => {
+    const debut = Date.now();
+    act(() => useStore.getState().applySync(sync(salle({ deadline: debut + 8_000, deadlineDurationMs: 60_000 }), debut)));
+    render(<Minuterie />);
+    const regle = screen.getByRole('timer');
+    expect(regle).toHaveAttribute('data-urgence');
+    const pleins = [...regle.querySelectorAll('rect')].filter((rect) => rect.getAttribute('fill')?.startsWith('url('));
+    expect(pleins.length).toBeGreaterThan(0);
+    expect(pleins.every((rect) => rect.getAttribute('fill') === 'url(#hach-x-e)')).toBe(true);
+    expect(regle.innerHTML).not.toMatch(/sang|meute|#A23B24|#D9765A/i);
   });
 
   it('se fige quand la table attend son village, et repart à la reprise', () => {

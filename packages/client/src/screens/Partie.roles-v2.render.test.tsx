@@ -29,6 +29,7 @@ import {
   type Rng,
 } from '@garoutom/engine';
 
+import { Narrateur } from '../components/partie/Narrateur.js';
 import { jouer } from '../lib/actions.js';
 import { useStore } from '../lib/store.js';
 import { Partie } from './Partie.js';
@@ -223,14 +224,15 @@ describe('<Partie /> — les rôles optionnels', () => {
     expect(screen.getByTestId(`marque-${String(marque)}`)).toHaveTextContent('+2');
     expect(jeton(marque)).toHaveAccessibleName(/marqué·e par le Corbeau : deux voix d’office/);
     expect(screen.queryAllByText('+2', { selector: '[data-testid^="marque-"]' })).toHaveLength(1);
-    // La barre explique : qui, et ce que ça pèse.
+    // Le compte du vote l'explique aux lecteurs d'écran : qui, et ce que ça pèse
+    // (à l'œil, le cartouche « +2 » du jeton et le crieur le disent).
     const explication = screen.getByTestId('explication-marque');
     expect(within(screen.getByTestId('barre-vote')).getByTestId('explication-marque')).toBe(explication);
     expect(explication).toHaveTextContent(`Le Corbeau a marqué ${nom(marque)} : deux voix d’office au vote du jour.`);
     expect(container.textContent ?? '').not.toMatch(IDENTIFIANTS_BRUTS);
   });
 
-  it('sur grand écran, le rond porte la même marque et la margelle la même explication', () => {
+  it('sur grand écran, le cercle porte la même marque et le pupitre la même explication', () => {
     const restaurer = simulerGrandEcran();
     const mesure = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width: 980,
@@ -252,14 +254,15 @@ describe('<Partie /> — les rôles optionnels', () => {
 
       expect(screen.getByTestId('place')).toHaveAttribute('data-disposition', 'cercle');
       expect(screen.getByTestId(`marque-${String(marque)}`)).toHaveTextContent('+2');
-      expect(screen.getByLabelText('La margelle')).toContainElement(screen.getByTestId('explication-marque'));
+      expect(screen.getByTestId('barre-vote')).toContainElement(screen.getByTestId('explication-marque'));
+      expect(screen.getByTestId('fil-colonne')).toBeInTheDocument();
     } finally {
       mesure.mockRestore();
       restaurer();
     }
   });
 
-  it('le Bouc émissaire désigne plusieurs votants sur la place, puis confirme', async () => {
+  it('le Bouc émissaire désigne plusieurs votants sur la place, puis confirme — sans retour', async () => {
     const { banc, bouc, a, b } = egaliteSurLeBouc();
     const room = publier(banc, bouc);
     const utilisateur = userEvent.setup();
@@ -267,49 +270,52 @@ describe('<Partie /> — les rôles optionnels', () => {
 
     expect(screen.getByTestId('partie')).toHaveAttribute('data-phase', 'bouc');
     expect(screen.getByTestId('crieur')).toHaveTextContent(`c’est ${nom(bouc)}, le Bouc émissaire, qui paie pour tous`);
-    const action = screen.getByTestId('action');
-    expect(action).toHaveTextContent('Votre dernier mot : désignez qui votera demain');
+    expect(screen.getByTestId('consigne')).toHaveTextContent('Votre dernier mot : désignez qui votera demain');
     // Lui est tombé : son jeton ne se touche pas.
     expect(jeton(bouc)).toBeDisabled();
-    expect(within(action).getByRole('button', { name: 'Désignez au moins un vivant' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Désignez au moins un vivant' })).toBeDisabled();
 
     await utilisateur.click(jeton(b));
     await utilisateur.click(jeton(a));
     expect(jeton(a)).toHaveAttribute('aria-pressed', 'true');
     expect(jeton(b)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('etat-designation')).toHaveTextContent(
-      `Voteront demain : ${nom(Math.min(a, b))} et ${nom(Math.max(a, b))}.`,
+      `2 votants : ${nom(Math.min(a, b))} et ${nom(Math.max(a, b))}`,
     );
     // Un second toucher retire un votant.
     await utilisateur.click(jeton(b));
     expect(jeton(b)).toHaveAttribute('aria-pressed', 'false');
     await utilisateur.click(jeton(b));
-    await utilisateur.click(screen.getByRole('button', { name: 'Confirmer ces 2 votants' }));
+    await utilisateur.click(screen.getByRole('button', { name: 'Désigner ces 2 votants' }));
+    expect(jouer).not.toHaveBeenCalled();
+    await utilisateur.click(screen.getByRole('button', { name: 'Confirmer — sans retour : désigner ces 2 votants' }));
     expect(jouer).toHaveBeenCalledWith({ type: 'designerVotants', seats: [a, b].sort((x, y) => x - y) });
     expect(container.textContent ?? '').not.toMatch(IDENTIFIANTS_BRUTS);
   });
 
-  it('pendant le dernier mot du Bouc, les autres lisent la phrase de la phase', () => {
+  it('pendant le dernier mot du Bouc, les autres lisent la scène au crieur et la légende du graveur', () => {
     const { banc, bouc } = egaliteSurLeBouc();
     const autre = banc.state.players.find((p) => p.alive && p.seat !== bouc)!.seat;
     const room = publier(banc, autre);
     render(<Partie room={room} />);
 
-    expect(screen.getByTestId('action')).toHaveTextContent(
+    expect(screen.getByTestId('crieur')).toHaveTextContent(
       'Le Bouc émissaire rend l’âme. Son dernier mot peut désigner qui votera demain.',
     );
+    expect(screen.getByTestId('consigne')).toHaveTextContent('« Il fallait bien quelqu’un. »');
     expect(within(screen.getByTestId('place')).queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('le lendemain, seuls les désignés votent : les autres le lisent, la barre ne compte qu’eux', async () => {
+  it('le lendemain, seuls les désignés votent : les autres le lisent, le compte ne compte qu’eux', async () => {
     const { banc, bouc, a, b } = egaliteSurLeBouc();
     const avant = banc.events.length;
     banc.agir(bouc, { type: 'designerVotants', seats: [a, b] });
     const temoin = banc.state.players.find((p) => p.alive && p.seat !== a && p.seat !== b)!.seat;
 
-    // Le narrateur crie le dernier mot, sans accolade.
+    // Le narrateur crie le dernier mot, sans accolade (la nuit, l'écran — doublé
+    // ici — porte le crieur des zones communes).
     let room = publier(banc, temoin);
-    const vue = render(<Partie room={room} />);
+    const vue = render(<Narrateur />);
     act(() => {
       publier(banc, temoin, avant);
     });
@@ -322,11 +328,14 @@ describe('<Partie /> — les rôles optionnels', () => {
     expect(banc.state.phase.kind).toBe('jour');
     expect(banc.state.votants).toEqual([a, b].sort((x, y) => x - y));
 
-    // Un vivant non désigné : pas de vote, et il le lit.
+    // Un vivant non désigné : pas de vote, le bouton éteint et sa raison.
     useStore.setState({ chronique: [] });
     room = publier(banc, temoin);
     const temoinVue = render(<Partie room={room} />);
-    expect(screen.getByTestId('non-designe')).toHaveTextContent('vous ne votez pas aujourd’hui');
+    const raison = screen.getByTestId('non-designe');
+    expect(raison).toHaveTextContent('Le Bouc émissaire ne vous a pas désigné·e.');
+    expect(screen.getByRole('button', { name: 'Voter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Voter' })).toHaveAttribute('aria-describedby', raison.id);
     expect(screen.queryByRole('button', { name: 'S’abstenir' })).toBeNull();
     expect(screen.getByTestId('barre-vote')).toHaveTextContent('0 sur 2 a voté');
     expect(screen.getByTestId('explication-votants')).toHaveTextContent(
@@ -334,10 +343,11 @@ describe('<Partie /> — les rôles optionnels', () => {
     );
     expect(jetonQuelconque(temoin)).toHaveTextContent('ne vote pas aujourd’hui');
     expect(jetonQuelconque(a)).not.toHaveTextContent('ne vote pas');
+    expect(jetonQuelconque(a)).toHaveTextContent('votera');
     expect(temoinVue.container.textContent ?? '').not.toMatch(IDENTIFIANTS_BRUTS);
     temoinVue.unmount();
 
-    // Un désigné vote comme d'habitude ; la barre avance sur deux.
+    // Un désigné vote comme d'habitude ; le compte avance sur deux.
     banc.agir(a, { type: 'voter', target: temoin });
     room = publier(banc, b);
     const utilisateur = userEvent.setup();
@@ -345,6 +355,7 @@ describe('<Partie /> — les rôles optionnels', () => {
     expect(screen.getByTestId('barre-vote')).toHaveTextContent('1 sur 2 a voté');
     await utilisateur.click(jeton(temoin));
     await utilisateur.click(screen.getByRole('button', { name: `Voter contre ${nom(temoin)}` }));
+    await utilisateur.click(screen.getByRole('button', { name: `Confirmer : ${nom(temoin)} à la potence` }));
     expect(jouer).toHaveBeenCalledWith({ type: 'voter', target: temoin });
   });
 

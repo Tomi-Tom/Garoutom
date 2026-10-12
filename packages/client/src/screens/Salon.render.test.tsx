@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_OPTIONS, type Channel, type GameOptions, type RoomView, type SyncPayload } from '@garoutom/engine';
 
@@ -45,10 +45,31 @@ function doublureCanal(): Channel {
   return { request: vi.fn(() => Promise.resolve(null)) } as unknown as Channel;
 }
 
-describe('<Salon />', () => {
+/**
+ * Le salon a deux plans : trois étapes sur le téléphone, trois colonnes sur le
+ * bureau (min-width 64rem). jsdom n'a pas de mise en page : on dit au test de
+ * quelle largeur il est.
+ */
+const matchMediaDOrigine = window.matchMedia;
+function fixeLargeur(large: boolean): void {
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: large,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList) as typeof window.matchMedia;
+}
+
+describe('<Salon /> — sur le bureau, trois colonnes', () => {
   let canal: Channel;
 
   beforeEach(() => {
+    fixeLargeur(true);
     localStorage.clear();
     canal = doublureCanal();
     installeCanal(() => canal);
@@ -60,6 +81,10 @@ describe('<Salon />', () => {
       notices: [],
       live: null,
     });
+  });
+
+  afterEach(() => {
+    window.matchMedia = matchMediaDOrigine;
   });
 
   it('dit le code à recopier — mono, gros, avec de quoi le copier', () => {
@@ -83,9 +108,9 @@ describe('<Salon />', () => {
       expect(screen.getByText(`Joueur ${String(seat)}`, { exact: false })).toBeInTheDocument();
       expect(screen.getByText(`siège ${String(seat + 1)}`)).toBeInTheDocument();
     }
-    // Un seul hôte, dit comme tel ; le local se reconnaît sans chercher.
-    expect(screen.getAllByText('Hôte')).toHaveLength(1);
-    expect(screen.getByText('(vous)')).toBeInTheDocument();
+    // Un seul hôte, dit comme tel ; le local se reconnaît sans chercher (un mot d'état par jeton).
+    expect(screen.getAllByText(/hôte/)).toHaveLength(1);
+    expect(screen.getByText('vous · hôte')).toBeInTheDocument();
   });
 
   it('l’hôte peut lancer à six joueurs, pas avant', () => {
@@ -168,7 +193,7 @@ describe('<Salon />', () => {
     absente.players[2]!.disconnectedUntil = Date.now() + 30_000;
     useStore.setState({ decalageHorloge: 0 });
     vue.rerender(<Salon room={absente} />);
-    expect(screen.getByText(/Absent · \d+ s/)).toBeInTheDocument();
+    expect(screen.getByText(/absent·e · \d+ s/)).toBeInTheDocument();
   });
 
   it('le sélecteur de skin : l’hôte change d’univers, l’invité le lit', async () => {

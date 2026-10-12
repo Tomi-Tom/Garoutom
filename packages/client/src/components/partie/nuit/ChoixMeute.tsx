@@ -2,32 +2,58 @@
  * La meute : dévorer — et voir les siens voter.
  *
  * Chaque loup vote pour un vivant qui n'est pas des leurs, ou s'abstient, et
- * peut changer d'avis tant que l'étape court (R40). Le vote part au premier
- * toucher : c'est un vote vivant, que la meute voit se poser en temps réel
- * (`pack.votes`) — une pastille au nom de chaque loup sur le jeton qu'il
- * vise. Sous les votes, le mini-fil du canal de la meute : on y parle en
- * regardant les voix se poser à côté des mots (design.md, section 3).
+ * peut changer d'avis tant que l'étape court (R40). Le bouton principal de la
+ * barre dit « Ne viser personne » tant que rien n'est touché ; il touche un
+ * jeton, le principal devient « Dévorer Fanny » (toucher le jeton à nouveau
+ * le rend au silence) — l'un et l'autre armés en deux temps (P0-6). La barre
+ * a ainsi deux boutons, comme chez tous. La meute voit les voix se poser en temps
+ * réel (`pack.votes`) : sur le jeton visé, une pastille aux initiales des
+ * loups (« B·O ») — le seul endroit où la craie paraît, en texte de 12 px —
+ * et dans le résumé, la cible qui mène. Le fil de la meute est derrière le
+ * pli « La meute ».
+ *
+ * **Aucune teinte de surface** (N2) : l'écran de la meute est, à un mètre,
+ * celui du village qui dort. Ses complices sont seulement non choisissables
+ * (état 15) — rien d'autre ne les distingue.
  *
  * Seules comptent les voix des loups vivants (R41) : la liste et les
  * pastilles ne montrent qu'eux.
  */
 
-import { motion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { RESSORT_CARTE } from '../../../anim/tokens.js';
 import { jouer } from '../../../lib/actions.js';
 import { useGame, useNoms, useVoix } from '../../../lib/partie.js';
-import { Fil } from '../Fil.js';
-import { Place } from '../Place.js';
-import { EnTeteRole, GabaritRole, Pastille, usePeau } from './commun.js';
+import { Bouton } from '../../caprices/index.js';
+import { Consigne, libelleArme, Pastille, Resume, usePeau } from './commun.js';
+import { EcranNuit, PlaceDeNuit } from './EcranNuit.js';
 import { textePrompt } from './textes.js';
+
+/**
+ * Les initiales des loups (« B·O ») : la première lettre, et autant de
+ * lettres de plus qu'il en faut pour départager deux loups (trois au plus).
+ */
+function initialesDe(loups: readonly number[], nom: (seat: number) => string): Map<number, string> {
+  const prefixe = (seat: number, n: number) => {
+    const pseudo = nom(seat).trim();
+    return pseudo.charAt(0).toLocaleUpperCase('fr') + pseudo.slice(1, n);
+  };
+  const resultat = new Map<number, string>();
+  for (const loup of loups) {
+    let n = 1;
+    while (n < 3 && loups.some((autre) => autre !== loup && prefixe(autre, n) === prefixe(loup, n))) n += 1;
+    resultat.set(loup, prefixe(loup, n));
+  }
+  return resultat;
+}
 
 export function ChoixMeute() {
   const game = useGame();
   const peau = usePeau();
   const voix = useVoix();
   const nom = useNoms();
+  // `undefined` : rien touché depuis le dernier envoi — le choix suit la voix envoyée.
+  const [touche, setTouche] = useState<number | null | undefined>(undefined);
   if (game?.you == null || game.prompt?.kind !== 'devorer') return null;
   const moi = game.you;
 
@@ -35,98 +61,104 @@ export function ChoixMeute() {
   const votes = game.pack?.votes ?? {};
   const vivants = meute.filter((seat) => game.players[seat]?.alive === true);
   const monVote: number | null | undefined = votes[moi.seat];
+  const choix = touche !== undefined ? touche : typeof monVote === 'number' ? monVote : null;
 
   const choisissable = (seat: number) => game.players[seat]?.alive === true && !meute.includes(seat);
-  const devorer = (target: number | null) => void jouer({ type: 'devorer', target });
+  const devorer = (target: number | null) => {
+    setTouche(undefined);
+    void jouer({ type: 'devorer', target });
+  };
 
-  // Une pastille par loup sur le jeton qu'il vise.
+  // Les voix des loups vivants, par cible.
   const parCible = new Map<number, number[]>();
   for (const loup of vivants) {
     const cible = votes[loup];
     if (cible === undefined || cible === null) continue;
     parCible.set(cible, [...(parCible.get(cible) ?? []), loup]);
   }
+  const initiales = initialesDe(vivants, nom);
   const annotations: Record<number, ReactNode> = {};
   for (const [cible, loups] of parCible) {
     annotations[cible] = (
-      <span className="flex flex-wrap justify-center gap-0.5">
-        {loups.map((loup) => (
-          <Pastille key={loup} teinte="sang">
-            {loup === moi.seat ? 'vous' : nom(loup)}
-          </Pastille>
-        ))}
-      </span>
+      <Pastille ton="meute">
+        {loups.map((loup) => initiales.get(loup)).join('·')}
+        <span className="sr-only">{` : ${loups.map((loup) => (loup === moi.seat ? 'vous' : nom(loup))).join(', ')}`}</span>
+      </Pastille>
     );
   }
+  // La cible qui mène : « la meute : Fanny (2) ».
+  const enTete = [...parCible.entries()].sort((a, b) => b[1].length - a[1].length || a[0] - b[0])[0];
+
+  const action = choix === null ? null : `Dévorer ${nom(choix)}`;
+  const gras =
+    choix !== null
+      ? `${choix === monVote ? 'Votre voix' : 'Votre choix'} : ${nom(choix)}`
+      : monVote === null
+        ? 'Vous laissez le village dormir'
+        : undefined;
 
   return (
-    <GabaritRole teinte="sang" testId="nuit-meute">
-      <EnTeteRole role={moi.role} teinte="sang" texte={textePrompt(peau, game.prompt, nom, moi.seat)} />
-
-      <Place
-        choisissables={choisissable}
-        choisis={typeof monVote === 'number' ? [monVote] : []}
-        onChoisir={(seat) => {
-          if (seat !== monVote) devorer(seat);
-        }}
-        teinte="sang"
-        annotations={annotations}
-        compacte
-        label="Choisir qui dévorer cette nuit"
-      />
-
-      <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          className="btn-voisin"
-          aria-pressed={monVote === null}
-          onClick={() => devorer(null)}
-          style={monVote === null ? { borderColor: 'var(--sang)', color: 'var(--sang)' } : undefined}
-        >
-          Ne dévorer personne
-        </button>
-        {game.acted && (
-          <p className="text-sm" style={{ color: 'var(--papier-doux)' }} role="status">
-            {typeof monVote === 'number'
-              ? `Votre voix va à ${nom(monVote)}.`
-              : 'Vous laissez le village dormir.'}{' '}
-            Vous pouvez changer d’avis tant que la nuit court.
-          </p>
-        )}
-      </div>
-
-      {/* --- La meute et ses voix --- */}
-      <section aria-labelledby="titre-meute" className="carte p-4" style={{ borderColor: 'var(--sang-creux)' }}>
-        <h3 id="titre-meute" className="font-identite text-xl font-semibold first-letter:uppercase" style={{ color: 'var(--sang)' }}>
-          {voix.nomCamp('loups')}
-        </h3>
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {vivants.map((loup) => {
-            const cible = votes[loup];
-            return (
-              <motion.li
-                key={loup}
-                layout
-                transition={RESSORT_CARTE}
-                className="flex flex-wrap items-baseline justify-between gap-x-3 text-base"
-              >
-                <span>
-                  {nom(loup)}
-                  {loup === moi.seat && (
-                    <span className="ml-1 text-sm" style={{ color: 'var(--papier-doux)' }}>
-                      (vous)
-                    </span>
-                  )}
-                </span>
-                <span className="text-sm" style={{ color: cible === undefined ? 'var(--papier-doux)' : 'var(--papier)' }}>
-                  {cible === undefined ? 'n’a pas encore choisi' : cible === null ? 's’abstient' : `vise ${nom(cible)}`}
-                </span>
-              </motion.li>
-            );
-          })}
-        </ul>
-        <Fil mode="integre" canaux={['loups']} className="mt-3" />
-      </section>
-    </GabaritRole>
+    <EcranNuit
+      testId="nuit-meute"
+      meute
+      consigne={<Consigne titre={voix.nomRole(moi.role)} texte={textePrompt(peau, game.prompt, nom, moi.seat)} />}
+      place={
+        <PlaceDeNuit
+          label="Choisir qui dévorer cette nuit"
+          choisissables={choisissable}
+          choisis={choix === null ? [] : [choix]}
+          onChoisir={(seat) => setTouche(choix === seat ? null : seat)}
+          annotations={annotations}
+        />
+      }
+      apresPlace={
+        // Les voix de la meute, dites aux lecteurs d'écran : les pastilles de la place sont muettes.
+        <section aria-label={voix.nomCamp('loups')} className="sr-only">
+          <ul>
+            {vivants.map((loup) => {
+              const cible = votes[loup];
+              return (
+                <li key={loup}>
+                  <span>
+                    {nom(loup)}
+                    {loup === moi.seat ? ' (vous)' : ''}
+                  </span>{' '}
+                  <span>
+                    {cible === undefined ? 'n’a pas encore choisi' : cible === null ? 's’abstient' : `vise ${nom(cible)}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      }
+      resume={
+        <Resume
+          {...(gras === undefined ? {} : { gras })}
+          {...(enTete === undefined ? {} : { suite: ` · la meute : ${nom(enTete[0])} (${String(enTete[1].length)})` })}
+        />
+      }
+      action={
+        action === null || choix === null ? (
+          // Rien de touché (ou le jeton choisi touché à nouveau) : le silence de la meute, en deux temps.
+          <Bouton
+            key="personne"
+            variante="primaire"
+            aria-pressed={monVote === null}
+            arme={{ libelle: libelleArme('Ne viser personne', true), onConfirmer: () => devorer(null) }}
+          >
+            Ne viser personne
+          </Bouton>
+        ) : (
+          <Bouton
+            key={choix}
+            variante="primaire"
+            arme={{ libelle: libelleArme(action, true), onConfirmer: () => devorer(choix) }}
+          >
+            {action}
+          </Bouton>
+        )
+      }
+    />
   );
 }

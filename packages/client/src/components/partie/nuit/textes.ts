@@ -54,7 +54,7 @@ export function textePrompt(
   }
 }
 
-/** « Nuit 3 », dans la voix du skin : le compteur est l'affaire de l'écran, en mono. */
+/** « Nuit 3 », dans la voix du skin : le compteur est l'affaire de l'écran (le carnet, le registre). */
 export function numeroDeNuit(peau: Skin, jour: number): string {
   return resoudre(peau.recit.nuit, { n: String(jour) });
 }

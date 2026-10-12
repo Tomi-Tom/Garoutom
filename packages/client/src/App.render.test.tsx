@@ -131,7 +131,7 @@ describe('<App /> — le lien', () => {
     await waitFor(() => expect(useStore.getState().rattachement).toBe('rattache'));
 
     act(() => canal.couper());
-    expect(screen.getByTestId('bandeau-lien')).toHaveTextContent('Liaison perdue');
+    expect(screen.getByTestId('bandeau-lien')).toHaveTextContent('Reconnexion');
     expect(container.querySelector('[data-suspendu]')).not.toBeNull();
 
     act(() => canal.ouvrir());
@@ -192,5 +192,93 @@ describe('<App /> — le lien', () => {
     act(() => canal.emettre('clock', 4_200));
     expect(useStore.getState().decalageHorloge).toBe(4_200);
     expect(useStore.getState().horlogeCanal).toBe(true);
+  });
+});
+
+describe('<App /> — l’habit du lien (SPEC § 5.11, § 5.13)', () => {
+  it('table disparue : l’écran « La table s’est levée sans vous. » et le retour à l’accueil', async () => {
+    saveToken('BRUM', 'jeton');
+    canal.request.mockResolvedValue({ code: 'BRUM', playerId: 'p0', token: 'jeton' });
+    const utilisateur = userEvent.setup();
+    render(<App />);
+    act(() => canal.ouvrir());
+    await act(async () => canal.emettre('sync', sync()));
+    act(() => {
+      canal.couper();
+      canal.emettre('gone');
+    });
+    const ecran = screen.getByRole('dialog', { name: 'Table BRUM' });
+    expect(ecran).toHaveTextContent('La table s’est levée sans vous.');
+    await utilisateur.click(screen.getByRole('button', { name: 'Retour à l’accueil' }));
+    expect(screen.queryByTestId('table-disparue')).toBeNull();
+  });
+
+  it('le bandeau fait 32 px, décale l’écran, et chaque état a ses mots', async () => {
+    saveToken('BRUM', 'jeton');
+    inscrireCodeDansLUrl('BRUM');
+    canal.request.mockResolvedValue({ code: 'BRUM', playerId: 'p0', token: 'jeton' });
+    render(<App />);
+    act(() => canal.ouvrir());
+    await act(async () => canal.emettre('sync', sync()));
+    await waitFor(() => expect(useStore.getState().rattachement).toBe('rattache'));
+
+    act(() => canal.couper());
+    const bandeau = screen.getByTestId('bandeau-lien');
+    expect(bandeau).toHaveAttribute('data-etat', 'reconnexion');
+    expect(bandeau).toHaveTextContent('Reconnexion… la table vous garde votre place.');
+    // Dans le flux, avant l'écran : il le décale, il ne le recouvre pas.
+    expect(bandeau.className).not.toMatch(/fixed|absolute/);
+    expect(bandeau.nextElementSibling).toContainElement(document.querySelector('[data-suspendu]'));
+  });
+
+  it('hors ligne : dernier état connu, voile de hachures, plus rien ne répond', async () => {
+    saveToken('BRUM', 'jeton');
+    inscrireCodeDansLUrl('BRUM');
+    canal.request.mockResolvedValue({ code: 'BRUM', playerId: 'p0', token: 'jeton' });
+    render(<App />);
+    act(() => canal.ouvrir());
+    await act(async () => canal.emettre('sync', sync()));
+    await waitFor(() => expect(useStore.getState().rattachement).toBe('rattache'));
+
+    act(() => void window.dispatchEvent(new Event('offline')));
+    expect(screen.getByTestId('bandeau-lien')).toHaveTextContent('Hors ligne — dernier état connu.');
+    expect(screen.getByTestId('voile-hors-ligne')).toBeInTheDocument();
+    expect(document.querySelector('[data-suspendu], .h-full[inert]')).not.toBeNull();
+    expect(document.querySelector('[inert]')).not.toBeNull();
+  });
+
+  it('reprise impossible : « Réessayer » relance la reprise', async () => {
+    saveToken('BRUM', 'jeton');
+    inscrireCodeDansLUrl('BRUM');
+    canal.request.mockResolvedValue({ code: 'BRUM', playerId: 'p0', token: 'jeton' });
+    const utilisateur = userEvent.setup();
+    render(<App />);
+    act(() => canal.ouvrir());
+    await act(async () => canal.emettre('sync', sync()));
+    await waitFor(() => expect(useStore.getState().rattachement).toBe('rattache'));
+
+    act(() => useStore.getState().setRattachement('echec'));
+    expect(screen.getByTestId('bandeau-lien')).toHaveTextContent('Votre place n’a pas pu être reprise.');
+    const avant = canal.request.mock.calls.length;
+    await utilisateur.click(screen.getByRole('button', { name: 'Réessayer' }));
+    await waitFor(() => expect(canal.request.mock.calls.length).toBeGreaterThan(avant));
+  });
+
+  it('un avis de refus dit « Refusé : », sans rouge ; trois avis au plus, le plus récent en bas', () => {
+    render(<App />);
+    act(() => {
+      const store = useStore.getState();
+      store.pushNotice('un', 'info');
+      store.pushNotice('deux', 'info');
+      store.pushNotice('trois', 'error');
+      store.pushNotice('quatre', 'info');
+    });
+    const avis = [...document.querySelectorAll<HTMLElement>('[data-avis]')];
+    expect(avis.map((a) => a.textContent)).toEqual(['deux', 'Refusé : trois', 'quatre']);
+    expect(avis[1]).toHaveAttribute('data-avis', 'refus');
+    for (const a of avis) {
+      expect(a.getAttribute('style') ?? '').not.toMatch(/sang|red|rgb\(/i);
+      expect(a.className).toContain('min-h-11');
+    }
   });
 });

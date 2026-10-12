@@ -1,14 +1,13 @@
 /**
- * L'interrupteur du salon et des réglages : une glissière creusée dans la
- * nuit, un jeton qui coulisse.
+ * La case gravée (SPEC Caprices § 5.17) — elle remplace l'interrupteur à
+ * glissière, étranger au cuivre : un carré de 24, filet 1,5 ; cochée, une
+ * croix de deux traits de 2 px ; le mot « oui » ou « non » à droite en
+ * `--t-statut` ; la ligne entière se touche (≥ 44).
  *
- * La case à cocher est le vrai contrôle — le reste est décor, `aria-hidden`.
- * Grisé, il l'est par la seule vraie raison, que `hint` dit en toutes lettres.
+ * La case à cocher est le vrai contrôle — le carré est un dessin,
+ * `aria-hidden`. Éteinte, elle l'est par la seule vraie raison, que `hint`
+ * dit en toutes lettres : jamais d'opacité, un filet en pointillé.
  */
-
-import { motion } from 'motion/react';
-
-import { RESSORT_JETON } from '../anim/tokens.js';
 
 export function Interrupteur({
   id,
@@ -17,6 +16,7 @@ export function Interrupteur({
   checked,
   editable = true,
   onToggle,
+  separe = true,
 }: {
   id: string;
   label: string;
@@ -24,20 +24,20 @@ export function Interrupteur({
   checked: boolean;
   editable?: boolean;
   onToggle: (valeur: boolean) => void;
+  /** Un filet fin au-dessus de la ligne, entre deux cases d'une liste. */
+  separe?: boolean;
 }) {
   return (
     <label
-      className="flex min-h-11 gap-3 rounded-lg p-3"
+      className="flex min-h-11 items-start gap-3 py-1.5"
       style={{
         cursor: editable ? 'pointer' : 'default',
-        background: checked ? 'color-mix(in srgb, var(--lanterne) 9%, transparent)' : 'transparent',
-        boxShadow: `inset 0 0 0 1px ${checked ? 'color-mix(in srgb, var(--lanterne) 45%, transparent)' : 'var(--arcade-trait)'}`,
-        opacity: editable ? 1 : 0.75,
+        borderTop: separe ? '0.75px solid var(--filet-doux)' : undefined,
       }}
     >
       <input
         type="checkbox"
-        className="sr-only"
+        className="peer sr-only"
         checked={checked}
         disabled={!editable}
         onChange={() => {
@@ -45,33 +45,51 @@ export function Interrupteur({
         }}
         aria-describedby={`${id}-hint`}
       />
-      <Glissiere actif={checked} />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-bold">{label}</span>
-        <span id={`${id}-hint`} className="text-xs leading-snug" style={{ color: 'var(--papier-doux)' }}>
+      <CaseGravee cochee={checked} eteinte={!editable} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span
+          className="text-[15px] leading-5 font-semibold"
+          style={{ color: editable ? 'var(--encre)' : 'var(--encre-2)' }}
+        >
+          {label}
+        </span>
+        <span id={`${id}-hint`} className="t-statut">
           {hint}
         </span>
+      </span>
+      <span aria-hidden="true" className="t-statut flex-none leading-5">
+        {checked ? 'oui' : 'non'}
       </span>
     </label>
   );
 }
 
-export function Glissiere({ actif }: { actif: boolean }) {
+/** Le carré gravé : cochée, deux traits en croix ; éteinte, un filet pointillé. */
+export function CaseGravee({ cochee, eteinte = false }: { cochee: boolean; eteinte?: boolean }) {
+  const encre = eteinte ? 'var(--filet-doux)' : 'var(--encre)';
   return (
-    <span
+    <svg
       aria-hidden="true"
-      className="relative mt-0.5 block h-6 w-11 shrink-0 rounded-full"
-      style={{
-        background: actif ? 'var(--lanterne)' : 'var(--nuit-creux)',
-        boxShadow: 'inset 0 0 0 1px var(--arcade-trait)',
-      }}
+      focusable="false"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      className="mt-0.5 flex-none peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"
+      data-case={cochee ? 'cochee' : 'vide'}
     >
-      <motion.span
-        className="absolute top-0.5 size-5 rounded-full"
-        style={{ background: 'var(--papier)' }}
-        animate={{ left: actif ? 22 : 2 }}
-        transition={RESSORT_JETON}
+      <rect
+        x=".75"
+        y=".75"
+        width="22.5"
+        height="22.5"
+        fill={eteinte ? 'none' : 'var(--surface)'}
+        stroke={encre}
+        strokeWidth="1.5"
+        strokeDasharray={eteinte ? '3 2' : undefined}
       />
-    </span>
+      {cochee && (
+        <path d="M6.2 6 L17.8 18.1 M17.9 6.1 L6.1 17.9" stroke={encre} strokeWidth="2" strokeLinecap="square" />
+      )}
+    </svg>
   );
 }

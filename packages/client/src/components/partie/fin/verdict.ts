@@ -30,23 +30,40 @@ export function estGagnant(winner: Winner | null, joueur: PlayerView): boolean {
 export type CouleurFin = 'gagne' | 'perdu' | 'neutre';
 
 export interface VerdictSiege {
+  /** Le verdict en un mot, en capitales — le code du son et du partage : GAGNÉ, PERDU, FIN… */
   verdict: string;
   couleur: CouleurFin;
+  /**
+   * Le sort de ce siège en toutes lettres, titre de la planche du verdict :
+   * « Vous avez gagné ». Les capitales sont réservées au code de la table
+   * (SPEC Caprices § 3.6) : le mot en capitales ne s'affiche plus.
+   */
+  phrase: string;
+}
+
+const PHRASES: Readonly<Record<string, string>> = {
+  GAGNÉ: 'Vous avez gagné',
+  PERDU: 'Vous avez perdu',
+  FIN: 'La partie est finie',
+  'PARTIE NULLE': 'Personne ne l’emporte',
+};
+
+function verdict(code: string, couleur: CouleurFin): VerdictSiege {
+  return { verdict: code, couleur, phrase: PHRASES[code] ?? code };
 }
 
 /**
- * Le verdict en un mot, en capitales. Spectateur (`siege` nul) : « FIN » ;
- * partie sans vainqueur : « PARTIE NULLE », neutre pour tout le monde.
+ * Le verdict du siège : son code en un mot et sa phrase. Spectateur (`siege`
+ * nul) : « FIN » ; partie sans vainqueur : « PARTIE NULLE », neutre pour
+ * tout le monde.
  */
 export function verdictDuSiege(
   winner: Winner | null,
   joueurs: readonly PlayerView[],
   siege: number | null,
 ): VerdictSiege {
-  if (winner === 'personne') return { verdict: 'PARTIE NULLE', couleur: 'neutre' };
+  if (winner === 'personne') return verdict('PARTIE NULLE', 'neutre');
   const moi = siege === null ? undefined : joueurs.find((joueur) => joueur.seat === siege);
-  if (winner === null || moi === undefined) return { verdict: 'FIN', couleur: 'neutre' };
-  return estGagnant(winner, moi)
-    ? { verdict: 'GAGNÉ', couleur: 'gagne' }
-    : { verdict: 'PERDU', couleur: 'perdu' };
+  if (winner === null || moi === undefined) return verdict('FIN', 'neutre');
+  return estGagnant(winner, moi) ? verdict('GAGNÉ', 'gagne') : verdict('PERDU', 'perdu');
 }

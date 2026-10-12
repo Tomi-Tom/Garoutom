@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -106,5 +106,79 @@ describe('<Home />', () => {
     // Rien n'a été mémorisé d'une entrée refusée.
     expect(useStore.getState().playerId).toBeNull();
     expect(localStorage.getItem('garoutom.jetons')).toBeNull();
+  });
+
+  it('habille le dos de boîte : frise, frontispice du Caprice 43 et sa légende', () => {
+    installeCanal(() => doublureCanal(Promise.resolve({ code: 'TEST', playerId: 'p0', token: 'j' })));
+    const { container } = render(<Home />);
+
+    expect(container.querySelector('.frise')).not.toBeNull();
+    expect(container.querySelector('[data-frontispice="yeux"]')).not.toBeNull();
+    expect(container.querySelector('[data-legende="accueil"]')).toHaveTextContent(
+      /^«\s+Le sommeil de la raison engendre des loups\.\s+»$/,
+    );
+    // La fiche TBP-012 reste celle du catalogue.
+    expect(container.querySelector('.arcade-dos')).not.toBeNull();
+  });
+
+  it('n’a pas d’autofocus : le clavier masquerait les boutons', () => {
+    installeCanal(() => doublureCanal(Promise.resolve({ code: 'TEST', playerId: 'p0', token: 'j' })));
+    render(<Home />);
+    expect(screen.getByLabelText('Votre pseudo')).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
+  it('le code tient en quatre cases, une lettre par case, sur une seule vraie zone de saisie', async () => {
+    installeCanal(() => doublureCanal(Promise.resolve({ code: 'TEST', playerId: 'p0', token: 'j' })));
+    const utilisateur = userEvent.setup();
+    const { container } = render(<Home />);
+
+    const cases = container.querySelectorAll('[data-case-code]');
+    expect(cases).toHaveLength(4);
+    await utilisateur.type(screen.getByLabelText('Code de la table'), 'vrg');
+    expect([...cases].map((c) => c.textContent)).toEqual(['V', 'R', 'G', '']);
+
+    // Le collage se répartit tout seul, et ne garde que les lettres du serveur.
+    await utilisateur.clear(screen.getByLabelText('Code de la table'));
+    await utilisateur.click(screen.getByLabelText('Code de la table'));
+    await utilisateur.paste('vr-g1t');
+    expect([...cases].map((c) => c.textContent)).toEqual(['V', 'R', 'G', 'T']);
+    // Les cases ne sont que le dessin : les lecteurs d'écran n'ont qu'un champ.
+    for (const laCase of cases) expect(laCase).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('« Ouvrir une table » est le primaire — « Rejoindre » le devient avec un lien d’invitation', () => {
+    installeCanal(() => doublureCanal(Promise.resolve({ code: 'TEST', playerId: 'p0', token: 'j' })));
+    const { unmount } = render(<Home />);
+    expect(screen.getByRole('button', { name: 'Ouvrir une table' })).toHaveClass('bouton-primaire');
+    expect(screen.getByRole('button', { name: 'Rejoindre' })).toHaveClass('bouton-secondaire');
+    unmount();
+
+    window.history.replaceState(null, '', '/?table=VRGT');
+    try {
+      render(<Home />);
+      expect(screen.getByLabelText('Code de la table')).toHaveValue('VRGT');
+      expect(screen.getByRole('button', { name: 'Rejoindre' })).toHaveClass('bouton-primaire');
+      expect(screen.getByRole('button', { name: 'Ouvrir une table' })).toHaveClass('bouton-secondaire');
+      // Le primaire passe en tête de la barre au pouce.
+      const barre = screen.getByRole('group', { name: 'Votre action' });
+      expect(within(barre).getAllByRole('button').map((b) => b.textContent)).toEqual(['Rejoindre', 'Ouvrir une table']);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('un bouton éteint dit pourquoi : il faut un pseudo', async () => {
+    installeCanal(() => doublureCanal(Promise.resolve({ code: 'TEST', playerId: 'p0', token: 'j' })));
+    const utilisateur = userEvent.setup();
+    render(<Home />);
+    // Le pseudo d'un test précédent survit en mémoire : on l'efface.
+    await utilisateur.clear(screen.getByLabelText('Votre pseudo'));
+    const ouvrir = screen.getByRole('button', { name: 'Ouvrir une table' });
+    expect(ouvrir).toBeDisabled();
+    expect(ouvrir).toHaveAccessibleDescription('Écrivez d’abord votre pseudo.');
+    await utilisateur.type(screen.getByLabelText('Votre pseudo'), 'Léa');
+    expect(ouvrir).toBeEnabled();
+    expect(screen.queryByText('Écrivez d’abord votre pseudo.')).toBeNull();
   });
 });

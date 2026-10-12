@@ -165,15 +165,23 @@ export function disposerEnCercle(
   largeur: number,
   hauteur: number,
   sceneMin?: Scene | readonly Scene[],
+  /**
+   * Un jeton de taille fixe (le cercle desktop de Caprices : m 72 / 56, SPEC
+   * § 5.1.1) : on ne cherche plus le plus grand qui tient, on pose celui-là —
+   * ou on rend `null` s'il ne tient pas.
+   */
+  jetonFixe?: { largeur: number; hauteur: number; medaillon: number },
 ): Ronde | null {
   if (n <= 0 || largeur <= 0 || hauteur <= 0) return null;
   // Plusieurs scènes possibles : une haute pour les places carrées, une
   // large et basse pour les écrans courts. La première qui tient l'emporte.
   const scenes: readonly (Scene | undefined)[] =
     sceneMin === undefined ? [undefined] : Array.isArray(sceneMin) ? sceneMin : [sceneMin as Scene];
-  for (let jeton = LARGEUR_MAX; jeton >= LARGEUR_MIN; jeton -= PAS) {
-    const medaillon = medaillonPour(jeton);
-    const haut = hauteurPour(medaillon);
+  const debut = jetonFixe?.largeur ?? LARGEUR_MAX;
+  const fin = jetonFixe?.largeur ?? LARGEUR_MIN;
+  for (let jeton = debut; jeton >= fin; jeton -= PAS) {
+    const medaillon = jetonFixe?.medaillon ?? medaillonPour(jeton);
+    const haut = jetonFixe?.hauteur ?? hauteurPour(medaillon);
     const rx = largeur / 2 - jeton / 2 - MARGE;
     const ry = hauteur / 2 - haut / 2 - MARGE;
     // Un anneau plus étroit qu'un jeton n'est plus un rond, c'est une pile.

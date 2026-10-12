@@ -1,28 +1,46 @@
 /**
- * La fin de partie : l'écran de fin commun de l'arcade (`EcranFin`) habillé du
- * verdict de CE siège, puis les cartes retournées et la nuit racontée.
+ * La fin de partie, en portfolio (SPEC Caprices § 5.15 ; maquettes
+ * `C-Fin-Verdict`, `C-Fin-Distribution`, `C-Fin-NuitRacontee`,
+ * `C-Fin-Planche`, `C-Fin-Desktop`). Tirage papier — l'épreuve imprimée.
+ *
+ * Sous la frise : le **verdict** dans sa cuvette (la légende « Il est
+ * l'heure. », le cartouche du vainqueur, le verdict du crieur, le sort de ce
+ * siège, l'heure où la partie s'est arrêtée, son rôle, les survivants), puis
+ * **les cartes retournées** en petites cartes, la **nuit racontée** en
+ * planches numérotées, et le fil à relire. Desktop : le verdict à gauche
+ * (cuvette de 420), le reste à droite ; la page défile, et c'est le seul
+ * écran de partie qui défile.
+ *
+ * L'écran de fin commun de la collection (`EcranFin`) est abandonné : son
+ * verdict en capitales, ses boutons en pastille, ses lignes à 85 %
+ * d'opacité contredisent la direction (capitales réservées au code, angles
+ * vifs, aucune opacité sur un texte). Sa promesse est tenue ici à la main :
+ * les trois actions de la collection, **dans leur ordre** — Rejouer (l'hôte
+ * seul), L'arcade, Partager —, puis Quitter la table ; le verdict annoncé
+ * par une région vive ; le son du verdict, lui, part de `useSonsPartie` à
+ * l'évènement `fin`.
  *
  * Le chiffre est le moment où la partie s'est arrêtée, dans les mots du skin :
  * « Nuit 3 » si la dernière chose racontée est de la nuit, « Jour 4 » sinon
- * (à défaut de log, le numéro du jour de la vue). Les trois lignes sont la
- * phrase de fin du narrateur, le sort de ce siège, et les survivants.
+ * (à défaut de log, le numéro du jour de la vue).
  */
 
-import { EcranFin } from '@tombp/arcade';
 import { useState } from 'react';
 
 import type { GameView } from '@garoutom/engine';
 
-import { quitterTable, revanche } from '../../lib/actions.js';
-import { ARCADE_ID } from '../../lib/identity.js';
-import { useGame, useNoms, useRoom, useSkinId, useVoix } from '../../lib/partie.js';
+import { useGame, useRoom, useSkinId } from '../../lib/partie.js';
 import { useStore } from '../../lib/store.js';
 import { peauDuSkin, resoudre } from '../../skins/registre.js';
+import { Bouton, Cuvette } from '../caprices/index.js';
+import { useEstLarge } from '../useEstLarge.js';
 import { Fil } from './Fil.js';
 import { Distribution } from './fin/Distribution.js';
 import { NuitRacontee } from './fin/NuitRacontee.js';
 import { finitDeNuit } from './fin/recit.js';
+import { ActionsFin, Verdict } from './fin/PlancheVerdict.js';
 import { verdictDuSiege } from './fin/verdict.js';
+import { useZonesCommunes } from './zones.js';
 
 /** « Nuit 3 » ou « Jour 4 » : où la partie s'est arrêtée. */
 function chiffreDe(game: GameView, recit: { nuit: string; jour: string }): string {
@@ -35,66 +53,57 @@ function chiffreDe(game: GameView, recit: { nuit: string; jour: string }): strin
   return resoudre(nuit ? recit.nuit : recit.jour, { n: String(derniere.day) });
 }
 
+/** Le fil de la partie, à relire sous le récit. */
+function RelireLeFil() {
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <Bouton variante="secondaire" aria-expanded={ouvert} onClick={() => setOuvert((o) => !o)}>
+        {ouvert ? 'Refermer le fil' : 'Relire le fil'}
+      </Bouton>
+      {ouvert && (
+        <Cuvette className="w-full p-3">
+          <Fil mode="integre" />
+        </Cuvette>
+      )}
+    </div>
+  );
+}
+
 export function Fin() {
   const game = useGame();
   const room = useRoom();
   const playerId = useStore((state) => state.playerId);
-  const voix = useVoix();
-  const noms = useNoms();
   const recit = peauDuSkin(useSkinId()).recit;
-  const [filOuvert, setFilOuvert] = useState(false);
+  const large = useEstLarge();
+  const zones = useZonesCommunes();
 
   if (game === null) return null;
 
   const siege = game.you?.seat ?? null;
-  const { verdict, couleur } = verdictDuSiege(game.winner, game.players, siege);
+  const sort = verdictDuSiege(game.winner, game.players, siege);
   const estHote = room !== null && playerId !== null && room.hostId === playerId;
-  const vivants = game.players.filter((joueur) => joueur.alive);
-
-  const ligneRole =
-    game.you === null
-      ? 'Vous suivez la table en spectateur.'
-      : `Vous étiez ${voix.nomRole(game.you.role)}, ${game.you.alive ? 'debout à la fin' : 'tombé·e avant la fin'}.`;
-  const ligneSurvivants =
-    vivants.length === 0
-      ? 'Personne ne reste debout.'
-      : `${String(vivants.length)} ${vivants.length > 1 ? 'survivants' : 'survivant'} sur ${String(game.players.length)} : ${vivants.map((joueur) => noms(joueur.seat)).join(', ')}`;
-  const lignes = [voix.phraseFin(game.winner ?? 'personne'), ligneRole, ligneSurvivants];
+  const chiffre = chiffreDe(game, recit);
+  const actions = (disposition: 'grille' | 'barre' | 'portes') => (
+    <ActionsFin disposition={disposition} estHote={estHote} verdict={sort.verdict} chiffre={chiffre} />
+  );
 
   return (
-    <EcranFin
-      id={ARCADE_ID}
-      verdict={verdict}
-      couleur={couleur}
-      chiffre={chiffreDe(game, recit)}
-      lignes={lignes}
-      surRejouer={estHote ? () => void revanche() : undefined}
-      actions={[{ libelle: 'Quitter la table', surClic: () => void quitterTable() }]}
-      // Dans le `main` en colonne de la partie, le gabarit centré se laissait
-      // rétrécir à la hauteur de l'écran : la nuit racontée débordait alors
-      // des deux côtés, et le verdict partait au-dessus, hors d'atteinte.
-      className="shrink-0"
-    >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-1 text-left">
-        {!estHote && <p className="text-center text-papier-doux">L’hôte peut relancer une revanche.</p>}
-        <Distribution game={game} />
-        <NuitRacontee game={game} />
-        <div className="flex flex-col items-center gap-3">
-          <button
-            type="button"
-            className="btn-voisin min-h-11"
-            aria-expanded={filOuvert}
-            onClick={() => setFilOuvert((o) => !o)}
-          >
-            {filOuvert ? 'Refermer le fil' : 'Relire le fil'}
-          </button>
-          {filOuvert && (
-            <div className="carte w-full p-3">
-              <Fil mode="integre" />
-            </div>
-          )}
+    <div data-testid="fin" data-verdict={sort.couleur} className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">{zones.frise}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-10 px-[var(--gouttiere)] pt-6 pb-10 lg:grid lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <div className="max-lg:mx-2 lg:sticky lg:top-6">
+            <Verdict game={game} sort={sort} chiffre={chiffre} actions={actions(large ? 'grille' : 'portes')} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-10">
+            <Distribution game={game} />
+            <NuitRacontee game={game} />
+            <RelireLeFil />
+          </div>
         </div>
       </div>
-    </EcranFin>
+      {!large && <div className="shrink-0 bg-surface pb-[env(safe-area-inset-bottom,0px)]">{actions('barre')}</div>}
+    </div>
   );
 }

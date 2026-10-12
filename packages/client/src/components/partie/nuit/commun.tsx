@@ -1,188 +1,210 @@
 /**
- * Ce que tous les écrans de la nuit partagent : la peau du skin, la lune, la
- * tête de l'écran du rôle, le récapitulatif d'après le choix, l'accès replié
- * à un canal secret.
+ * Ce que tous les écrans de la nuit partagent : la peau du skin, la consigne,
+ * la ligne de résumé, la pastille posée sur un jeton, la mention des
+ * pouvoirs éteints.
  *
  * Rien ici ne décide de ce qu'un siège a le droit de voir : la `GameView` l'a
- * déjà fait. Ces briques ne font que l'habiller, et chaque mot qui nomme une
- * mécanique passe par la voix du skin.
+ * déjà fait. Ces briques ne font que l'habiller — et toujours de la même
+ * façon pour tous (loi N1) : aucune teinte de rôle, aucune lueur, aucune
+ * animation qui dépendrait de qui joue (N2, N6). La craie de la meute ne
+ * paraît qu'en texte de 12 px, dans une pastille posée sur la place.
  */
 
-import type { ChatChannel, RoleId } from '@garoutom/engine';
-import { AnimatePresence, motion } from 'motion/react';
-import { useId, useState, type ReactNode } from 'react';
+import type { RoleId } from '@garoutom/engine';
+import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
-import { RESSORT_CARTE, RESSORT_PANNEAU } from '../../../anim/tokens.js';
 import { useSkinId, useVoix } from '../../../lib/partie.js';
+import { useStore } from '../../../lib/store.js';
 import { peauDuSkin, type Skin } from '../../../skins/registre.js';
-import { SymboleRole } from '../../habit/Symbole.js';
-import { Fil } from '../Fil.js';
-import type { Teinte } from '../Place.js';
+import { Bouton } from '../../caprices/index.js';
+
+/** Le temps des yeux fermés : l'écran tombe au palier IV, puis revient. */
+const YEUX_FERMES_MS = 3_000;
+
+/**
+ * « Fermer les yeux » — le bouton principal de qui n'a rien à jouer (le
+ * dormeur, le mort, le spectateur, et l'acteur dont le choix est parti sans
+ * retour). Aucun effet de jeu : l'écran tombe un instant au palier IV, comme
+ * on baisse les paupières ; un toucher le rouvre. Il existe pour que la barre
+ * ait, chez tous, la même forme : deux boutons (arbitrage du chef, N1).
+ */
+export function BoutonFermerLesYeux() {
+  const [fermes, setFermes] = useState(false);
+  useEffect(() => {
+    if (!fermes) return;
+    const minuteur = setTimeout(() => setFermes(false), YEUX_FERMES_MS);
+    return () => clearTimeout(minuteur);
+  }, [fermes]);
+  return (
+    <>
+      <Bouton variante="primaire" onClick={() => setFermes(true)}>
+        Fermer les yeux
+      </Bouton>
+      {fermes &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            data-testid="yeux-fermes"
+            className="fixed inset-0 z-[80] bg-[var(--cp-bistre-900)]"
+            onPointerDown={() => setFermes(false)}
+          />,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/**
+ * Le bouton principal d'un rôle qui ne peut pas passer son tour (la Voyante,
+ * le Salvateur, Cupidon), tant que rien n'est choisi : actif, comme chez tous,
+ * mais il n'envoie rien — il pose un avis qui dit quoi faire.
+ */
+export function BoutonChoisir({ libelle, avis }: { libelle: string; avis: string }) {
+  return (
+    <Bouton variante="primaire" onClick={() => useStore.getState().pushNotice(avis)}>
+      {libelle}
+    </Bouton>
+  );
+}
+
+/**
+ * La ligne de résumé avec, à droite, un outil au pouce — l'appui long
+ * « Carnet » de la Voyante : il vit ici, hors de la barre, pour que la barre
+ * garde chez tous ses deux boutons.
+ */
+export function LigneResume({ children, outil }: { children?: ReactNode; outil?: ReactNode }) {
+  return (
+    <div className="flex h-6 items-center gap-2">
+      <div className="min-w-0 flex-1">{children}</div>
+      {outil}
+    </div>
+  );
+}
 
 /** La table de textes entière du skin réglé — les prompts n'ont pas de méthode dans `Voix`. */
 export function usePeau(): Skin {
   return peauDuSkin(useSkinId());
 }
 
-/** Chaque teinte de sélection, en variable de la maison. */
-export const COULEUR: Record<Teinte, string> = {
-  lanterne: 'var(--lanterne)',
-  sang: 'var(--sang)',
-  serment: 'var(--serment)',
-  lune: 'var(--lune)',
-};
+const GRAND_ECRAN = '(min-width: 64rem)';
 
-/**
- * La lune gravée : un disque, deux cratères, un halo. Décorative — le numéro
- * de la nuit et la phrase disent tout ce qu'elle dit.
- */
-export function Lune({ taille = 96, className }: { taille?: number; className?: string }) {
-  const halo = useId();
-  return (
-    <svg
-      width={taille}
-      height={taille}
-      viewBox="0 0 100 100"
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-    >
-      <defs>
-        <radialGradient id={halo}>
-          <stop offset="0.55" stopColor="var(--lune)" stopOpacity="0.28" />
-          <stop offset="1" stopColor="var(--lune)" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="50" fill={`url(#${halo})`} />
-      <circle cx="50" cy="50" r="27" fill="var(--papier)" opacity="0.92" />
-      <circle cx="41" cy="44" r="5" fill="var(--lune)" opacity="0.5" />
-      <circle cx="58" cy="58" r="3.5" fill="var(--lune)" opacity="0.45" />
-      <circle cx="57" cy="40" r="2" fill="var(--lune)" opacity="0.4" />
-    </svg>
+/** Le grand écran (≥ 64 rem) : la colonne droite y est toujours ouverte (SPEC § 7.1). */
+export function useGrandEcran(): boolean {
+  const [grand, setGrand] = useState(
+    () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(GRAND_ECRAN).matches,
   );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const liste = window.matchMedia(GRAND_ECRAN);
+    const suivre = () => setGrand(liste.matches);
+    suivre();
+    liste.addEventListener('change', suivre);
+    return () => liste.removeEventListener('change', suivre);
+  }, []);
+  return grand;
+}
+
+/** La première lettre en minuscule — « Sonder Anna » devient « Confirmer : sonder Anna ». */
+function minuscule(texte: string): string {
+  return texte.charAt(0).toLocaleLowerCase('fr') + texte.slice(1);
 }
 
 /**
- * La lune se lève sur **sa** carte : un rayon froid, le symbole du rôle, son
- * nom dans la voix du skin, puis la consigne. La teinte suit l'action — la
- * meute lit son écran au sang, Cupidon au serment, les autres à la lune.
+ * Le libellé armé d'une action (§ 5.4, § 5.5) : « Confirmer : sonder Anna » ;
+ * quand le moteur ne permet pas de revenir sur le choix (la Sorcière, le Loup
+ * Blanc), le libellé le dit — « Confirmer — sans retour : … ».
  */
-export function EnTeteRole({ role, texte, teinte }: { role: RoleId; texte: string; teinte: Teinte }) {
-  const voix = useVoix();
-  const couleur = COULEUR[teinte];
-  return (
-    <header className="relative flex flex-col items-center gap-3 pt-2 text-center">
-      {/* Le rayon : un cône de lumière froide qui descend sur le symbole. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute top-0 left-1/2 h-48 w-56 -translate-x-1/2"
-        style={{
-          background: `radial-gradient(ellipse at top, color-mix(in srgb, ${couleur} 26%, transparent), transparent 70%)`,
-        }}
-      />
-      <motion.div
-        initial={{ y: 28, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={RESSORT_PANNEAU}
-        className="relative flex flex-col items-center"
-      >
-        <Lune taille={64} className="-mb-6" />
-        <span
-          className="relative grid size-20 place-items-center rounded-full"
-          style={{ background: 'var(--nuit-relief)', boxShadow: `0 0 0 1px ${couleur}, 0 0 28px -6px ${couleur}` }}
-        >
-          <SymboleRole role={role} taille={52} />
-        </span>
-      </motion.div>
-      <h2 className="font-identite text-3xl leading-tight font-bold" style={{ color: couleur }}>
-        {voix.nomRole(role)}
-      </h2>
-      <motion.p
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...RESSORT_CARTE, delay: 0.15 }}
-        className="max-w-[34rem] text-base leading-relaxed"
-      >
-        {texte}
-      </motion.p>
-    </header>
-  );
+export function libelleArme(action: string, changeable: boolean): string {
+  return `${changeable ? 'Confirmer : ' : 'Confirmer — sans retour : '}${minuscule(action)}`;
 }
 
 /**
- * Le récapitulatif d'un choix fait. `changeable` ne vaut que ce que le
- * moteur permet : à l'étape principale, une action renvoyée remplace la
- * précédente tant que l'étape court ; la Sorcière, seule en scène, clôt la
- * nuit en jouant — elle n'a plus qu'à se rendormir.
+ * La zone de consigne (§ 7.1, 72 px) : la consigne du rôle en `--t-jeu`, ou,
+ * chez qui n'a rien à faire, la **légende** du moment en italique du graveur.
+ * Un titre caché nomme l'écran pour les lecteurs d'écran (le nom du rôle, ou
+ * la phrase de l'heure) : il ne se voit pas, il ne déplace rien.
  */
-export function Recap({
-  children,
-  changeable,
-  onChanger,
+export function Consigne({
+  titre,
+  texte,
+  legende,
+  statut = false,
 }: {
-  children: ReactNode;
-  changeable: boolean;
-  onChanger?: () => void;
+  titre: string;
+  texte?: ReactNode;
+  legende?: string;
+  /** Le récapitulatif d'un choix : la consigne devient un statut (`role="status"`). */
+  statut?: boolean;
+}) {
+  // Les consignes longues (la Sorcière, le Corbeau) passent en 16/18 pour
+  // tenir dans les trois lignes de la zone, comme sur les planches.
+  const longue = typeof texte === 'string' && texte.length > 110;
+  return (
+    <div className="flex h-full w-full flex-col justify-center">
+      <h2 className="sr-only">{titre}</h2>
+      {legende !== undefined ? (
+        <p data-testid="consigne-nuit" className="t-legende m-0 text-center">
+          « {legende} »
+        </p>
+      ) : (
+        <p
+          data-testid="consigne-nuit"
+          role={statut ? 'status' : undefined}
+          className={`m-0 max-h-[72px] overflow-hidden text-encre ${longue ? 't-corps text-[16px] leading-[18px]' : 't-jeu'}`}
+        >
+          {texte}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * La ligne de résumé (§ 5.5, 24 px) : « **Votre choix : Fanny** · la meute :
+ * Fanny (2) » à gauche, un chiffre à droite. Vide, la ligne reste.
+ */
+export function Resume({
+  gras,
+  suite,
+  droite,
+  icone,
+  testId,
+}: {
+  gras?: ReactNode;
+  suite?: ReactNode;
+  droite?: ReactNode;
+  icone?: ReactNode;
+  testId?: string;
 }) {
   return (
-    <motion.div
-      role="status"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={RESSORT_CARTE}
-      className="carte flex flex-col items-center gap-3 p-4 text-center"
+    <div
+      data-testid={testId}
+      className="flex h-6 items-center justify-between gap-2 font-corps text-[14px] leading-6 whitespace-nowrap"
     >
-      <p className="text-base">{children}</p>
-      <p className="text-sm" style={{ color: 'var(--papier-doux)' }}>
-        {changeable ? 'Vous pouvez changer d’avis tant que la nuit court.' : 'Rendormez-vous.'}
-      </p>
-      {changeable && onChanger && (
-        <button type="button" className="btn-voisin" onClick={onChanger}>
-          Changer d’avis
-        </button>
-      )}
-    </motion.div>
+      <span className="flex min-w-0 items-center gap-1.5 overflow-hidden text-ellipsis text-encre-2">
+        {icone !== undefined && <span className="flex shrink-0 text-encre">{icone}</span>}
+        {gras !== undefined && <b className="font-semibold text-encre">{gras}</b>}
+        {suite}
+      </span>
+      {droite !== undefined && <span className="t-chiffre shrink-0 text-encre">{droite}</span>}
+    </div>
   );
 }
 
 /**
- * Un canal secret replié par défaut — le serment des amoureux surtout : « le
- * voisin du canapé ne doit lire “crois-moi” qu'à celui à qui c'est dit ».
- * Un geste l'ouvre, un geste le referme.
+ * Une pastille posée sur un jeton (§ 5.1.4, état 17) : 18 px de haut, fond
+ * `--surface`, filet `--filet`, texte de 12 px. `meute` écrit en craie — le
+ * seul endroit où la couleur de la meute paraît la nuit, en texte (N2).
  */
-export function CanalReplie({ canal, teinte }: { canal: ChatChannel; teinte: Teinte }) {
-  const voix = useVoix();
-  const [ouvert, setOuvert] = useState(false);
-  const zone = useId();
-  const couleur = COULEUR[teinte];
+export function Pastille({ children, ton = 'encre' }: { children: ReactNode; ton?: 'encre' | 'meute' | 'serment' }) {
+  const couleur = ton === 'meute' ? 'text-meute' : ton === 'serment' ? 'text-serment' : 'text-encre';
   return (
-    <div className="w-full">
-      <button
-        type="button"
-        aria-expanded={ouvert}
-        aria-controls={zone}
-        onClick={() => setOuvert((v) => !v)}
-        className="btn-voisin w-full justify-between gap-3"
-        style={{ color: couleur }}
-      >
-        <span>{voix.libelleCanal(canal)}</span>
-        <span aria-hidden="true">{ouvert ? '−' : '+'}</span>
-      </button>
-      <AnimatePresence initial={false}>
-        {ouvert && (
-          <motion.div
-            id={zone}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={RESSORT_CARTE}
-            className="overflow-hidden"
-          >
-            <Fil mode="integre" canaux={[canal]} className="mt-2" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <span
+      className={`inline-flex h-[18px] max-w-full items-center gap-0.5 border border-filet bg-surface px-1 font-corps text-[12px] leading-4 font-semibold whitespace-nowrap ${couleur}`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -213,56 +235,14 @@ export function pouvoirsEteints(
 /**
  * La mention sobre d'un pouvoir éteint. La perte est publique — l'annonce de
  * la rancune l'a dite à tous (R92) —, mais seul le siège concerné lit qu'elle
- * le touche : sa nuit sans consigne n'est pas un oubli.
+ * le touche : sa nuit sans consigne n'est pas un oubli. La nuit, elle tient
+ * dans la ligne de résumé.
  */
 export function PouvoirsEteints({ className = '' }: { className?: string }) {
   const voix = useVoix();
   return (
-    <p data-testid="pouvoirs-eteints" className={`text-sm italic ${className}`} style={{ color: 'var(--papier-doux)' }}>
+    <span data-testid="pouvoirs-eteints" className={`italic ${className}`}>
       Vos pouvoirs se sont éteints avec {voix.nomRole('ancien')}.
-    </p>
-  );
-}
-
-/** Une petite pastille posée sur un jeton de la place. */
-export function Pastille({ children, teinte }: { children: ReactNode; teinte: Teinte }) {
-  return (
-    <span
-      className="inline-block max-w-full truncate rounded-full px-1.5 py-px text-[11px] leading-4 font-bold"
-      style={{ background: 'var(--nuit-creux)', color: COULEUR[teinte], boxShadow: `inset 0 0 0 1px ${COULEUR[teinte]}` }}
-    >
-      {children}
     </span>
-  );
-}
-
-/** Le gabarit d'un écran de rôle : une colonne, l'en-tête, puis l'action. */
-export function GabaritRole({
-  teinte,
-  children,
-  testId,
-}: {
-  teinte: Teinte;
-  children: ReactNode;
-  testId: string;
-}) {
-  return (
-    <motion.section
-      data-testid={testId}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={RESSORT_PANNEAU}
-      className="relative isolate mx-auto flex w-[min(44rem,100%)] flex-col gap-5 px-4 py-6"
-    >
-      {/* La meute teinte le village de sang ; les autres restent sous la lune. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem]"
-        style={{
-          background: `radial-gradient(ellipse at 50% 0%, color-mix(in srgb, ${COULEUR[teinte]} ${teinte === 'sang' ? '18' : '8'}%, transparent), transparent 65%)`,
-        }}
-      />
-      {children}
-    </motion.section>
   );
 }

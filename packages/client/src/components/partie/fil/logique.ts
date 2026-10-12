@@ -14,13 +14,45 @@ export const SEUIL_COMPTEUR = 240;
 /** L'ordre des onglets, du plus public au plus secret. */
 export const ORDRE_CANAUX: readonly ChatChannel[] = ['village', 'loups', 'amoureux', 'morts'];
 
-/** La teinte d'un canal, en variable CSS de la palette. */
+/** La teinte d'un canal, en variable CSS de la palette (§ 5.10). */
 export const TEINTE_CANAL: Record<ChatChannel, string> = {
-  village: 'var(--lanterne)',
-  loups: 'var(--sang)',
-  amoureux: 'var(--serment)',
-  morts: 'var(--lune)',
+  village: 'var(--canal-village)',
+  loups: 'var(--canal-meute)',
+  amoureux: 'var(--canal-serment)',
+  morts: 'var(--canal-audela)',
 };
+
+/** La forme du cartouche de l'onglet : la forme avant le mot, le mot avant la teinte. */
+export const FORME_CANAL: Record<ChatChannel, 'ecu' | 'mordu' | 'lacs' | 'bruni'> = {
+  village: 'ecu',
+  loups: 'mordu',
+  amoureux: 'lacs',
+  morts: 'bruni',
+};
+
+/** Le filet de marge des messages : droit, dentelé, double, pointillé. */
+export type FiletCanal = 'droit' | 'dentele' | 'double' | 'pointille';
+export const FILET_CANAL: Record<ChatChannel, FiletCanal> = {
+  village: 'droit',
+  loups: 'dentele',
+  amoureux: 'double',
+  morts: 'pointille',
+};
+
+/**
+ * Le champ de saisie annonce à qui l'on parle (§ 5.10), dans le mot du skin :
+ * « Le village » → « Parler au village… », « La meute » → « Parler à la meute… ».
+ */
+export function indicationSaisie(canal: ChatChannel, libelle: string): string {
+  if (canal === 'amoureux') return 'Murmurer…';
+  if (canal === 'morts') return 'Commenter d’outre-tombe…';
+  const nu = libelle.trim();
+  const bas = nu.charAt(0).toLowerCase() + nu.slice(1);
+  if (/^le /.test(bas)) return `Parler au ${bas.slice(3)}…`;
+  if (/^la /.test(bas)) return `Parler à la ${bas.slice(3)}…`;
+  if (/^l['’]/.test(bas)) return `Parler à l’${bas.slice(2)}…`;
+  return `Parler à ${bas}…`;
+}
 
 /**
  * Les onglets : seulement ce que ce siège peut lire. Un canal est lisible

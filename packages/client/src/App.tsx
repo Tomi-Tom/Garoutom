@@ -16,12 +16,13 @@
  */
 
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { NoticePayload, SyncPayload } from '@garoutom/engine';
 
-import { DUREE_AVIS_MS, RESSORT_CARTE, RESSORT_PANNEAU } from './anim/tokens.js';
-import { Matieres, useTirage } from './components/caprices/index.js';
+import { DUREE_AVIS_MS, IMPRESSION } from './anim/tokens.js';
+import { Bouton, Cartouche, Cuvette, Matieres, useTirage } from './components/caprices/index.js';
+import { Glyphe } from './components/habit/glyphes.js';
 import {
   annulerReprise,
   codeDeLUrl,
@@ -37,6 +38,13 @@ import { useStore, type Notice } from './lib/store.js';
 import { Home } from './screens/Home.js';
 import { Partie } from './screens/Partie.js';
 import { Salon } from './screens/Salon.js';
+import { voixDuSkin } from './skins/registre.js';
+
+/** La table qui s'est levée sans nous : ce qu'il faut pour la dire, après qu'on l'a oubliée. */
+interface TableDisparue {
+  code: string;
+  skin: string;
+}
 
 /** La table qu'on tient, ou qu'on cherche à reprendre : le magasin, sinon l'adresse. */
 function codeCourant(): string | null {
@@ -63,6 +71,7 @@ export function App() {
   // personne : il faut reprendre sa place, sinon on reste branché sans plus
   // rien recevoir. `epoque` compte les ouvertures, et déclenche la reprise.
   const [epoque, setEpoque] = useState(0);
+  const [disparue, setDisparue] = useState<TableDisparue | null>(null);
 
   useEffect(() => {
     const leCanal = canal();
@@ -72,6 +81,7 @@ export function App() {
       // La table a disparu sous nos pieds : on oublie tout, et on le dit.
       const table = code === 'gone' ? codeCourant() : null;
       if (table !== null) {
+        setDisparue({ code: table, skin: useStore.getState().room?.options.skin ?? 'thiercelieux' });
         placePerdue(table, 'gone');
         return;
       }
@@ -94,7 +104,9 @@ export function App() {
     };
     const surDisparue = () => {
       const code = codeCourant();
-      if (code !== null) placePerdue(code, 'gone');
+      if (code === null) return;
+      setDisparue({ code, skin: useStore.getState().room?.options.skin ?? 'thiercelieux' });
+      placePerdue(code, 'gone');
     };
     const surHorloge = (decalage: number) => store.setDecalageCanal(decalage);
 
@@ -154,8 +166,11 @@ export function App() {
   // Papier le jour, cuivre la nuit (Caprices § 3.2) : posé sur <html>.
   useTirage();
 
-  // Le dernier état reste lisible, grisé, le temps de reprendre sa place.
+  // Le dernier état reste lisible le temps de reprendre sa place ; hors ligne,
+  // un voile le couvre et plus rien n'y répond (SPEC § 5.11) — sans jamais
+  // passer le texte à l'opacité.
   const suspendu = room !== null && (!connected || rattachement !== 'rattache');
+  const horsLigne = useStore((state) => state.horsLigne);
 
   const ecran =
     room === null ? (
@@ -167,34 +182,51 @@ export function App() {
     );
 
   return (
-    <div className="relative h-full" data-skin={room?.options.skin ?? 'thiercelieux'}>
-      <div
-        className="h-full"
-        data-suspendu={suspendu ? '' : undefined}
-        aria-busy={suspendu || undefined}
-        style={{ opacity: suspendu ? 0.55 : 1, transition: 'opacity 0.3s ease' }}
-      >
-        {ecran}
+    <div className="relative flex h-full flex-col" data-skin={room?.options.skin ?? 'thiercelieux'}>
+      <Bandeau />
+
+      <div className="relative min-h-0 flex-1">
+        <div
+          className="h-full"
+          data-suspendu={suspendu ? '' : undefined}
+          aria-busy={suspendu || undefined}
+          inert={horsLigne && room !== null ? true : undefined}
+        >
+          {ecran}
+        </div>
+        {horsLigne && room !== null && (
+          <div
+            aria-hidden="true"
+            data-testid="voile-hors-ligne"
+            className="hach-x absolute inset-0 z-[90]"
+            style={{ opacity: 0.2 }}
+          />
+        )}
       </div>
 
       <Matieres />
       <RegionVivante />
       <Avis />
-      <Bandeau />
       {remplace && <AutreOnglet />}
+      {disparue !== null && <TableSansVous table={disparue} onRetour={() => setDisparue(null)} />}
     </div>
   );
 }
 
 /**
- * Le bandeau du lien, en haut de l'écran : pour soi seul, et sans jamais
- * dire pourquoi les autres sont absents (recherche 04, P1 n° 13).
+ * Le bandeau du lien (SPEC § 5.11) : 32 px entre la barre d'état et la frise,
+ * qui décale l'écran — l'état réseau n'est pas un secret de rôle. Pour soi
+ * seul, et sans jamais dire pourquoi les autres sont absents (recherche 04,
+ * P1 n° 13). Fond palier-3 sous des hachures verticales, texte vergé sur un
+ * cartouche palier-3 plein.
  *
  * - hors ligne : tout de suite, dès que le navigateur le dit ;
- * - liaison perdue : le canal se reconnecte, sans jamais renoncer ;
+ * - reconnexion : le canal se rebranche, sans jamais renoncer ;
  * - reprise de votre place : connecté, la place n'est pas encore rendue —
  *   les actions attendent ;
  * - reprise impossible : un geste la relance.
+ *
+ * (La partie ouverte ailleurs a son propre écran, `AutreOnglet`.)
  */
 function Bandeau() {
   const connected = useStore((state) => state.connected);
@@ -202,41 +234,91 @@ function Bandeau() {
   const rattachement = useStore((state) => state.rattachement);
   const remplace = useStore((state) => state.remplace);
 
-  const message: { texte: string; relancer?: true } | null = remplace
+  const message: { texte: string; etat: string; relancer?: true } | null = remplace
     ? null
     : horsLigne
-      ? { texte: 'Hors ligne — votre place vous attend.' }
+      ? { etat: 'hors-ligne', texte: 'Hors ligne — dernier état connu.' }
       : !connected
-        ? { texte: 'Liaison perdue — le village vous raccroche…' }
+        ? { etat: 'reconnexion', texte: 'Reconnexion… la table vous garde votre place.' }
         : rattachement === 'reprise' || rattachement === 'perdu'
-          ? { texte: 'Reprise de votre place…' }
+          ? { etat: 'reprise', texte: 'Reprise de votre place…' }
           : rattachement === 'echec'
-            ? { texte: 'Votre place n’a pas pu être reprise.', relancer: true }
+            ? { etat: 'echec', texte: 'Votre place n’a pas pu être reprise.', relancer: true }
             : null;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {message !== null && (
         <motion.div
           key="bandeau"
-          initial={{ y: -30 }}
-          animate={{ y: 0 }}
-          exit={{ y: -30 }}
-          transition={RESSORT_PANNEAU}
+          initial={{ height: 0 }}
+          animate={{ height: 32 }}
+          exit={{ height: 0 }}
+          transition={IMPRESSION}
           data-testid="bandeau-lien"
+          data-etat={message.etat}
           aria-hidden={message.relancer ? undefined : 'true'}
-          className="fixed inset-x-0 top-0 z-120 flex items-center justify-center gap-3 py-1.5 text-center font-mono text-xs font-bold"
-          style={{ background: 'var(--lune)', color: 'var(--nuit-creux)' }}
+          className="relative z-[120] flex shrink-0 items-center justify-center gap-2 overflow-visible"
+          style={{
+            background: 'var(--cp-palier-3)',
+            backgroundImage:
+              'repeating-linear-gradient(90deg, var(--cp-palier-2) 0 0.6px, transparent 0.6px 6px)',
+            color: 'var(--cp-verge)',
+          }}
         >
-          <span>{message.texte}</span>
+          <Cartouche
+            forme="ecu"
+            taille={20}
+            className="[--cartouche-fond:var(--cp-palier-3)] [--cartouche-texte:var(--cp-verge)] [--cartouche-trait:var(--cp-palier-3)]"
+          >
+            {message.texte}
+          </Cartouche>
           {message.relancer && (
-            <button type="button" className="underline underline-offset-2" onClick={reprendreSiPossible}>
+            <button
+              type="button"
+              className="t-statut relative shrink-0 cursor-pointer border-0 bg-transparent p-0 underline underline-offset-2 before:absolute before:inset-x-[-8px] before:inset-y-[-8px] before:content-['']"
+              style={{ color: 'var(--cp-verge)' }}
+              onClick={reprendreSiPossible}
+            >
               Réessayer
             </button>
           )}
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/** Un écran plein, posé sur tout : la table s'est levée, ou la partie se joue ailleurs. */
+function EcranPlein({
+  testid,
+  titre,
+  idTitre,
+  children,
+}: {
+  testid: string;
+  titre: string;
+  idTitre: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={idTitre}
+      data-testid={testid}
+      className="fixed inset-0 z-[130] grid place-items-center p-6"
+      style={{ background: 'var(--fond)' }}
+    >
+      <Cuvette className="w-full max-w-[24rem]">
+        <div className="flex flex-col items-center gap-4 p-6 text-center">
+          <h2 id={idTitre} className="t-titre">
+            {titre}
+          </h2>
+          {children}
+        </div>
+      </Cuvette>
+    </div>
   );
 }
 
@@ -252,26 +334,34 @@ function AutreOnglet() {
     canal().connect();
   };
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="titre-autre-onglet"
-      data-testid="autre-onglet"
-      className="fixed inset-0 z-130 grid place-items-center p-6"
-      style={{ background: 'rgb(12 15 25 / 0.92)' }}
-    >
-      <div className="carte flex max-w-[24rem] flex-col items-center gap-4 p-6 text-center">
-        <h2 id="titre-autre-onglet" className="font-identite text-2xl font-bold">
-          Partie ouverte dans un autre onglet
-        </h2>
-        <p className="text-base" style={{ color: 'var(--papier-doux)' }}>
-          Votre place est tenue ailleurs — un autre onglet, ou un autre appareil.
-        </p>
-        <button type="button" className="btn-village" onClick={reprendreIci} autoFocus>
-          Reprendre ici
-        </button>
-      </div>
-    </div>
+    <EcranPlein testid="autre-onglet" idTitre="titre-autre-onglet" titre="Partie ouverte dans un autre onglet">
+      <p className="t-corps">
+        La partie est ouverte dans un autre onglet. Votre place est tenue ailleurs — un autre onglet, ou un autre
+        appareil.
+      </p>
+      <Bouton variante="primaire" onClick={reprendreIci} autoFocus>
+        Reprendre ici
+      </Bouton>
+    </EcranPlein>
+  );
+}
+
+/**
+ * La table a disparu sous nos pieds (fermeture 4002, ou l'avis `gone`). La
+ * place est déjà oubliée et l'accueil derrière l'écran ; celui-ci le dit, avec
+ * la légende du skin, et laisse y revenir d'un geste.
+ */
+function TableSansVous({ table, onRetour }: { table: TableDisparue; onRetour: () => void }) {
+  const legende = voixDuSkin(table.skin).legendeEcran('tableDisparue');
+  return (
+    <EcranPlein testid="table-disparue" idTitre="titre-table-disparue" titre={`Table ${table.code}`}>
+      <p className="t-legende" data-testid="legende-table-disparue">
+        {legende}
+      </p>
+      <Bouton variante="primaire" onClick={onRetour} autoFocus>
+        Retour à l’accueil
+      </Bouton>
+    </EcranPlein>
   );
 }
 
@@ -290,17 +380,21 @@ function RegionVivante() {
   );
 }
 
-/** Le fil des avis éphémères, en bas de l'écran : la voix du serveur. */
+/** Le plus d'avis qui se montrent d'un coup (SPEC § 5.13) : le plus récent en bas. */
+const AVIS_VISIBLES = 3;
+
+/** Les avis éphémères, juste au-dessus de la barre au pouce : la voix du serveur. */
 function Avis() {
   const notices = useStore((state) => state.notices);
   const retirer = useStore((state) => state.dismissNotice);
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-x-0 bottom-4 z-110 flex flex-col items-center gap-2 px-4"
+      className="pointer-events-none fixed inset-x-0 z-[110] flex flex-col items-center gap-2 px-4"
+      style={{ bottom: 'calc(var(--barre-pouce-h) + env(safe-area-inset-bottom, 0px) + 8px)' }}
     >
       <AnimatePresence initial={false}>
-        {notices.map((notice) => (
+        {notices.slice(-AVIS_VISIBLES).map((notice) => (
           <CarteAvis key={notice.id} notice={notice} onDone={() => retirer(notice.id)} />
         ))}
       </AnimatePresence>
@@ -308,6 +402,11 @@ function Avis() {
   );
 }
 
+/**
+ * Un avis : du papier, un filet, un glyphe de 16. Il paraît à l'impression
+ * (pas de ressort, pas de rebond) et s'efface après 6 s. Un refus s'écrit
+ * « Refusé : » en 600, avec le pâté d'encre — jamais de rouge.
+ */
 function CarteAvis({ notice, onDone }: { notice: Notice; onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, DUREE_AVIS_MS);
@@ -318,18 +417,23 @@ function CarteAvis({ notice, onDone }: { notice: Notice; onDone: () => void }) {
   return (
     <motion.div
       layout
-      initial={{ y: 12, opacity: 0, scale: 0.97 }}
-      animate={{ y: 0, opacity: 1, scale: 1 }}
-      exit={{ y: 6, opacity: 0, scale: 0.97 }}
-      transition={RESSORT_CARTE}
-      className="pointer-events-auto rounded-lg px-4 py-2.5 text-sm font-semibold"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={IMPRESSION}
+      data-avis={erreur ? 'refus' : 'info'}
+      className="pointer-events-auto flex min-h-11 w-full max-w-[358px] items-center gap-2 px-4 py-3 text-sm leading-5"
       style={{
-        background: erreur ? 'var(--sang)' : 'var(--nuit-relief)',
-        color: erreur ? 'var(--papier)' : 'var(--lune)',
-        border: `1px solid ${erreur ? 'var(--sang-creux)' : 'var(--arcade-trait)'}`,
+        background: 'var(--surface)',
+        color: 'var(--encre)',
+        border: '1px solid var(--filet)',
       }}
     >
-      {notice.message}
+      <Glyphe nom={erreur ? 'refuse' : 'marque'} />
+      <span className="min-w-0 flex-1">
+        {erreur && <strong className="font-semibold">Refusé : </strong>}
+        {notice.message}
+      </span>
     </motion.div>
   );
 }

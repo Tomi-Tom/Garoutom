@@ -116,9 +116,9 @@ describe('IM Fell jamais dans un bouton, une consigne, un statut', () => {
   });
 
   it('aucun <button> de l’app ne porte IM Fell (hors héritage de la vague 2)', () => {
-    // Écrans d'avant Caprices, refaits en vague 2 (lots V2-C et V2-E) : à
+    // Écrans d'avant Caprices, refaits en vague 2 (lot V2-C) : à
     // retirer de cette liste en les refaisant.
-    const HERITAGE = new Set(['components/partie/Fil.tsx', 'components/partie/fin/NuitRacontee.tsx']);
+    const HERITAGE = new Set(['components/partie/fin/NuitRacontee.tsx']);
     const fautes: string[] = [];
     const parcourir = function* (dossier: string): Generator<string> {
       for (const entree of readdirSync(dossier, { withFileTypes: true })) {

@@ -1,9 +1,9 @@
 /* @vitest-environment jsdom */
 /**
- * La présence sur la place (D17) : un joueur qui se reconnecte porte la lune
- * éteinte et son compte à rebours de grâce ; un absent — grâce passée, place
- * gardée — porte un cerne en pointillés et le mot du skin. Toujours une
- * forme et un mot, jamais la seule pâleur.
+ * La présence sur la place (D17, SPEC § 5.1.4 état 11) : un absent porte la
+ * hachure croisée et la chaise vide, le mot du skin, et tant que la grâce
+ * court son compte à rebours. Toujours une forme et un mot, jamais la seule
+ * pâleur.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -31,17 +31,23 @@ describe('<Place /> — la présence', () => {
 
     render(<Place />);
 
+    const libelle = voixDuSkin('thiercelieux').libelleAbsent();
+    // L'absent dont la grâce court : le mot et le compte à rebours (§ 5.1.4, état 11).
     const reconnexion = screen.getByTestId('presence-2');
-    expect(reconnexion.textContent).toMatch(/^reconnexion · 4[12] s$/);
+    expect(reconnexion.textContent).toMatch(new RegExp(`^${libelle} · 4[12] s$`));
 
     const absent = screen.getByTestId('presence-3');
-    const libelle = voixDuSkin('thiercelieux').libelleAbsent();
     expect(absent).toHaveTextContent(libelle);
-    // La forme, pas la pâleur : le médaillon change de cerne, le jeton garde son contraste.
-    const medaillon = absent.parentElement?.querySelector('[data-presence="absent"]');
+    // La forme, pas la pâleur : le disque se couvre d'une hachure croisée et
+    // d'une chaise vide ; le jeton garde son contraste — aucune opacité.
+    const jeton = absent.closest('li') as HTMLElement;
+    const medaillon = jeton.querySelector('[data-presence="absent"]');
     expect(medaillon).not.toBeNull();
-    expect((medaillon as HTMLElement).style.border).toContain('dashed');
-    expect((absent.closest('li') as HTMLElement).style.opacity).toBe('1');
+    // (La nuit : le motif « -v », au trait vergé.)
+    expect(medaillon?.innerHTML).toMatch(/url\(#hach-x-[ev]\)/);
+    expect(medaillon?.querySelector('[data-glyphe="absent"]')).not.toBeNull();
+    expect(jeton.querySelector('[data-couvre-chef]')).toBeNull();
+    expect(jeton.innerHTML).not.toMatch(/opacity/);
 
     // Les lecteurs d'écran l'entendent aussi.
     expect(screen.getByText(new RegExp(`Joueur 3 — .*${libelle}`))).toBeInTheDocument();

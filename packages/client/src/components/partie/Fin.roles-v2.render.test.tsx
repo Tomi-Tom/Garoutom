@@ -280,7 +280,7 @@ describe('<Fin /> — les rôles optionnels', () => {
 
     poser(banc.state, blanc);
     const vue = render(<Fin />);
-    expect(verdict()).toBe('GAGNÉ');
+    expect(verdict()).toBe('Vous avez gagné');
     expect(screen.getByText(/Le Loup Blanc se tient seul sur la place déserte/)).toBeInTheDocument();
     // Un seul gagnant sur la table : lui.
     const gagnants = document.querySelectorAll('[data-gagnant="oui"]');
@@ -296,7 +296,7 @@ describe('<Fin /> — les rôles optionnels', () => {
     for (const perdant of [loup, villageois]) {
       poser(banc.state, perdant);
       const autre = render(<Fin />);
-      expect(verdict()).toBe('PERDU');
+      expect(verdict()).toBe('Vous avez perdu');
       autre.unmount();
     }
 
@@ -311,13 +311,13 @@ describe('<Fin /> — les rôles optionnels', () => {
 
     poser(banc.state, loup);
     const vueLoup = render(<Fin />);
-    expect(verdict()).toBe('GAGNÉ');
+    expect(verdict()).toBe('Vous avez gagné');
     expect(screen.getAllByText('Le Loup Blanc a épargné la meute.').length).toBeGreaterThan(0);
     vueLoup.unmount();
 
     poser(banc.state, blanc);
     render(<Fin />);
-    expect(verdict()).toBe('PERDU');
+    expect(verdict()).toBe('Vous avez perdu');
     const gagnants = [...document.querySelectorAll('[data-gagnant="oui"]')];
     expect(gagnants).toHaveLength(1);
     expect(gagnants[0]).toHaveTextContent(nom(loup));

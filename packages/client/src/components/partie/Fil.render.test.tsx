@@ -169,7 +169,7 @@ describe('<Fil />', () => {
 
     const log = screen.getByRole('log');
     expect(within(log).getAllByText(`Joueur ${String(autre)}`)).toHaveLength(1);
-    expect(within(log).getByText('Vous')).toBeInTheDocument();
+    expect(within(log).getByText('vous')).toBeInTheDocument();
     expect(within(log).getByText('Jour 1')).toBeInTheDocument();
   });
 

@@ -169,34 +169,34 @@ describe('<Fin />', () => {
 
     poser(village, villageois, `p${String(villageois)}`);
     const vue = render(<Fin />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('GAGNÉ');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Vous avez gagné');
     vue.unmount();
 
     poser(village, loup, `p${String(loup)}`);
     render(<Fin />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('PERDU');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Vous avez perdu');
   });
 
   it('les loups gagnent : le verdict suit le camp du siège', () => {
     const loup = meute.players.find((p) => p.role === 'loup')!.seat;
     poser(meute, loup, `p${String(loup)}`);
     render(<Fin />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('GAGNÉ');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Vous avez gagné');
     expect(screen.getByText(/La meute a pris Thiercelieux/)).toBeInTheDocument();
   });
 
   it('un spectateur lit FIN, sans bouton de revanche', () => {
     poser(village, null, null);
     render(<Fin />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('FIN');
-    expect(screen.queryByRole('button', { name: 'REJOUER' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('La partie est finie');
+    expect(screen.queryByRole('button', { name: 'Rejouer' })).toBeNull();
     expect(screen.getByText(/spectateur/)).toBeInTheDocument();
   });
 
   it('REJOUER seulement pour l’hôte ; les autres lisent qu’il peut relancer', async () => {
     poser(village, 0, 'p0');
     const vue = render(<Fin />);
-    const bouton = screen.getByRole('button', { name: 'REJOUER' });
+    const bouton = screen.getByRole('button', { name: 'Rejouer' });
     await userEvent.setup().click(bouton);
     expect(revanche).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/L’hôte peut relancer une revanche/)).toBeNull();
@@ -204,7 +204,7 @@ describe('<Fin />', () => {
 
     poser(village, 1, 'p1');
     render(<Fin />);
-    expect(screen.queryByRole('button', { name: 'REJOUER' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rejouer' })).toBeNull();
     expect(screen.getByText(/L’hôte peut relancer une revanche/)).toBeInTheDocument();
   });
 

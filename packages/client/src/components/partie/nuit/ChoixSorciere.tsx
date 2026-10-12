@@ -1,38 +1,61 @@
 /**
- * La Sorcière, seule en scène (R36, R42–R44).
+ * La Sorcière, seule en scène (R36, R42–R44), dans le gabarit unique.
  *
- * La victime de la meute est montrée — ou son absence —, avec l'état des
- * deux réserves. Sauver ne s'offre que si la vie reste, qu'il y a quelqu'un à
- * sauver et que la table le permet (`peutSeSauver`) ; empoisonner désigne un
- * vivant sur la place, elle-même comprise, tant que la mort reste. Les deux
- * se cumulent, puis « Valider » ; ou « Ne rien faire ».
+ * La consigne nomme la victime de la meute — ou son absence ; sur la place,
+ * la victime porte la pastille « victime » ; le résumé tient les deux fioles
+ * (« Vie : 1 · Mort : 1 », « Vie : épuisée »). Le bouton principal de la
+ * barre (à droite de « ma carte », comme chez tous) dit exactement ce qui
+ * partira :
  *
- * Elle est seule à jouer cette étape : son choix la clôt sur-le-champ
- * (`settle`), il n'y a donc pas de retour possible — le récapitulatif ne
- * promet rien de tel.
+ * - rien de touché : « Ne rien faire » ;
+ * - toucher la victime (si la vie reste et que la table le permet,
+ *   `peutSeSauver`) : « Sauver Fanny » ; la toucher à nouveau y renonce ;
+ * - toucher un autre jeton (tant que la mort reste) : « Empoisonner Léa » ;
+ *   les deux se cumulent : « Sauver Fanny et empoisonner Léa ».
+ *
+ * Tout s'arme en deux temps, et le libellé armé le dit : « Confirmer — sans
+ * retour : … » — son choix clôt l'étape sur-le-champ (`settle`).
  */
 
-import { useState } from 'react';
+import type { GameView, Prompt } from '@garoutom/engine';
+import { useState, type ReactNode } from 'react';
 
 import { jouer } from '../../../lib/actions.js';
-import { useGame, useNoms } from '../../../lib/partie.js';
-import { Place } from '../Place.js';
-import { EnTeteRole, GabaritRole, Pastille, Recap, usePeau } from './commun.js';
+import { useGame, useNoms, useVoix } from '../../../lib/partie.js';
+import { Bouton } from '../../caprices/index.js';
+import { Icone } from '../../habit/Icone.js';
+import { BoutonFermerLesYeux, Consigne, libelleArme, Pastille, Resume, usePeau } from './commun.js';
+import { EcranNuit, PlaceDeNuit } from './EcranNuit.js';
 import { textePrompt } from './textes.js';
 
 export function ChoixSorciere() {
   const game = useGame();
+  if (game?.you == null || game.prompt?.kind !== 'sorciere') return null;
+  return <Sorciere game={game} moi={game.you} prompt={game.prompt} />;
+}
+
+type PromptSorciere = Extract<Prompt, { kind: 'sorciere' }>;
+
+function Sorciere({
+  game,
+  moi,
+  prompt,
+}: {
+  game: GameView;
+  moi: NonNullable<GameView['you']>;
+  prompt: PromptSorciere;
+}) {
   const peau = usePeau();
+  const voix = useVoix();
   const nom = useNoms();
-  const [sauver, setSauver] = useState(false);
+  const [sauverTouche, setSauverTouche] = useState(false);
   const [poison, setPoison] = useState<number | null>(null);
   const [envoye, setEnvoye] = useState<{ save: boolean; kill: number | null } | null>(null);
-  if (game?.you == null || game.prompt?.kind !== 'sorciere') return null;
-  const moi = game.you;
-  const prompt = game.prompt;
 
   const victime = prompt.victim;
   const peutSauver = prompt.vie && victime !== null && prompt.peutSeSauver;
+  // Rien n'est versé tant qu'elle n'a pas touché la victime.
+  const sauver = peutSauver && sauverTouche;
   const vivant = (seat: number) => game.players[seat]?.alive === true;
 
   const envoyer = (save: boolean, kill: number | null) => {
@@ -43,98 +66,84 @@ export function ChoixSorciere() {
   // Le récapitulatif attend la vue : un refus du serveur laisse la main.
   const fait = game.acted;
 
-  return (
-    <GabaritRole teinte="lune" testId="nuit-sorciere">
-      <EnTeteRole role={moi.role} teinte="lune" texte={textePrompt(peau, prompt, nom, moi.seat)} />
+  const choisissable = (seat: number) =>
+    !fait && vivant(seat) && (prompt.mort || (peutSauver && seat === victime));
+  const choisir = (seat: number) => {
+    if (peutSauver && seat === victime) setSauverTouche(!sauver);
+    else if (prompt.mort) setPoison((avant) => (avant === seat ? null : seat));
+  };
 
-      {/* --- La victime et les réserves --- */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="carte p-4">
-          <p className="text-xs font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--papier-doux)' }}>
-            Désigné·e cette nuit
-          </p>
-          <p className="mt-1 text-xl font-bold" style={{ color: victime === null ? 'var(--lune)' : 'var(--sang)' }}>
-            {victime === null ? 'Personne' : victime === moi.seat ? `${nom(victime)} (vous)` : nom(victime)}
-          </p>
-        </div>
-        <div className="carte flex flex-col gap-1 p-4" aria-label="Vos réserves">
-          <Reserve libelle="Vie" intacte={prompt.vie} />
-          <Reserve libelle="Mort" intacte={prompt.mort} />
-        </div>
-      </div>
+  const annotations: Record<number, ReactNode> =
+    victime === null ? {} : { [victime]: <Pastille>{sauver ? 'sauvé·e' : 'victime'}</Pastille> };
 
-      {fait ? (
-        <Recap changeable={false}>
-          {resume(envoye, nom, victime)}
-        </Recap>
-      ) : (
+  const morceaux: string[] = [];
+  if (sauver && victime !== null) morceaux.push(`sauver ${nom(victime)}`);
+  if (poison !== null) morceaux.push(`empoisonner ${nom(poison)}`);
+  const action = morceaux.length === 0 ? null : capitale(morceaux.join(' et '));
+
+  const fioles = (
+    <Resume
+      icone={<Icone nom={prompt.vie ? 'vie' : 'vie-epuisee'} className="size-4" />}
+      gras={`Vie : ${prompt.vie ? '1' : 'épuisée'}`}
+      suite={
         <>
-          {peutSauver && victime !== null && (
-            <button
-              type="button"
-              className="btn-voisin self-center"
-              aria-pressed={sauver}
-              onClick={() => setSauver((v) => !v)}
-              style={sauver ? { borderColor: 'var(--lanterne)', color: 'var(--lanterne)' } : undefined}
-            >
-              {sauver && (
-                <span aria-hidden="true" className="mr-1.5">
-                  ✓
-                </span>
-              )}
-              Sauver {nom(victime)}
-            </button>
-          )}
-
-          {prompt.mort && (
-            <>
-              <Place
-                choisissables={vivant}
-                choisis={poison === null ? [] : [poison]}
-                onChoisir={(seat) => setPoison((avant) => (avant === seat ? null : seat))}
-                teinte="sang"
-                compacte
-                label="Choisir qui empoisonner"
-                {...(victime === null
-                  ? {}
-                  : { annotations: { [victime]: <Pastille teinte="sang">désigné·e</Pastille> } })}
-              />
-              <p className="text-center text-sm" style={{ color: 'var(--papier-doux)' }} aria-live="polite">
-                {poison === null
-                  ? 'Touchez un jeton pour empoisonner — ou laissez la place en paix.'
-                  : `Empoisonner ${nom(poison)}. Touchez à nouveau pour renoncer.`}
-              </p>
-            </>
-          )}
-
-          <div className="flex flex-wrap justify-center gap-2">
-            <button
-              type="button"
-              className="btn-village"
-              disabled={!sauver && poison === null}
-              onClick={() => envoyer(sauver && peutSauver, poison)}
-            >
-              Valider
-            </button>
-            <button type="button" className="btn-voisin" onClick={() => envoyer(false, null)}>
-              Ne rien faire
-            </button>
-          </div>
+          <span aria-hidden="true">·</span>
+          <span className="flex text-encre">
+            <Icone nom={prompt.mort ? 'mort' : 'mort-epuisee'} className="size-4" />
+          </span>
+          <b className="font-semibold text-encre">{`Mort : ${prompt.mort ? '1' : 'épuisée'}`}</b>
         </>
-      )}
-    </GabaritRole>
+      }
+    />
+  );
+
+  return (
+    <EcranNuit
+      testId="nuit-sorciere"
+      consigne={
+        fait ? (
+          <Consigne titre={voix.nomRole(moi.role)} statut texte={`${resume(envoye, nom, victime)} Rendormez-vous.`} />
+        ) : (
+          <Consigne titre={voix.nomRole(moi.role)} texte={textePrompt(peau, prompt, nom, moi.seat)} />
+        )
+      }
+      place={
+        <PlaceDeNuit
+          label={prompt.mort ? 'Choisir qui empoisonner' : 'La place du village'}
+          choisissables={choisissable}
+          choisis={[...(sauver && victime !== null ? [victime] : []), ...(poison === null ? [] : [poison])]}
+          onChoisir={choisir}
+          annotations={annotations}
+        />
+      }
+      resume={fioles}
+      action={
+        fait ? (
+          <BoutonFermerLesYeux />
+        ) : action === null ? (
+          <Bouton
+            key="rien"
+            variante="primaire"
+            arme={{ libelle: libelleArme('Ne rien faire', false), onConfirmer: () => envoyer(false, null) }}
+          >
+            Ne rien faire
+          </Bouton>
+        ) : (
+          <Bouton
+            key={action}
+            variante="primaire"
+            arme={{ libelle: libelleArme(action, false), onConfirmer: () => envoyer(sauver, poison) }}
+          >
+            {action}
+          </Bouton>
+        )
+      }
+    />
   );
 }
 
-function Reserve({ libelle, intacte }: { libelle: string; intacte: boolean }) {
-  return (
-    <p className="flex items-baseline justify-between gap-3 text-base">
-      <span>{libelle}</span>
-      <span className="text-sm font-bold" style={{ color: intacte ? 'var(--lanterne)' : 'var(--papier-doux)' }}>
-        {intacte ? 'intacte' : 'épuisée'}
-      </span>
-    </p>
-  );
+function capitale(texte: string): string {
+  return texte.charAt(0).toLocaleUpperCase('fr') + texte.slice(1);
 }
 
 function resume(
@@ -147,6 +156,5 @@ function resume(
   if (envoye.save && victime !== null) morceaux.push(`Vous sauvez ${nom(victime)}`);
   if (envoye.kill !== null) morceaux.push(`vous empoisonnez ${nom(envoye.kill)}`);
   if (morceaux.length === 0) return 'Vous ne faites rien cette nuit.';
-  const phrase = morceaux.join(', et ');
-  return `${phrase.charAt(0).toUpperCase()}${phrase.slice(1)}.`;
+  return `${capitale(morceaux.join(', et '))}.`;
 }

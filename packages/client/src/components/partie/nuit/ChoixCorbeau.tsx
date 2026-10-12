@@ -8,14 +8,15 @@
  */
 
 import { jouer } from '../../../lib/actions.js';
-import { useGame, useNoms } from '../../../lib/partie.js';
+import { useGame, useNoms, useVoix } from '../../../lib/partie.js';
 import { ChoixUnique } from './ChoixUnique.js';
-import { EnTeteRole, GabaritRole, usePeau } from './commun.js';
+import { usePeau } from './commun.js';
 import { textePrompt } from './textes.js';
 
 export function ChoixCorbeau() {
   const game = useGame();
   const peau = usePeau();
+  const voix = useVoix();
   const nom = useNoms();
   if (game?.you == null || game.prompt?.kind !== 'marquer') return null;
   const moi = game.you;
@@ -25,27 +26,26 @@ export function ChoixCorbeau() {
   const marquer = (target: number | null) => void jouer({ type: 'marquer', target });
 
   return (
-    <GabaritRole teinte="lune" testId="nuit-corbeau">
-      <EnTeteRole role={moi.role} teinte="lune" texte={textePrompt(peau, game.prompt, nom, moi.seat)} />
-      <ChoixUnique
-        acted={game.acted}
-        choisissable={choisissable}
-        teinte="lune"
-        label="Choisir qui marquer cette nuit"
-        verbe={(qui) => `Marquer ${qui}`}
-        recap={(qui) => (
-          <>
-            Votre marque est posée sur <strong>{qui}</strong> : deux voix l’attendront au vote du jour.
-          </>
-        )}
-        recapSansMemoire="Votre choix est fait : l’aube dira la marque, jamais votre main."
-        onValider={(target) => marquer(target)}
-        personne={{
-          libelle: 'Ne marquer personne',
-          recap: 'Vous ne marquez personne cette nuit.',
-          onValider: () => marquer(null),
-        }}
-      />
-    </GabaritRole>
+    <ChoixUnique
+      game={game}
+      testId="nuit-corbeau"
+      titre={voix.nomRole(moi.role)}
+      consigne={textePrompt(peau, game.prompt, nom, moi.seat)}
+      choisissable={choisissable}
+      label="Choisir qui marquer cette nuit"
+      verbe={(qui) => `Marquer ${qui}`}
+      recap={(qui) => (
+        <>
+          Votre marque est posée sur <strong>{qui}</strong> : deux voix l’attendront au vote du jour.
+        </>
+      )}
+      recapSansMemoire="Votre choix est fait : l’aube dira la marque, jamais votre main."
+      onValider={(target) => marquer(target)}
+      personne={{
+        libelle: 'Ne marquer personne',
+        recap: 'Vous ne marquez personne cette nuit.',
+        onValider: () => marquer(null),
+      }}
+    />
   );
 }
