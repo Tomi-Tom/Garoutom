@@ -9,6 +9,7 @@
 export * from './types.js';
 export * from './options.js';
 export * from './rng.js';
+export * from './input.js';
 export * from './game.js';
 export * from './views.js';
 export * from './protocol.js';

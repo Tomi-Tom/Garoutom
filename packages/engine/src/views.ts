@@ -10,7 +10,7 @@
  * siège a une raison explicite de la connaître.
  */
 
-import { livingPack, speakableChannels } from './game.js';
+import { livingPack, MAX_CHAT_PER_CHANNEL, speakableChannels } from './game.js';
 import { campOf } from './types.js';
 import type {
   ChatChannel,
@@ -119,6 +119,29 @@ function readableChannels(state: GameState, seat: number | null, omniscient: boo
   if (state.lovers?.includes(seat)) readable.add('amoureux');
   if (!player.alive) readable.add('morts');
   return readable;
+}
+
+/**
+ * Les derniers messages de chaque canal lisible — `MAX_CHAT_PER_CHANNEL`
+ * chacun, dans l'ordre du fil (R78, D23).
+ *
+ * La borne se compte canal par canal : ce qu'un siège voit d'un canal ne
+ * dépend que de ce canal, jamais du bavardage de ceux qu'il ne lit pas. Le
+ * moteur range déjà le fil ainsi ; la vue le redit, pour un état d'avant qui
+ * en garderait davantage.
+ */
+function lastPerChannel(chat: readonly ChatMessage[], readable: ReadonlySet<ChatChannel>): ChatMessage[] {
+  const restants = new Map<ChatChannel, number>();
+  const gardes: ChatMessage[] = [];
+  for (let i = chat.length - 1; i >= 0; i -= 1) {
+    const message = chat[i];
+    if (!message || !readable.has(message.channel)) continue;
+    const reste = restants.get(message.channel) ?? MAX_CHAT_PER_CHANNEL;
+    if (reste === 0) continue;
+    restants.set(message.channel, reste - 1);
+    gardes.push(message);
+  }
+  return gardes.reverse();
 }
 
 function promptFor(state: GameState, seat: number): Prompt | null {
@@ -274,7 +297,7 @@ export function viewFor(state: GameState, seat: number | null): GameView {
     pouvoirsPerdus: state.pouvoirsPerdus,
     marque: state.corbeau,
     votants: state.votants,
-    chat: state.chat.filter((message) => readable.has(message.channel)),
+    chat: lastPerChannel(state.chat, readable),
     channels: seat === null ? [] : speakableChannels(state, seat),
     over: state.over,
     winner: state.winner,

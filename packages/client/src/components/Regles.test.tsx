@@ -22,10 +22,12 @@ function salle(options: GameOptions): RoomView {
       connected: true,
       isHost: seat === 0,
       disconnectedUntil: null,
+      absent: false,
     })),
     reconnectGraceMs: 60_000,
     deadline: null,
     deadlineDurationMs: null,
+    paused: false,
   };
 }
 

@@ -8,15 +8,23 @@
  * - `timeoutPhase` clôt la phase en cours quand son temps est écoulé.
  *
  * Toutes rendent un nouvel état et la liste de ce qui s'est passé. Aucune ne
- * modifie l'état reçu, aucune ne lit l'horloge, aucune ne tire au hasard sans
- * passer par le `Rng` injecté : une partie se rejoue à l'identique.
+ * modifie l'état reçu, aucune ne lit l'horloge, aucune ne tire au hasard
+ * ailleurs que dans le générateur rangé dans l'état (`GameState.rng`, R104) :
+ * une partie se rejoue à l'identique, et une partie interrompue — sérialisée,
+ * rangée, rechargée — reprend exactement là où elle s'était arrêtée.
+ *
+ * `timeoutPhase` porte aussi, à la demande du serveur, les morts d'abandon
+ * (R101) : c'est le serveur qui sait qui est parti depuis trop longtemps, le
+ * moteur n'a pas d'horloge.
  *
  * Le meneur de jeu, c'est ce fichier. Tout ce qu'il ferait autour d'une table —
  * appeler les rôles, compter les voix, annoncer les morts, rappeler au Chasseur
  * qu'il doit tirer — est ici, et nulle part ailleurs.
  */
 
+import { cleanText, parseAction } from './input.js';
 import { compositionFor } from './options.js';
+import { createSeededRng, isRngState, rngDraw } from './rng.js';
 import {
   IllegalActionError,
   campOf,
@@ -30,6 +38,7 @@ import {
   type GameState,
   type NightChoices,
   type NightStep,
+  type Phase,
   type PlayerState,
   type RoleId,
   type Rng,
@@ -37,8 +46,16 @@ import {
   type Winner,
 } from './types.js';
 
-/** Le fil garde les derniers messages, pas tous : l'état voyage à chaque action. */
-export const MAX_CHAT_MESSAGES = 300;
+/**
+ * Le fil garde les derniers messages **de chaque canal**, pas tous : l'état
+ * voyage à chaque action (R78). Une borne commune à tous les canaux ferait
+ * tomber les vieux messages du village au rythme des bavardages de la meute
+ * — et le premier numéro visible au village trahirait l'activité des loups.
+ */
+export const MAX_CHAT_PER_CHANNEL = 100;
+/** Le plafond du fil entier : quatre canaux, cent messages chacun. */
+export const MAX_CHAT_MESSAGES = 4 * MAX_CHAT_PER_CHANNEL;
+/** Un message : 280 points de code au plus, après nettoyage (R78, R103). */
 export const MAX_MESSAGE_LENGTH = 280;
 
 /** Temps fixes, en millisecondes. */
@@ -90,7 +107,34 @@ function shuffle<T>(items: T[], rng: Rng): T[] {
   return copy;
 }
 
-export function createGame(setup: { players: number; options: GameOptions }, rng: Rng): Step {
+/**
+ * L'état d'un générateur, pour le ranger dans la partie.
+ *
+ * Un générateur à graine (`createSeededRng`) dit où il en est : la partie
+ * reprend exactement sa suite. Un `Rng` quelconque — un double de test — ne
+ * le dit pas : on lui tire alors un état neuf, de 32 bits.
+ */
+function rngStateOf(rng: Rng): number {
+  const seeded = rng as Rng & { state?: unknown };
+  if (typeof seeded.state === 'function') {
+    const state: unknown = (seeded.state as () => unknown)();
+    if (isRngState(state)) return state;
+  }
+  return rng.nextInt(0x1_0000_0000) >>> 0;
+}
+
+/**
+ * Distribue les cartes et ouvre la révélation (R30).
+ *
+ * `seed` est une graine — un entier, que le serveur tire et peut oublier :
+ * tout l'aléa de la partie en découle, puis voyage dans `GameState.rng`
+ * (R104). Pour la commodité des tests, c'est aussi un `Rng` : il mélange les
+ * cartes, puis son état — ou, faute de mieux, un tirage — sème celui de la
+ * partie. `createGame(setup, n)` et `createGame(setup, createSeededRng(n))`
+ * rendent la même partie.
+ */
+export function createGame(setup: { players: number; options: GameOptions }, seed: number | Rng): Step {
+  const rng = typeof seed === 'number' ? createSeededRng(seed) : seed;
   const roles = shuffle(compositionFor(setup.players, setup.options), rng);
   const players: PlayerState[] = roles.map((role, seat) => ({
     seat,
@@ -102,6 +146,7 @@ export function createGame(setup: { players: number; options: GameOptions }, rng
   const state: GameState = {
     options: setup.options,
     players,
+    rng: rngStateOf(rng),
     phase: { kind: 'revelation', ready: [] },
     phaseSeq: 1,
     day: 1,
@@ -250,23 +295,41 @@ export function pendingActors(state: GameState): number[] {
 }
 
 /**
+ * Une étape sans personne pour la jouer — Sorcière morte ou sans pouvoir
+ * (R36, R92), Loup Blanc mort (R97) — n'existe que pour durer : c'est une
+ * étape fantôme.
+ */
+function isGhostStep(state: GameState, step: NightStep): boolean {
+  if (step === 'sorciere') return livingPowered(state, 'sorciere').length === 0;
+  if (step === 'loupBlanc') return livingWith(state, 'loupBlanc').length === 0;
+  return false;
+}
+
+/**
  * Durée de la phase en cours, en millisecondes, ou `0` si elle n'en a pas.
  *
- * Prend le `Rng` pour les étapes fantômes : leur durée doit être imprévisible,
- * sans quoi elle trahirait la mort du rôle aussi sûrement qu'un saut.
+ * Fonction pure (R104) : la durée d'une étape fantôme — imprévisible, sans
+ * quoi elle trahirait la mort du rôle aussi sûrement qu'un saut — a été
+ * tirée par le moteur à l'entrée de l'étape et rangée dans la phase. On peut
+ * donc la demander autant de fois qu'on veut, avant ou après un
+ * rechargement : la réponse ne change pas, l'aléa n'avance pas.
+ *
+ * Le second paramètre n'est plus lu : il reste pour les appelants d'avant
+ * D20, qui passaient leur `Rng`.
  */
-export function phaseBudgetMs(state: GameState, rng: Rng): number {
+export function phaseBudgetMs(state: GameState, _rngIgnore?: Rng): number {
   const phase = state.phase;
   switch (phase.kind) {
     case 'revelation':
       return REVEAL_MS;
     case 'nuit': {
-      // Une étape sans personne pour la jouer — Sorcière morte ou sans
-      // pouvoir (R36, R92), Loup Blanc mort (R97) — dure un temps fantôme.
-      const ghost =
-        (phase.step === 'sorciere' && livingPowered(state, 'sorciere').length === 0) ||
-        (phase.step === 'loupBlanc' && livingWith(state, 'loupBlanc').length === 0);
-      if (ghost) return GHOST_STEP_MS.min + rng.nextInt(GHOST_STEP_MS.spread);
+      if (phase.ghostMs !== undefined) return phase.ghostMs;
+      // Un état d'avant D20 n'a pas rangé sa durée fantôme : on la lit dans
+      // l'aléa de la partie, sans le faire avancer — même état, même durée.
+      if (isGhostStep(state, phase.step)) {
+        const alea = isRngState(state.rng) ? state.rng : state.phaseSeq >>> 0;
+        return GHOST_STEP_MS.min + rngDraw(alea, GHOST_STEP_MS.spread).value;
+      }
       return state.options.tempsNuit * 1000;
     }
     case 'chasseur':
@@ -290,10 +353,19 @@ export function phaseBudgetMs(state: GameState, rng: Rng): number {
 interface Turn {
   state: GameState;
   events: GameEvent[];
-  rng: Rng;
 }
 
-function enter(turn: Turn, phase: GameState['phase']): void {
+/**
+ * Un tirage dans `[0, max)`, pris dans l'aléa de la partie — qui avance
+ * d'un pas (R104). Le seul endroit où le moteur tire au sort.
+ */
+function draw(state: GameState, max: number): number {
+  const { value, next } = rngDraw(state.rng, max);
+  state.rng = next;
+  return value;
+}
+
+function enter(turn: Turn, phase: Phase): void {
   turn.state.phase = phase;
   turn.state.phaseSeq += 1;
   const step = phase.kind === 'nuit' ? phase.step : undefined;
@@ -317,10 +389,21 @@ function startNight(turn: Turn): void {
   enter(turn, { kind: 'nuit', step: 'principale', acted: [] });
 }
 
+/**
+ * Ouvre une étape de nuit seconde — le Loup Blanc, la Sorcière. Fantôme, sa
+ * durée se tire ici, à l'entrée, et se range dans la phase (R104) : c'est le
+ * dernier tirage du pas, et `phaseBudgetMs` n'a plus qu'à la lire.
+ */
+function enterStep(turn: Turn, step: NightStep): void {
+  const phase: Phase = { kind: 'nuit', step, acted: [] };
+  if (isGhostStep(turn.state, step)) phase.ghostMs = GHOST_STEP_MS.min + draw(turn.state, GHOST_STEP_MS.spread);
+  enter(turn, phase);
+}
+
 /** Après l'étape principale ou celle du Loup Blanc : la Sorcière, ou l'aube. */
 function afterWolves(turn: Turn): void {
   if (inGame(turn.state, 'sorciere')) {
-    enter(turn, { kind: 'nuit', step: 'sorciere', acted: [] });
+    enterStep(turn, 'sorciere');
   } else {
     resolveNight(turn);
   }
@@ -342,15 +425,18 @@ function leaders(tally: Record<number, number>): { top: number; seats: number[] 
   return { top, seats: seats.sort((a, b) => a - b) };
 }
 
-function pick<T>(items: T[], rng: Rng): T | null {
+function pick<T>(items: T[], state: GameState): T | null {
   if (items.length === 0) return null;
-  return items[rng.nextInt(items.length)] ?? null;
+  return items[draw(state, items.length)] ?? null;
 }
 
 function closePrincipal(turn: Turn): void {
-  const { state, rng } = turn;
+  const { state } = turn;
   const night = state.night;
 
+  // Une flèche tirée vers un siège mort d'abandon depuis se perd : un
+  // couple ne se forme qu'entre deux vivants (R37, R101).
+  if (night.lovers && !night.lovers.every((seat) => isAlive(state, seat))) night.lovers = null;
   if (night.lovers) {
     state.lovers = night.lovers;
     state.log.push({ day: state.day, type: 'amoureux', seats: night.lovers });
@@ -370,19 +456,20 @@ function closePrincipal(turn: Turn): void {
 
   // Seules comptent les voix des loups encore en vie — Loup Blanc compris :
   // il chasse avec la meute (R96).
+  // Une proie morte d'abandon entre-temps ne se dévore plus (R101).
   const tally: Record<number, number> = {};
   for (const wolf of livingPack(state)) {
     const target = night.wolfVotes[wolf];
-    if (target === undefined || target === null) continue;
+    if (target === undefined || target === null || !isAlive(state, target)) continue;
     tally[target] = (tally[target] ?? 0) + 1;
   }
   // Une égalité entre loups se tranche au sort : la meute a faim, elle ne
   // renonce pas faute d'accord.
-  night.victim = pick(leaders(tally).seats, rng);
+  night.victim = pick(leaders(tally).seats, state);
   state.log.push({ day: state.day, type: 'loups', target: night.victim });
 
   if (whiteWolfNight(state)) {
-    enter(turn, { kind: 'nuit', step: 'loupBlanc', acted: [] });
+    enterStep(turn, 'loupBlanc');
   } else {
     afterWolves(turn);
   }
@@ -498,7 +585,12 @@ function kill(
     suites.push({ type: 'rancune', seat });
   }
 
-  if (player.role === 'chasseur') {
+  // Qui a quitté la partie n'a plus de main : ni tir, ni dernier mot, ni
+  // brassard à transmettre lui-même — la charge passe au hasard, sans phase
+  // (R101). Seul le chagrin de son amoureux le suit (R47).
+  const parti = cause === 'abandon';
+
+  if (player.role === 'chasseur' && !parti) {
     // Le poison étouffe le Chasseur, et le chagrin ne laisse pas de souffle
     // pour viser : pas de tir. L'option de table rouvre la main pour toute
     // mort (R48) — autour d'une table, c'est le meneur qui en décide.
@@ -506,7 +598,7 @@ function kill(
       cause === 'loups' || cause === 'vote' || cause === 'chasseur' || state.options.chasseurEmpoisonne;
     if (peutTirer) state.triggers.push({ kind: 'chasseur', seat });
   }
-  if (state.captain === seat) state.triggers.push({ kind: 'succession', seat });
+  if (state.captain === seat && !parti) state.triggers.push({ kind: 'succession', seat });
 
   const lovers = state.lovers;
   if (lovers?.includes(seat)) {
@@ -545,6 +637,44 @@ export function winnerOf(state: GameState): Winner | null {
   if (white > 0 && white === alive.length) return 'loupBlanc';
   if (white === 0 && wolves === alive.length) return 'loups';
   return null;
+}
+
+/**
+ * Les morts d'abandon (R101, D18) : les sièges vivants que le serveur dit
+ * partis depuis trop longtemps quittent la partie, d'un bloc.
+ *
+ * Mort publique — l'absence l'était déjà —, rôle montré selon
+ * `revelerRoles` ; aucun pouvoir ne part : ni tir, ni rancune de l'Ancien,
+ * ni dernier mot. Le chagrin de l'amoureux suit (R47), avec ses propres
+ * déclencheurs. Un capitaine parti lègue sa charge au hasard parmi les
+ * vivants, sans phase de succession — personne ne la tiendrait.
+ *
+ * Sans l'option `abandon`, rien ne se passe : la table attend ses absents.
+ * Un siège mort, inconnu ou mal formé est ignoré.
+ */
+function abandonSeats(turn: Turn, seats: readonly unknown[]): void {
+  const { state } = turn;
+  if (state.options.abandon === false) return;
+  const partants = [
+    ...new Set(seats.filter((seat): seat is number => Number.isSafeInteger(seat) && isAlive(state, seat as number))),
+  ].sort((a, b) => a - b);
+  if (partants.length === 0) return;
+
+  const captain = state.captain;
+  const { deaths, suites } = killAll(
+    state,
+    partants.map((seat) => ({ seat, cause: 'abandon' as const })),
+  );
+  turn.events.push({ type: 'morts', deaths }, ...suites);
+
+  if (captain !== null && partants.includes(captain)) {
+    const heir = state.options.capitaine ? pick(livingSeats(state), state) : null;
+    state.captain = heir;
+    if (heir !== null) {
+      state.log.push({ day: state.day, type: 'capitaine', seat: heir });
+      turn.events.push({ type: 'capitaine', seat: heir, from: captain });
+    }
+  }
 }
 
 /** La partie se clôt sur une issue. */
@@ -621,13 +751,17 @@ function proceed(turn: Turn): void {
 }
 
 function closeElection(turn: Turn): void {
-  const { state, rng } = turn;
+  const { state } = turn;
   if (state.phase.kind !== 'election') return;
+  // Ne comptent que les voix des vivants, pour des vivants : un siège mort
+  // d'abandon à la clôture ne vote plus et ne s'élit plus (R101). Sans
+  // abandon, personne ne meurt pendant l'élection — rien ne change.
   const tally: Record<number, number> = {};
-  for (const target of Object.values(state.phase.votes)) {
-    if (target !== null) tally[target] = (tally[target] ?? 0) + 1;
+  for (const [key, target] of Object.entries(state.phase.votes)) {
+    if (target === null || !isAlive(state, Number(key)) || !isAlive(state, target)) continue;
+    tally[target] = (tally[target] ?? 0) + 1;
   }
-  const elected = pick(leaders(tally).seats, rng);
+  const elected = pick(leaders(tally).seats, state);
   if (elected !== null) {
     state.captain = elected;
     state.log.push({ day: state.day, type: 'capitaine', seat: elected });
@@ -643,9 +777,10 @@ function closeDay(turn: Turn): void {
   const { state } = turn;
   if (state.phase.kind !== 'jour') return;
 
+  // Comme à l'élection : les voix des vivants, pour des vivants (R101).
   const tally: Record<number, number> = {};
   for (const [key, target] of Object.entries(state.phase.votes)) {
-    if (target === null) continue;
+    if (target === null || !isAlive(state, Number(key)) || !isAlive(state, target)) continue;
     const weight = Number(key) === state.captain ? 2 : 1;
     tally[target] = (tally[target] ?? 0) + weight;
   }
@@ -711,7 +846,7 @@ function settle(turn: Turn): void {
 }
 
 function closePhase(turn: Turn): void {
-  const { state, rng } = turn;
+  const { state } = turn;
   const phase = state.phase;
   switch (phase.kind) {
     case 'revelation':
@@ -732,7 +867,7 @@ function closePhase(turn: Turn): void {
       return;
     }
     case 'succession': {
-      const heir = pick(livingSeats(state), rng);
+      const heir = pick(livingSeats(state), state);
       passCaptaincy(turn, phase.seat, heir);
       return;
     }
@@ -823,7 +958,8 @@ export function speakableChannels(state: GameState, seat: number): ChatChannel[]
 
 function say(turn: Turn, seat: number, channel: ChatChannel, raw: string): void {
   const { state } = turn;
-  const text = raw.replace(/\s+/g, ' ').trim().slice(0, MAX_MESSAGE_LENGTH);
+  // NFKC, espaces pliés, invisibles retirés, 280 points de code (R78, R103).
+  const text = cleanText(raw, MAX_MESSAGE_LENGTH);
   if (text.length === 0) throw new IllegalActionError('Message vide', 'empty');
   if (!speakableChannels(state, seat).includes(channel)) {
     throw new IllegalActionError('Vous ne pouvez pas parler ici', 'channel');
@@ -833,16 +969,67 @@ function say(turn: Turn, seat: number, channel: ChatChannel, raw: string): void 
   const id = state.nextMessageId[channel] ?? 1;
   state.nextMessageId[channel] = id + 1;
   state.chat.push({ id, channel, seat, text, day: state.day });
-  if (state.chat.length > MAX_CHAT_MESSAGES) state.chat.splice(0, state.chat.length - MAX_CHAT_MESSAGES);
+  // Le plus ancien message **de ce canal** tombe, et lui seul : la borne de
+  // chaque canal ne dépend que de lui (R78).
+  let surplus = state.chat.filter((message) => message.channel === channel).length - MAX_CHAT_PER_CHANNEL;
+  while (surplus > 0) {
+    state.chat.splice(
+      state.chat.findIndex((message) => message.channel === channel),
+      1,
+    );
+    surplus -= 1;
+  }
 }
 
-export function applyAction(state: GameState, action: Action, rng: Rng, seat: number): Step {
+/**
+ * L'état cloné d'un pas, aléa compris.
+ *
+ * Un état d'avant D20 n'a pas de `rng` : on l'y sème une fois — depuis le
+ * `Rng` que l'appelant d'alors passait encore, ou, à défaut, depuis le numéro
+ * de phase — et la partie continue, déterministe, sans plus jamais en avoir
+ * besoin. Un état qui porte le sien ignore tout `Rng` passé (R104).
+ */
+function cloneForTurn(state: GameState, legacy: Rng | undefined): GameState {
+  const next = structuredClone(state);
+  if (!isRngState(next.rng)) {
+    next.rng = legacy ? rngStateOf(legacy) : Math.imul((next.phaseSeq >>> 0) + 1, 0x9e37_79b1) >>> 0;
+  }
+  return next;
+}
+
+/** Un siège d'auteur : un entier, qui existe à cette table. */
+function requireSeat(state: GameState, seat: unknown): number {
+  if (typeof seat !== 'number' || !Number.isSafeInteger(seat)) {
+    throw new IllegalActionError('Ce siège n’existe pas', 'seat');
+  }
+  playerAt(state, seat);
+  return seat;
+}
+
+/**
+ * Applique l'intention d'un siège.
+ *
+ * `action` est relue par `parseAction` (R102) — défense en profondeur : même
+ * passée au filtre par le serveur, une action mal formée ne touche pas
+ * l'état. `seat` vient de la session, jamais de la charge utile.
+ *
+ * La forme à quatre arguments, `applyAction(state, action, rng, seat)`, est
+ * celle d'avant D20 : le `Rng` n'y est plus lu dès que l'état porte son aléa
+ * (R104) — c'est-à-dire toujours, pour une partie créée depuis.
+ */
+export function applyAction(state: GameState, action: Action, seat: number): Step;
+/** @deprecated Depuis D20, l'aléa vit dans l'état : `applyAction(state, action, seat)`. */
+export function applyAction(state: GameState, action: Action, rng: Rng, seat: number): Step;
+export function applyAction(state: GameState, raw: Action, rngOrSeat: Rng | number, legacySeat?: number): Step {
+  const legacy = typeof rngOrSeat === 'number' ? undefined : rngOrSeat;
+  const seatArg: unknown = typeof rngOrSeat === 'number' ? rngOrSeat : legacySeat;
+  const action = parseAction(raw, state.players.length);
   if (state.over && action.type !== 'dire') {
     throw new IllegalActionError('La partie est terminée', 'over');
   }
-  const turn: Turn = { state: structuredClone(state), events: [], rng };
+  const seat = requireSeat(state, seatArg);
+  const turn: Turn = { state: cloneForTurn(state, legacy), events: [] };
   const next = turn.state;
-  playerAt(next, seat);
 
   switch (action.type) {
     case 'dire':
@@ -981,22 +1168,16 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
       if (next.phase.kind !== 'bouc' || next.phase.seat !== seat) {
         throw new IllegalActionError('Ce n’est pas à vous de désigner', 'not-your-turn');
       }
-      // La charge utile vient du réseau : un tableau d'entiers, rien d'autre.
-      const brut: unknown = action.seats;
-      if (!Array.isArray(brut) || brut.length === 0) {
+      // `parseAction` a rendu des sièges entiers et distincts (R102) ; reste
+      // la règle : au moins un vivant (R94).
+      if (action.seats.length === 0) {
         throw new IllegalActionError('Désignez au moins un votant', 'target');
       }
-      const seats = [...new Set(brut as unknown[])];
-      for (const designe of seats) {
-        if (typeof designe !== 'number' || !Number.isInteger(designe)) {
-          throw new IllegalActionError('Un votant est un siège', 'target');
-        }
-        requireLiving(next, designe, 'Le votant');
-      }
+      for (const designe of action.seats) requireLiving(next, designe, 'Le votant');
       designate(
         turn,
         seat,
-        (seats as number[]).sort((a, b) => a - b),
+        [...action.seats].sort((a, b) => a - b),
       );
       return { state: next, events: turn.events };
     }
@@ -1050,13 +1231,56 @@ export function applyAction(state: GameState, action: Action, rng: Rng, seat: nu
  * `armedSeq` est le numéro de la phase qui a armé la minuterie : une minuterie
  * en retard arrive après que la phase a déjà été clôturée — par une action,
  * ou par une autre minuterie — et ne doit alors rien clôturer du tout.
+ *
+ * `closure.abandons` : les sièges que le serveur dit partis depuis
+ * `ABANDON_MS` (R101). Ils meurent d'abandon **d'abord**, à l'échéance, puis
+ * la phase se clôt entre vivants : une voix ou une cible d'un parti ne compte
+ * plus. Si ces morts décident la partie — déclencheurs vidés (R50) —, elle
+ * s'achève aussitôt, la nuit comprise ; sinon la nuit suit son cours, et ce
+ * qu'elles ont déclenché attend l'aube.
+ *
+ * La forme `timeoutPhase(state, rng, armedSeq)` est celle d'avant D20 : le
+ * `Rng` n'est plus lu dès que l'état porte son aléa (R104).
  */
-export function timeoutPhase(state: GameState, rng: Rng, armedSeq: number): Step {
+export function timeoutPhase(state: GameState, armedSeq: number, closure?: PhaseClosure): Step;
+/** @deprecated Depuis D20, l'aléa vit dans l'état : `timeoutPhase(state, armedSeq, closure?)`. */
+export function timeoutPhase(state: GameState, rng: Rng, armedSeq: number, closure?: PhaseClosure): Step;
+export function timeoutPhase(
+  state: GameState,
+  rngOrSeq: Rng | number,
+  seqOrClosure?: number | PhaseClosure,
+  legacyClosure?: PhaseClosure,
+): Step {
+  const legacy = typeof rngOrSeq === 'number' ? undefined : rngOrSeq;
+  const armedSeq = typeof rngOrSeq === 'number' ? rngOrSeq : seqOrClosure;
+  const closure = typeof rngOrSeq === 'number' ? (seqOrClosure as PhaseClosure | undefined) : legacyClosure;
   if (state.over) throw new IllegalActionError('La partie est terminée', 'over');
   if (state.phaseSeq !== armedSeq) {
     throw new IllegalActionError('Cette minuterie ne concerne plus la phase en cours', 'stale');
   }
-  const turn: Turn = { state: structuredClone(state), events: [], rng };
+  const abandons: unknown = closure?.abandons;
+  const turn: Turn = { state: cloneForTurn(state, legacy), events: [] };
+  if (Array.isArray(abandons) && abandons.length > 0) {
+    abandonSeats(turn, abandons as unknown[]);
+    // Au cœur de la nuit, rien ne regarde la victoire avant l'aube : les
+    // morts d'abandon qui la décident la closent ici. Le jour, la clôture
+    // s'en charge elle-même, après le dépouillement (R50, R72).
+    const decided = turn.state.triggers.length === 0 ? winnerOf(turn.state) : null;
+    if (turn.state.phase.kind === 'nuit' && decided !== null) {
+      finish(turn, decided);
+      return { state: turn.state, events: turn.events };
+    }
+  }
   closePhase(turn);
   return { state: turn.state, events: turn.events };
+}
+
+/** Ce que le serveur ajoute à une clôture de phase. */
+export interface PhaseClosure {
+  /**
+   * Les sièges vivants absents depuis `ABANDON_MS` : ils meurent d'abandon
+   * avant la clôture (R101). Les sièges morts ou inconnus sont ignorés ; sans
+   * l'option `abandon`, la liste entière l'est.
+   */
+  abandons?: readonly number[];
 }

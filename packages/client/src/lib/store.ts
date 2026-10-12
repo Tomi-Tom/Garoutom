@@ -5,13 +5,21 @@
  * par les `SyncPayload` et par rien d'autre. Un accusé de réussite ne touche
  * pas au magasin — le `sync` qui suit fait foi, et c'est lui, déjà, qui a été
  * taillé pour le siège de ce joueur. Ce que le client ajoute par-dessus est
- * à lui : le fil des avis éphémères, la connexion, le souvenir de son propre
- * identifiant, et la chronique des évènements reçus.
+ * à lui : le fil des avis éphémères, la connexion et le rattachement à sa
+ * place, le souvenir de son propre identifiant, et la chronique des
+ * évènements reçus.
  */
 
 import { create } from 'zustand';
 
-import type { GameEvent, GameView, NoticePayload, RoomView, SyncPayload } from '@garoutom/engine';
+import {
+  eventSeqOf,
+  type GameEvent,
+  type GameView,
+  type NoticePayload,
+  type RoomView,
+  type SyncPayload,
+} from '@garoutom/engine';
 
 /**
  * Un évènement du moteur tel que le client le garde : numéroté à l'arrivée,
@@ -23,6 +31,15 @@ export interface EvenementRecu {
   id: number;
   event: GameEvent;
   day: number;
+  /** Le numéro public de l'évènement dans le journal de la table (D22), quand le serveur le donne. */
+  seq?: number;
+  /**
+   * Rejoué à la reprise : l'évènement a eu lieu pendant l'absence. Il entre
+   * dans la chronique — le journal le raconte, le crieur le résume —, mais
+   * l'atelier sonore et les animations l'ignorent : on ne sonne pas le glas
+   * d'une mort qu'on lit après coup.
+   */
+  rejoue?: true;
 }
 
 /** Un avis éphémère : le message du serveur ou d'une action refusée. */
@@ -32,21 +49,60 @@ export interface Notice {
   tone: 'info' | 'error';
 }
 
+/**
+ * Le rattachement à sa place, distinct de la connexion (D22) : une socket
+ * ouverte n'est assise nulle part tant que le serveur n'a pas accepté la
+ * reprise.
+ *
+ * - `rattache` : la place est tenue — ou il n'y en a aucune à reprendre ;
+ * - `perdu` : la liaison est tombée alors qu'on tenait une place ;
+ * - `reprise` : connecté, la reprise est en vol ou retentée ;
+ * - `echec` : la reprise a échoué sans refus définitif ; un geste la relance.
+ *
+ * Tant que la place n'est pas `rattache`, les actions de jeu sont suspendues.
+ */
+export type Rattachement = 'rattache' | 'perdu' | 'reprise' | 'echec';
+
 interface StoreState {
   connected: boolean;
+  /** Le navigateur se dit hors ligne (`offline`) : le bandeau le dit tout de suite. */
+  horsLigne: boolean;
+  rattachement: Rattachement;
+  /**
+   * La place a été reprise depuis un autre onglet (`CLOSE_REPLACED`) : le
+   * canal ne se reconnecte plus tout seul, l'écran propose de reprendre ici.
+   */
+  remplace: boolean;
   /** L'identifiant public du joueur local, donné par l'accusé d'entrée à la table. */
   playerId: string | null;
   room: RoomView | null;
   game: GameView | null;
   /**
-   * `serverNow − Date.now()` au dernier `sync`, ou `null` avant le premier.
+   * `heure du serveur − Date.now()`, ou `null` avant la première estimation.
    *
    * Les échéances du contrat voyagent dans l'horloge du serveur, jamais dans
    * celle du navigateur : une machine décalée de trois minutes doit afficher
    * un compte à rebours juste. Tout l'écran compare donc à
    * `Date.now() + decalageHorloge`, qui est l'heure du serveur vue d'ici.
+   *
+   * Deux sources : le `serverNow` de chaque `sync` (grossier — il ignore le
+   * trajet), et, dès qu'il en donne une, l'estimation du canal sur
+   * l'aller-retour le plus court des `ping` (D22), qui l'emporte alors.
    */
   decalageHorloge: number | null;
+  /** Vrai dès que le canal a fourni son estimation : les `sync` ne la remplacent plus. */
+  horlogeCanal: boolean;
+  /**
+   * L'heure du serveur à laquelle la pause de la table a été vue (D19), ou
+   * `null` hors pause : la minuterie s'y fige, l'échéance reprendra décalée.
+   */
+  pauseVue: number | null;
+  /**
+   * Le numéro du dernier évènement public vu (`SyncPayload.seq`), pour la
+   * table en cours. Rendu au serveur dans `room:join.lastSeq` à la reprise ;
+   * un évènement déjà vu n'entre pas deux fois dans la chronique.
+   */
+  dernierSeq: number | null;
   /**
    * Les évènements reçus depuis l'entrée à la table, du plus ancien au plus
    * récent, bornés à `MAX_CHRONIQUE`. Remise à zéro par un `debut` (nouvelle
@@ -58,7 +114,12 @@ interface StoreState {
   live: { id: number; text: string } | null;
 
   setConnected: (connected: boolean) => void;
+  setHorsLigne: (horsLigne: boolean) => void;
+  setRattachement: (rattachement: Rattachement) => void;
+  setRemplace: (remplace: boolean) => void;
   setPlayerId: (playerId: string | null) => void;
+  /** L'estimation du canal (D22) : elle fait foi dès qu'elle existe. */
+  setDecalageCanal: (decalage: number) => void;
   applySync: (payload: SyncPayload) => void;
   pushNotice: (message: string, tone?: NoticePayload['tone']) => void;
   /** Annonce à la région vocale sans afficher d'avis — pour le narrateur. */
@@ -76,39 +137,87 @@ export const MAX_CHRONIQUE = 200;
 let sequence = 0;
 const nextId = (): number => (sequence += 1);
 
+/** Le `seq` d'un `sync`, s'il est lisible — un serveur d'avant D22 n'en envoie pas. */
+function seqDe(payload: SyncPayload): number | null {
+  const seq: unknown = payload.seq;
+  return typeof seq === 'number' && Number.isSafeInteger(seq) && seq >= 0 ? seq : null;
+}
+
 export const useStore = create<StoreState>((set) => ({
   connected: false,
+  horsLigne: false,
+  rattachement: 'rattache',
+  remplace: false,
   playerId: null,
   room: null,
   game: null,
   decalageHorloge: null,
+  horlogeCanal: false,
+  pauseVue: null,
+  dernierSeq: null,
   chronique: [],
   notices: [],
   live: null,
 
   setConnected: (connected) => set({ connected }),
 
+  setHorsLigne: (horsLigne) => set({ horsLigne }),
+
+  setRattachement: (rattachement) => set({ rattachement }),
+
+  setRemplace: (remplace) => set({ remplace }),
+
   setPlayerId: (playerId) => set({ playerId }),
+
+  setDecalageCanal: (decalage) => set({ decalageHorloge: decalage, horlogeCanal: true }),
 
   applySync: (payload) =>
     set((state) => {
       const day = payload.game?.day ?? 0;
-      let chronique = state.chronique;
-      if (payload.events.length > 0) {
+      const seq = seqDe(payload);
+      const rejoue = payload.replay === true;
+      // Une autre table : sa chronique et ses numéros ne sont pas les nôtres.
+      // Les numéros ne valent que pour la table qu'on tient déjà.
+      const autreTable = state.room !== null && state.room.code !== payload.room.code;
+      let dernier = state.room?.code === payload.room.code ? state.dernierSeq : null;
+      // Un journal qui repart de plus bas a été refait (table rechargée sans
+      // son journal) : les anciens numéros ne trient plus rien.
+      if (seq !== null && dernier !== null && seq < dernier) dernier = null;
+
+      // Les évènements déjà vus n'entrent pas deux fois : une reprise qui
+      // rejoue un peu trop, ou un `sync` en double, ne raconte rien de plus.
+      const neufs = payload.events
+        .map((event, index) => ({ event, seq: seq === null ? null : eventSeqOf(payload, index) }))
+        .filter((recu) => dernier === null || recu.seq === null || recu.seq > dernier);
+
+      let chronique = autreTable ? [] : state.chronique;
+      if (neufs.length > 0) {
         // Une partie qui commence repart d'une page blanche : la revanche ne
         // doit pas raconter les morts de la manche d'avant.
-        const base = payload.events.some((event) => event.type === 'debut') ? [] : chronique;
-        chronique = [...base, ...payload.events.map((event) => ({ id: nextId(), event, day }))].slice(
-          -MAX_CHRONIQUE,
-        );
+        const base = neufs.some((recu) => recu.event.type === 'debut') ? [] : chronique;
+        chronique = [
+          ...base,
+          ...neufs.map(
+            (recu): EvenementRecu => ({
+              id: nextId(),
+              event: recu.event,
+              day,
+              ...(recu.seq === null ? {} : { seq: recu.seq }),
+              ...(rejoue ? { rejoue: true as const } : {}),
+            }),
+          ),
+        ].slice(-MAX_CHRONIQUE);
       } else if (payload.game === null && chronique.length > 0) {
         // Retour au salon : la partie est rangée, sa chronique aussi.
         chronique = [];
       }
+
       return {
         room: payload.room,
         game: payload.game,
-        decalageHorloge: payload.serverNow - Date.now(),
+        decalageHorloge: state.horlogeCanal ? state.decalageHorloge : payload.serverNow - Date.now(),
+        pauseVue: payload.room.paused === true ? (state.pauseVue ?? payload.serverNow) : null,
+        dernierSeq: seq ?? dernier,
         chronique,
       };
     }),
@@ -132,16 +241,20 @@ export const useStore = create<StoreState>((set) => ({
     set((state) => ({ notices: state.notices.filter((notice) => notice.id !== id) })),
 
   // Quitter une table rend l'état à la nuit : rien ne doit y rester d'une
-  // partie qu'on a laissée. Les avis restent — ils disent pourquoi on part.
+  // partie qu'on a laissée. Les avis restent — ils disent pourquoi on part —,
+  // et l'horloge du canal aussi : elle ne dépend pas de la table.
   reset: () =>
-    set({
+    set((state) => ({
       room: null,
       game: null,
       playerId: null,
-      decalageHorloge: null,
+      decalageHorloge: state.horlogeCanal ? state.decalageHorloge : null,
+      pauseVue: null,
+      dernierSeq: null,
+      rattachement: 'rattache',
       chronique: [],
       live: null,
-    }),
+    })),
 }));
 
 /* ------------------------------------------------------------------ */
@@ -158,4 +271,9 @@ export function selectMe(state: { room: RoomView | null; playerId: string | null
 /** L'heure du serveur vue du navigateur, pour lire les échéances du contrat. */
 export function heureServeur(state: { decalageHorloge: number | null }): number {
   return Date.now() + (state.decalageHorloge ?? 0);
+}
+
+/** Les actions de jeu sont-elles suspendues, le temps de reprendre sa place ? */
+export function actionsSuspendues(state: { rattachement: Rattachement }): boolean {
+  return state.rattachement !== 'rattache';
 }

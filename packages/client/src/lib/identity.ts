@@ -2,8 +2,8 @@
  * Identité locale : pseudo mémorisé, jetons de reconnexion par table.
  *
  * Le jeton est un secret. Il ne sert qu'à reprendre sa propre place après un
- * rechargement ou une coupure — ce que le serveur autorise pendant le délai de
- * grâce (`RECONNECT_GRACE_MS`) — et il ne quitte jamais cette machine autrement
+ * rechargement ou une coupure — ce que le serveur autorise jusqu'à la fin de
+ * la partie (D17) — et il ne quitte jamais cette machine autrement
  * que vers le serveur qui l'a émis. Jamais vers un autre joueur, jamais dans un
  * lien, jamais dans l'état du magasin.
  */
@@ -47,12 +47,24 @@ function ecrire(cle: string, valeur: unknown): void {
   }
 }
 
+/*
+  La mémoire de l'onglet (D22). `localStorage` peut manquer — navigation
+  privée de certains navigateurs, stockage plein, bac à sable d'une
+  application —, et c'est justement là qu'une coupure de réseau coûterait la
+  place : le jeton est donc **aussi** gardé ici, le temps que vit la page. Un
+  rechargement l'oublie, `localStorage` le retrouve quand il existe.
+*/
+let nomEnMemoire: string | null = null;
+const jetonsEnMemoire = new Map<string, string>();
+
 export function loadName(): string {
   const nom = lire<unknown>(CLE_NOM, '');
-  return typeof nom === 'string' ? nom : '';
+  if (typeof nom === 'string' && nom !== '') return nom;
+  return nomEnMemoire ?? '';
 }
 
 export function saveName(nom: string): void {
+  nomEnMemoire = nom;
   ecrire(CLE_NOM, nom);
 }
 
@@ -67,18 +79,29 @@ function lireJetons(): Record<string, string> {
 }
 
 export function loadToken(code: string): string | undefined {
-  return lireJetons()[code.toUpperCase()];
+  const cle = code.toUpperCase();
+  return jetonsEnMemoire.get(cle) ?? lireJetons()[cle];
 }
 
 export function saveToken(code: string, jeton: string): void {
+  const cle = code.toUpperCase();
+  jetonsEnMemoire.set(cle, jeton);
   const tous = lireJetons();
-  tous[code.toUpperCase()] = jeton;
+  tous[cle] = jeton;
   ecrire(CLE_JETONS, tous);
 }
 
-/** Oublie une table qu'on vient de quitter volontairement. */
+/** Oublie une table qu'on vient de quitter volontairement — ou qui a disparu. */
 export function forgetToken(code: string): void {
+  const cle = code.toUpperCase();
+  jetonsEnMemoire.delete(cle);
   const tous = lireJetons();
-  delete tous[code.toUpperCase()];
+  delete tous[cle];
   ecrire(CLE_JETONS, tous);
+}
+
+/** Vide la mémoire de l'onglet — pour les tests, qui simulent un rechargement. */
+export function oublierMemoire(): void {
+  nomEnMemoire = null;
+  jetonsEnMemoire.clear();
 }

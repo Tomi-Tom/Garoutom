@@ -22,6 +22,20 @@
  * Chaque annonce part une fois, et une seule, à la région vocale de
  * l'application (`annoncer`) : un lecteur d'écran entend l'aube comme les
  * autres la lisent.
+ *
+ * Deux cas venus de la robustesse (D18, D22) :
+ *
+ * - **la reprise** : les évènements manqués pendant une absence arrivent
+ *   rejoués (`rejoue`). Le journal les range à leur heure, comme les autres ;
+ *   le crieur, lui, ne les rejoue pas un à un — il les **résume** sous
+ *   « Pendant votre absence », sans phrases d'heure, sans animation, en
+ *   gardant les dernières nouvelles ;
+ * - **la mort d'abandon** : un siège parti depuis trop longtemps meurt à la
+ *   clôture d'une échéance. Son évènement `morts` précède, dans le lot de
+ *   cette clôture, l'évènement `phase` qui ouvre l'heure suivante : il reste
+ *   donc dans le chapitre de l'heure qui s'achève — la nuit s'il tombe à la
+ *   fin d'une étape de nuit, le jour s'il tombe au vote. La phrase est celle
+ *   du skin (`morts.abandon`), qui ne dit jamais pourquoi.
  */
 
 import { AnimatePresence, motion } from 'motion/react';
@@ -246,11 +260,36 @@ export function estBascule(event: GameEvent): boolean {
   return event.type === 'phase' && event.phase === 'nuit' && event.step !== undefined && event.step !== 'principale';
 }
 
-/** Un lot du crieur, repéré par son dernier évènement. Les bascules d'étape n'en font pas partie. */
-function lotDe(recus: readonly EvenementRecu[]): { cle: number; ids: number[] } | null {
+/**
+ * Un lot du crieur, repéré par son dernier évènement. Les bascules d'étape
+ * n'en font pas partie. `resume` : le lot n'est fait que d'évènements rejoués
+ * à la reprise — le crieur le résume au lieu de le crier.
+ */
+interface Lot {
+  cle: number;
+  ids: number[];
+  resume: boolean;
+}
+
+function lotDe(recus: readonly EvenementRecu[]): Lot | null {
   const crie = recus.filter((recu) => !estBascule(recu.event));
   const dernier = crie[crie.length - 1];
-  return dernier === undefined ? null : { cle: dernier.id, ids: crie.map((recu) => recu.id) };
+  if (dernier === undefined) return null;
+  return { cle: dernier.id, ids: crie.map((recu) => recu.id), resume: crie.every((recu) => recu.rejoue === true) };
+}
+
+/** Ce que le résumé d'une absence garde : les dernières nouvelles, pas toute la nuit. */
+export const MAX_RESUME = 5;
+
+/** L'intitulé du résumé des évènements manqués. */
+export const PENDANT_ABSENCE = 'Pendant votre absence';
+
+/**
+ * Le résumé d'évènements rejoués : sans les phrases d'heure (le décor les
+ * dit), les dernières nouvelles seulement.
+ */
+export function resumer(lignes: readonly Ligne[]): Ligne[] {
+  return lignes.filter((ligne) => ligne.heure !== true).slice(-MAX_RESUME);
 }
 
 export function Narrateur({ className = '' }: { className?: string }) {
@@ -273,7 +312,7 @@ export function Narrateur({ className = '' }: { className?: string }) {
     phrases de nuit qu'on taisait), puis resterait le temps de sa sortie.
   */
   const dernierId = chronique[chronique.length - 1]?.id ?? 0;
-  const [crieur, setCrieur] = useState<{ vu: number; lot: { cle: number; ids: number[] } | null }>(() => ({
+  const [crieur, setCrieur] = useState<{ vu: number; lot: Lot | null }>(() => ({
     vu: dernierId,
     lot: lotDe(chronique.filter((recu) => !estBascule(recu.event)).slice(-LOT_INITIAL)),
   }));
@@ -292,19 +331,25 @@ export function Narrateur({ className = '' }: { className?: string }) {
     const aDire = dernierAnnonce === 0 ? inedits.slice(-LOT_INITIAL) : inedits;
     if (aDire.length > 0) {
       dernierAnnonce = Math.max(...aDire.map((recu) => recu.id));
-      const texte = aDire
+      // Les évènements rejoués se disent en résumé, sous leur intitulé.
+      const rejoues = resumer(
+        aDire.filter((recu) => recu.rejoue === true).flatMap((recu) => raconter(recu, voix, peau, nom)),
+      ).map((ligne) => ligne.texte);
+      const neufs = aDire
+        .filter((recu) => recu.rejoue !== true)
         .flatMap((recu) => raconter(recu, voix, peau, nom))
-        .map((ligne) => ligne.texte)
-        .join(' ');
+        .map((ligne) => ligne.texte);
+      const texte = [...(rejoues.length > 0 ? [`${PENDANT_ABSENCE} :`, ...rejoues] : []), ...neufs].join(' ');
       if (texte !== '') useStore.getState().annoncer(texte);
     }
   }, [chronique, voix, peau, nom]);
 
   const lignesDuLot = useMemo(() => {
     if (lot === null) return [];
-    return chronique
+    const lignes = chronique
       .filter((recu) => lot.ids.includes(recu.id))
       .flatMap((recu) => raconter(recu, voix, peau, nom));
+    return lot.resume ? resumer(lignes) : lignes;
   }, [lot, chronique, voix, peau, nom]);
 
   const [journalOuvert, setJournalOuvert] = useState(false);
@@ -355,13 +400,21 @@ export function Narrateur({ className = '' }: { className?: string }) {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={lot?.cle ?? 0}
-                initial={{ y: -6, opacity: 0 }}
+                // Un résumé de reprise se pose sans entrée : on ne rejoue pas
+                // l'animation d'une nouvelle qu'on lit après coup.
+                initial={lot?.resume === true ? false : { y: -6, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                exit={{ opacity: 0 }}
+                exit={lot?.resume === true ? undefined : { opacity: 0 }}
                 transition={RESSORT_CARTE}
                 data-testid="crieur"
+                data-resume={lot?.resume === true ? '' : undefined}
                 className={`flex flex-col gap-1 overflow-y-auto sm:max-h-none ${nuit ? 'max-h-20' : 'max-h-28'}`}
               >
+                {lot?.resume === true && (
+                  <p className="font-mono text-[11px] tracking-[0.12em] uppercase" style={{ color: 'var(--lune)' }}>
+                    {PENDANT_ABSENCE}
+                  </p>
+                )}
                 {lignes.map((ligne, rang) => (
                   <LigneDite
                     key={ligne.cle}

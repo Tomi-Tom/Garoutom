@@ -1,54 +1,42 @@
 /**
- * La prise : un WebSocket du Worker, branché sur le concentrateur.
+ * La prise : une socket hibernable du Durable Object, présentée au
+ * concentrateur.
  *
- * C'est le pendant exact de `ws-node.ts` côté serveur Node — l'unique endroit
- * qui sait à quoi ressemble une socket de l'hôte. Le concentrateur ne connaît
- * que `send` et `close` ; la prise lui présente le côté serveur d'une
- * `WebSocketPair`, et rend en échange les deux gestes que l'objet branchera
- * sur les évènements `message` et `close`/`error`.
+ * C'est le pendant de `ws-node.ts` côté serveur Node — l'unique endroit qui
+ * sait à quoi ressemble une socket de l'hôte. Le concentrateur ne connaît que
+ * `send`, `close`, l'adresse du client (quotas) et la version de protocole
+ * négociée ; la prise les lui donne, tirés de la socket et de son attachement.
  *
- * Elle ne touche à aucun global de Cloudflare : on la teste donc sous Node
- * avec une fausse socket, sans miniflare, et c'est tout l'intérêt de l'avoir
- * sortie de `tables.ts`.
+ * ## Le `hello` d'un réveil
+ *
+ * Le concentrateur envoie `hello` dès qu'on lui attache une connexion. À
+ * l'ouverture, c'est voulu. Mais après une hibernation, l'objet renaît avec un
+ * concentrateur vide, et il faut lui **rattacher** les sockets déjà ouvertes
+ * — sans redire bonjour à des clients qui sont là depuis une heure. La prise
+ * d'un rattachement avale donc le premier cadre s'il est un `hello`.
+ * (Une option `attach(socket, id, { rattachement: true })` dans le Hub serait
+ * plus nette ; elle n'est pas au contrat, on s'en passe.)
+ *
+ * Elle ne touche à aucun global de Cloudflare : on la teste sous Node avec
+ * une fausse socket.
  */
 
-import type { Hub } from '@garoutom/server';
+import type { HubSocket } from '@garoutom/server';
 
-/** Ce que la prise attend d'une socket : envoyer et fermer, rien de plus. */
-export interface SocketServeur {
-  send(data: string): void;
-  close(code?: number, reason?: string): void;
-}
-
-/** Les deux gestes que l'hôte branche sur ses évènements. */
-export interface Branchement {
-  /** L'identifiant de connexion attribué par le concentrateur. */
-  id: string;
-  /** Un message est arrivé du client. */
-  message(data: unknown): void;
-  /** La connexion est finie — `close` ou `error`, appelé autant qu'on veut. */
-  fin(): void;
-}
+import type { Attache, SocketHibernable } from './annuaire.js';
 
 /** Code de fermeture « normale » du protocole WebSocket (RFC 6455, 7.4.1). */
-const FERMETURE_NORMALE = 1000;
+export const FERMETURE_NORMALE = 1000;
 
-export function brancher(hub: Hub, socket: SocketServeur): Branchement {
-  let finie = false;
-
-  const fermer = (): void => {
-    // Fermer une socket déjà fermée lève une exception dans le runtime : ce
-    // n'est pas une erreur pour nous, la fin est la fin.
-    try {
-      socket.close(FERMETURE_NORMALE, 'Au revoir');
-    } catch {
-      /* déjà fermée */
-    }
-  };
-
-  const session = hub.attach({
+export function prise(socket: SocketHibernable, attache: Attache, rattachement: boolean): HubSocket {
+  let avalerHello = rattachement;
+  const hubSocket: HubSocket = {
+    protocol: attache.protocol,
     send: (data) => {
-      if (finie) return;
+      if (avalerHello) {
+        avalerHello = false;
+        if (data.startsWith('{"t":"hello"')) return;
+      }
       // Une socket qui se ferme pendant qu'on lui parle n'est pas une erreur :
       // l'évènement de fermeture suit, et c'est lui qui fera le ménage.
       try {
@@ -57,30 +45,15 @@ export function brancher(hub: Hub, socket: SocketServeur): Branchement {
         /* la fermeture suit */
       }
     },
-    close: fermer,
-  });
-
-  return {
-    id: session.id,
-    message: (data) => {
-      if (finie) return;
-      // Le client n'envoie que du texte ; un cadre binaire finira refusé par
-      // le décodage du concentrateur, qui l'ignore sans couper.
-      void session.receive(data).catch((error: unknown) => {
-        console.error('Message mal traité', error);
-      });
-    },
-    fin: () => {
-      // `error` puis `close` arrivent souvent tous les deux : la table ne
-      // doit apprendre le départ qu'une fois.
-      if (finie) return;
-      finie = true;
-      // Sans hibernation, le runtime attend qu'on rende la poignée de main de
-      // fermeture nous-mêmes ; la rendre deux fois est sans effet.
-      fermer();
-      void session.close().catch((error: unknown) => {
-        console.error('Fermeture mal refermée', error);
-      });
+    close: (code = FERMETURE_NORMALE, reason = '') => {
+      // Fermer une socket déjà fermée lève dans le runtime : la fin est la fin.
+      try {
+        socket.close(code, reason);
+      } catch {
+        /* déjà fermée */
+      }
     },
   };
+  if (attache.ip !== null) hubSocket.ip = attache.ip;
+  return hubSocket;
 }

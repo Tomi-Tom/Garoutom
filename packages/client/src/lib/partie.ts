@@ -63,31 +63,44 @@ export interface Echeance {
   fraction: number;
   /** Secondes restantes arrondies au-dessus, pour l'affichage. */
   secondes: number;
+  /** L'horloge de la table est suspendue (D19) : le temps restant est figé. */
+  figee: boolean;
 }
 
 /**
  * L'échéance du siège local, ou `null` s'il n'a rien à jouer (R80 : celle
  * des autres est un secret, le serveur ne l'envoie pas).
+ *
+ * Quand la table est en pause (`RoomView.paused`, D19), le temps restant se
+ * fige là où la pause l'a trouvé : l'échéance reprendra, décalée d'autant.
  */
 export function useEcheance(): Echeance | null {
   const deadline = useStore((state) => state.room?.deadline ?? null);
   const duree = useStore((state) => state.room?.deadlineDurationMs ?? null);
+  const pauseVue = useStore((state) => (state.room?.paused === true ? state.pauseVue : null));
   const [, setTic] = useState(0);
 
   useEffect(() => {
-    if (deadline === null) return;
+    if (deadline === null || pauseVue !== null) return;
     const timer = setInterval(() => setTic((n) => n + 1), 250);
     return () => clearInterval(timer);
-  }, [deadline]);
+  }, [deadline, pauseVue]);
 
   if (deadline === null || duree === null || duree <= 0) return null;
-  const restantMs = Math.max(0, deadline - heureServeur(useStore.getState()));
+  const maintenant = pauseVue ?? heureServeur(useStore.getState());
+  const restantMs = Math.max(0, deadline - maintenant);
   return {
     restantMs,
     dureeMs: duree,
     fraction: Math.min(1, restantMs / duree),
     secondes: Math.ceil(restantMs / 1000),
+    figee: pauseVue !== null,
   };
+}
+
+/** La table attend son village : plus aucun vivant n'est là, l'horloge est suspendue (D19). */
+export function usePause(): boolean {
+  return useStore((state) => state.room?.paused === true);
 }
 
 /** Les sièges vivants, dans l'ordre de la table. */

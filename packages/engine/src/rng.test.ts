@@ -9,7 +9,48 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { createSeededRng } from './rng.js';
+import { createGame, phaseBudgetMs } from './game.js';
+import { DEFAULT_OPTIONS } from './options.js';
+import { createSeededRng, isRngState, resumeSeededRng, rngDraw } from './rng.js';
+
+describe('R104 — l’état du générateur est une donnée', () => {
+  it('R104 — un générateur repris à son état continue exactement sa suite', () => {
+    const rng = createSeededRng(2026);
+    for (let i = 0; i < 37; i++) rng.nextInt(1_000);
+    const etat = rng.state();
+    expect(isRngState(etat)).toBe(true);
+    const repris = resumeSeededRng(JSON.parse(JSON.stringify(etat)) as number);
+    const suiteA = Array.from({ length: 100 }, () => rng.nextInt(1_000));
+    const suiteB = Array.from({ length: 100 }, () => repris.nextInt(1_000));
+    expect(suiteB).toEqual(suiteA);
+  });
+
+  it('R104 — un pas est une fonction pure : même état, même tirage, même suite', () => {
+    const a = rngDraw(123_456, 52);
+    expect(rngDraw(123_456, 52)).toEqual(a);
+    const rng = createSeededRng(123_456);
+    expect(rng.nextInt(52)).toBe(a.value);
+    expect(rng.state()).toBe(a.next);
+    expect(() => rngDraw(1, 0)).toThrow(RangeError);
+  });
+
+  it('R104 — seuls les entiers de 32 bits non signés sont des états', () => {
+    for (const bon of [0, 1, 0xffff_ffff]) expect(isRngState(bon)).toBe(true);
+    for (const mauvais of [-1, 2 ** 32, 1.5, Number.NaN, '1', null, undefined]) expect(isRngState(mauvais)).toBe(false);
+  });
+
+  it('R104 — une graine ou son générateur : la même partie, et l’aléa rangé dans l’état', () => {
+    const setup = { players: 12, options: DEFAULT_OPTIONS };
+    const parGraine = createGame(setup, 77);
+    const parRng = createGame(setup, createSeededRng(77));
+    expect(parGraine).toEqual(parRng);
+    expect(isRngState(parGraine.state.rng)).toBe(true);
+    // la durée d'une phase se lit sans tirer : l'aléa n'avance pas
+    const avant = parGraine.state.rng;
+    phaseBudgetMs(parGraine.state);
+    expect(parGraine.state.rng).toBe(avant);
+  });
+});
 
 /** Les n premiers tirages d’une graine — des suites entières à comparer. */
 function suite(graine: number, max = 1_000, n = 100): number[] {

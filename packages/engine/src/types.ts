@@ -11,7 +11,14 @@
  * C'est la seule façon de garder un équilibrage unique pour tous les univers.
  */
 
-/** Aléa injecté : le moteur n'appelle jamais `Math.random`. */
+/**
+ * Un générateur d'aléa : le moteur n'appelle jamais `Math.random`.
+ *
+ * Depuis D20, le moteur ne dépend plus d'un `Rng` injecté pour jouer : l'état
+ * de son générateur voyage dans `GameState.rng` (R104). Un `Rng` sert encore à
+ * distribuer les cartes (`createGame` en accepte un, pour les tests) et au
+ * générateur de compositions (`randomComposition`).
+ */
 export interface Rng {
   nextInt: (maxExclusive: number) => number;
 }
@@ -115,8 +122,23 @@ export function factionOf(role: RoleId): Faction {
  */
 export type Winner = 'village' | 'loups' | 'amoureux' | 'loupBlanc' | 'personne';
 
-/** Pourquoi quelqu'un meurt. Le skin en tire sa phrase d'annonce. */
-export type DeathCause = 'loups' | 'poison' | 'vote' | 'chasseur' | 'chagrin';
+/**
+ * Pourquoi quelqu'un meurt. Le skin en tire sa phrase d'annonce.
+ *
+ * `abandon` : un siège vivant absent depuis trop longtemps quitte la partie
+ * (R101, D18). C'est une mort publique, qui ne déclenche aucun pouvoir.
+ */
+export type DeathCause = 'loups' | 'poison' | 'vote' | 'chasseur' | 'chagrin' | 'abandon';
+
+/** Toutes les causes de mort, pour qui doit les parcourir — un skin qui les traduit. */
+export const DEATH_CAUSES = [
+  'loups',
+  'poison',
+  'vote',
+  'chasseur',
+  'chagrin',
+  'abandon',
+] as const satisfies readonly DeathCause[];
 
 /* ------------------------------------------------------------------ */
 /* Options                                                             */
@@ -165,6 +187,12 @@ export interface GameOptions {
   revelerRoles: boolean;
   /** Les morts voient les rôles de tous et lisent les canaux secrets. */
   mortsVoientTout: boolean;
+  /**
+   * Un siège vivant absent depuis `ABANDON_MS` meurt d'abandon à la clôture
+   * de phase suivante (R101, D18). Sans elle, la table attend ses absents :
+   * qui n'agit pas n'agit pas (R81), et la partie ne finit qu'au vote.
+   */
+  abandon: boolean;
   /** Durée d'une étape de nuit, en secondes. */
   tempsNuit: number;
   /** Durée du jour (débat et vote), en secondes. */
@@ -250,7 +278,18 @@ export type Trigger =
 export type Phase =
   /** Chacun découvre sa carte et confirme. */
   | { kind: 'revelation'; ready: number[] }
-  | { kind: 'nuit'; step: NightStep; acted: number[] }
+  | {
+      kind: 'nuit';
+      step: NightStep;
+      acted: number[];
+      /**
+       * La durée d'une étape fantôme — Sorcière morte ou sans pouvoir (R36),
+       * Loup Blanc mort (R97) —, tirée par le moteur à l'entrée de l'étape
+       * (R104). Absente d'une étape jouée : celle-là dure `tempsNuit`. Ne
+       * quitte jamais l'état — `viewFor` ne dit que l'étape.
+       */
+      ghostMs?: number;
+    }
   /** Le Chasseur mort tire, ou le capitaine mort désigne son successeur. */
   | { kind: 'chasseur'; seat: number }
   | { kind: 'succession'; seat: number }
@@ -291,6 +330,13 @@ export type LogEntry =
 export interface GameState {
   options: GameOptions;
   players: PlayerState[];
+  /**
+   * L'état du générateur d'aléa (mulberry32, entier non signé de 32 bits).
+   * Chaque tirage du moteur le fait avancer : un état sérialisé puis repris
+   * rejoue exactement la même partie qu'un état jamais interrompu (R104).
+   * Un secret comme un autre : il ne quitte pas l'état.
+   */
+  rng: number;
   phase: Phase;
   /**
    * Numéro de la phase en cours, incrémenté à chaque changement. Le serveur s'en
@@ -423,6 +469,12 @@ export interface Step {
   events: GameEvent[];
 }
 
+/**
+ * Un refus du moteur : un message humain, un `code` machine — `illegal`,
+ * `action` (charge utile mal formée, R102), `seat`, `target`, `wrong-phase`,
+ * `not-your-turn`, `cannot-vote`, `potion`, `powers`, `empty`, `name`,
+ * `channel`, `stale`, `over`, `players`, `composition`.
+ */
 export class IllegalActionError extends Error {
   constructor(
     message: string,

@@ -25,6 +25,7 @@
     "vitest": "^3.0.5"
   },
   "exports": {
-    ".": "./src/lib.ts"
+    ".": "./src/lib.ts",
+    "./store.contract": "./src/store.contract.ts"
   }
 }

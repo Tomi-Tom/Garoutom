@@ -361,25 +361,34 @@ describe('la Sorcière et son pas fantôme', () => {
   });
 
   it('R36 — morte, la Sorcière laisse une étape fantôme de cinq à dix secondes', () => {
-    const partie = new Partie(8, compose(2, ['voyante', 'sorciere']), 1);
-    partie.cloturer(); // nuit 1
-    partie.cloturer(); // l’étape principale se clôt sur le silence de tous
-    partie.cloturer(); // la Sorcière vivante se tait : aube paisible, jour 1
-    // le village la condamne au vote : la deuxième nuit l’appellera morte
-    const sorciere = siege(partie.state, 'sorciere');
-    for (const siege of livingSeats(partie.state)) {
-      partie.agir(siege, { type: 'voter', target: siege === sorciere ? null : sorciere });
-    }
-    expect(partie.state.players[sorciere]!.alive).toBe(false);
-    expect(partie.state.phase.kind).toBe('nuit'); // nuit 2
-    partie.cloturer(); // l’étape principale close : la morte est appelée quand même
-    expect(partie.state.phase).toEqual({ kind: 'nuit', step: 'sorciere', acted: [] });
+    /** La deuxième nuit d’une partie où le village a condamné sa Sorcière. */
+    const sorciereMorte = (graine: number): Partie => {
+      const partie = new Partie(8, compose(2, ['voyante', 'sorciere']), graine);
+      partie.cloturer(); // nuit 1
+      partie.cloturer(); // l’étape principale se clôt sur le silence de tous
+      partie.cloturer(); // la Sorcière vivante se tait : aube paisible, jour 1
+      // le village la condamne au vote : la deuxième nuit l’appellera morte
+      const sorciere = siege(partie.state, 'sorciere');
+      for (const siege of livingSeats(partie.state)) {
+        partie.agir(siege, { type: 'voter', target: siege === sorciere ? null : sorciere });
+      }
+      expect(partie.state.players[sorciere]!.alive).toBe(false);
+      expect(partie.state.phase.kind).toBe('nuit'); // nuit 2
+      partie.cloturer(); // l’étape principale close : la morte est appelée quand même
+      return partie;
+    };
+    const partie = sorciereMorte(1);
+    // la durée fantôme est tirée à l’entrée de l’étape et rangée avec elle (R104)
+    expect(partie.state.phase).toEqual({ kind: 'nuit', step: 'sorciere', acted: [], ghostMs: expect.any(Number) });
     // personne n’agit : ce pas n’existe que pour être vu, et pour durer
     expect(pendingActors(partie.state)).toEqual([]);
-    // sa durée, tirée au sort, reste dans la fourchette — et ne se répète pas
+    // la durée se lit sans tirer : la redemander ne la change pas
+    expect(phaseBudgetMs(partie.state)).toBe(phaseBudgetMs(partie.state));
+    // tirée au sort, elle reste dans la fourchette — et ne se répète pas
+    // d’une partie à l’autre
     const durees = new Set<number>();
     for (let graine = 1; graine <= 20; graine++) {
-      const duree = phaseBudgetMs(partie.state, createSeededRng(graine));
+      const duree = phaseBudgetMs(sorciereMorte(graine).state);
       expect(duree).toBeGreaterThanOrEqual(GHOST_STEP_MS.min);
       expect(duree).toBeLessThan(GHOST_STEP_MS.min + GHOST_STEP_MS.spread);
       durees.add(duree);

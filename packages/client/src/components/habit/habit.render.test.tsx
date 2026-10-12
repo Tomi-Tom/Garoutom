@@ -27,6 +27,7 @@ function reglerSkin(skin: string): void {
       reconnectGraceMs: 60_000,
       deadline: null,
       deadlineDurationMs: null,
+      paused: false,
     },
     game: null,
   });

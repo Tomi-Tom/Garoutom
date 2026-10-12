@@ -211,7 +211,21 @@ function EnTete({ room, game }: { room: RoomView; game: GameView }) {
             <BoutonSon />
           </div>
         </div>
-        <Minuterie />
+        {/* La ligne de la minuterie garde sa hauteur pour tous, qu'il y ait un
+            compte à rebours ou non (D23, « Silence à l'écran »). La pause, elle,
+            est publique : tout le monde la lit. */}
+        <div className="flex h-5 min-w-0 items-center gap-3">
+          <Minuterie className="flex-1" />
+          {room.paused && (
+            <p
+              data-testid="pause"
+              className="shrink-0 font-mono text-xs leading-5 whitespace-nowrap"
+              style={{ color: 'var(--lune)' }}
+            >
+              La partie attend son village
+            </p>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -225,11 +225,151 @@ nuits consécutives en comptent toujours une paire : le Loup Blanc a eu sa
 chance, et la meute, qui a fait tomber le village, l'emporte. Un couple
 d'amoureux Loup Blanc et loup est « mixte » : leurs factions diffèrent.
 
+## Le chantier robustesse (D17 à D24)
+
+**11 octobre 2026.** Quatre audits et un banc de chaos ont convergé : une
+grâce éteinte supprimait le joueur, une exception de minuterie tuait le
+processus, l'aléa repartait de la graine après un rechargement, une action
+`"1"` passait pour un siège. Le détail — constats, lots, fichiers — vit dans
+[`ROBUSTESSE.md`](ROBUSTESSE.md) ; voici ce qui est tranché. L'exigence :
+aucune place perdue, aucune partie perdue, reprise transparente, aucune
+partie figée, aucun client qui casse la table des autres.
+
+### D17 — Le siège appartient au joueur jusqu'à la fin de la partie
+
+En partie, un joueur n'est jamais retiré de la table. Passé
+`RECONNECT_GRACE_MS` (60 s), il est **montré absent** (`PlayerInfo.absent`,
+public comme `connected`) et son jeton reste valable jusqu'à la revanche ;
+un départ volontaire fait de lui un absent, pas un joueur supprimé. Au
+salon, la place se libère après `LOBBY_GRACE_MS` (30 s). La charge d'hôte
+passe à un joueur connecté.
+
+**Pourquoi.** La grâce de 60 s supprimait le joueur et son jeton : un loup
+qui changeait de réseau perdait sa partie pour de bon. Une place se garde ;
+ce qu'on fait d'un absent qui ne revient jamais, c'est D18.
+
+### D18 — La mort d'abandon termine toute partie, sans rien avouer
+
+Un siège vivant absent depuis `ABANDON_MS` (5 min, hors pause) meurt
+d'abandon — cause `abandon`, publique, rôle selon `revelerRoles` — à la
+clôture de phase suivante (R101). Aucun pouvoir ne se déclenche ; le
+chagrin de l'amoureux, si ; un capitaine parti lègue sa charge au hasard.
+L'option de table `abandon` (défaut : oui) permet d'attendre ses absents.
+
+Le lot 0 a précisé le geste : le serveur passe la liste des partis à la
+clôture **par l'échéance** — `timeoutPhase(state, seq, { abandons })` —,
+jamais à une clôture provoquée par une action ; les partis meurent d'abord,
+la phase se clôt ensuite entre vivants (une voix, une cible, une flèche vers
+un parti ne comptent plus). Si ces morts décident la partie, la nuit
+s'achève aussitôt ; le jour, la victoire se regarde après le dépouillement.
+
+**Pourquoi.** C'est la réponse à l'ancienne question ouverte « Robots et
+rôles cachés » : un robot qui agit avouerait un rôle — un loup qui dévore,
+une Voyante qui sonde. L'inertie (R81), puis une mort publique au moment où
+la phase se ferme de toute façon, n'avouent rien : l'absence était déjà
+publique, l'échéance aussi, et rien ne se clôt plus tôt que prévu. Mourir au
+milieu d'une phase, au contraire, pourrait la clore sur-le-champ et dire que
+le parti était le dernier attendu — c'est-à-dire qu'il avait un rôle.
+
+### D19 — L'horloge se suspend quand plus aucun vivant n'est là
+
+Si aucun siège vivant n'est connecté, la phase est suspendue
+(`RoomView.paused`) ; au premier retour, l'échéance est décalée d'autant.
+L'abandon ne court pas pendant une pause.
+
+**Pourquoi.** Une pause pour un seul absent serait exploitable ; une partie
+qui tourne à vide pendant la coupure du routeur ne l'est pas moins.
+
+### D20 — Le temps est une donnée, l'aléa voyage avec l'état
+
+L'état du générateur vit dans `GameState.rng` (R104) : le moteur est une
+fonction pure de l'état, `applyAction(state, action, seat)` et
+`timeoutPhase(state, seq)` n'ont plus besoin de `Rng`. Les durées fantômes
+sont tirées à l'entrée de l'étape et rangées dans la phase ; `phaseBudgetMs`
+est pur. Côté serveur, aucune minuterie n'est source de vérité : un
+`tick(code)` idempotent fait ce qui est dû, un chien de garde force les
+échéances dépassées, une erreur inattendue interrompt la partie au lieu de
+tuer le processus.
+
+Les anciennes signatures (`applyAction(state, action, rng, seat)`,
+`timeoutPhase(state, rng, seq)`, `phaseBudgetMs(state, rng)`) compilent
+encore et ignorent le `Rng` : l'état porte le sien. **Une graine donne la
+même partie qu'avant** quand le serveur s'en sert comme il le faisait — un
+seul `Rng` par table, durées fantômes tirées à l'armement : le tirage
+fantôme était déjà le dernier de son pas. Vérifié sur trois mille parties
+rejouées contre le moteur d'avant, 283 038 pas, sans un écart. Les tests qui
+tiraient leurs durées fantômes d'un `Rng` à part, eux, voient leurs
+tirages suivants décalés.
+
+**Pourquoi.** Une table rechargée repartait de la graine : elle rejouait des
+tirages déjà joués, et ne réarmait jamais sa minuterie. L'aléa rangé avec
+l'état, une partie interrompue reprend exactement — deux mille parties
+sérialisées à chaque pas le prouvent.
+
+### D21 — Les tables sont persistées, partout
+
+Node : `FileRoomStore` (écriture atomique, `.bak`, regroupement), arrêt
+gracieux. Worker : un Durable Object en hibernation, stockage SQLite, une
+alarme pour toutes les tables. Au chargement, une table est réconciliée ;
+`Room.schema` est versionné.
+
+**Pourquoi.** Tout l'état vivait en mémoire : un redémarrage, un
+déploiement, une éviction effaçaient les parties en cours.
+
+### D22 — Le lien se surveille des deux côtés
+
+Protocole versionné (`PROTOCOL_VERSION` 2, `PROTOCOL_MIN` 1, `?v=` dans
+l'URL, cadre `hello`), battement `ping`/`pong` (le `pong` porte l'heure du
+serveur), codes de fermeture (1012 redémarrage, 4000 version, 4001 place
+reprise ailleurs, 4002 table disparue), `join` idempotent, et rattrapage :
+un journal public numéroté, `room:join.lastSeq`, `SyncPayload.seq` et
+`replay`.
+
+Le lot 0 a choisi la forme du rattrapage : `events` reste un
+`GameEvent[]`, numéroté par un seul champ parallèle — `seq`, le numéro du
+dernier ; les évènements d'un `sync` sont consécutifs — et un `sync` rejoué
+porte `replay: true`. Un client de version 1 lit le même tableau qu'avant.
+
+**Pourquoi.** Sans battement, un lien à moitié ouvert est invisible des deux
+côtés ; sans numéros, un joueur revenu ne sait pas ce qu'il a manqué. Le
+champ parallèle laisse le Worker se déployer avant le client (D24).
+
+### D23 — Le serveur ne croit rien et ne tombe pas
+
+Le moteur relit toute action (`parseAction`, R102) et nettoie tout texte
+(`cleanText`, `cleanName`, R103) ; le fil garde cent messages **par canal**,
+dans l'état comme dans la vue (R78). Quotas dans le `Hub`, analyses d'URL
+protégées, `sync` identique jamais renvoyé, origines contrôlées, messages
+d'erreur internes jamais renvoyés tels quels, écran identique la nuit pour
+tous les sièges sans action, Wake Lock en partie.
+
+Le lot 0 a porté la borne par canal jusque dans l'état : une borne commune
+aux quatre canaux faisait tomber les vieux messages du village au rythme
+des bavardages de la meute — le premier numéro visible au village trahissait
+l'activité des loups, contre R78.
+
+**Pourquoi.** Une action `"1"` passait pour un siège, `[1, 1]` liait un
+joueur à lui-même ; trois cents messages de caractères de contrôle gonflaient
+la vue au-delà de la borne du cadre, que le client ignorait en silence — la
+table gelait.
+
+### D24 — Déploiement prudent
+
+Le Worker d'abord, rétrocompatible, puis le client. Le déploiement refuse
+tant que des parties sont en cours (sauf `--force`) ; Wrangler épinglé,
+journaux JSON d'une ligne, jamais de jeton.
+
+**Pourquoi.** L'état persisté fait d'un déploiement un simple blip de
+reconnexion ; encore faut-il que le nouveau Worker parle aux anciens
+clients.
+
 ## Questions ouvertes
+
+La question « Robots et rôles cachés » — que faire d'un joueur qui ne
+revient pas, quand son rôle est secret ? — est tranchée par D18.
 
 | Sujet | La question |
 |---|---|
-| Robots et rôles cachés | Que faire d'un joueur qui ne revient pas après le délai de grâce, quand son rôle est secret ? Un robot de loup qui dévore est un aveu ; le pattern collection (`reprise-et-robots.md`) ne s'applique pas tel quel. |
 | Le fil sur mobile | Tiroir qui pousse la place, ou colonne permanente compacte sous la place ? À décider devant le client réel. |
 | Les minuteries | Barre toujours visible, ou mention discrète qui ne s'agite que dans les trente dernières secondes ? À décider devant le client réel. |
 | Rôles suivants | Cinq sont ouverts en v2 (D12–D16). Restent le Voleur, le Renard, le Joueur de flûte (`refs/roles.md`) : lesquels, et quand ? |

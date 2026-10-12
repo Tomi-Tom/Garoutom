@@ -113,10 +113,12 @@ function salle(): RoomView {
       connected: true,
       isHost: seat === 0,
       disconnectedUntil: null,
+      absent: false,
     })),
     reconnectGraceMs: 60_000,
     deadline: null,
     deadlineDurationMs: null,
+    paused: false,
   };
 }
 
@@ -126,6 +128,7 @@ function poser(state: GameState, siege: number | null, playerId: string | null):
     room: salle(),
     game: viewFor(state, siege),
     events: [],
+    seq: 0,
     serverNow: Date.now(),
   });
   useStore.setState({ playerId });

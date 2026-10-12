@@ -24,6 +24,7 @@ import {
   isAlive,
   livingSeats,
   MAX_CHAT_MESSAGES,
+  MAX_CHAT_PER_CHANNEL,
   MAX_MESSAGE_LENGTH,
   pendingActors,
   phaseBudgetMs,
@@ -761,21 +762,43 @@ describe('le fil de discussion', () => {
     expect(pas.state.chat.at(-1)!.text).toBe(tropLong.slice(0, MAX_MESSAGE_LENGTH));
   });
 
-  it('R78 — le fil garde les trois cents derniers, la numérotation continue', () => {
+  it('R78 — chaque canal garde ses cent derniers, la numérotation continue', () => {
     const { partie, orateur } = matinBavard();
-    // Trois cent cinq messages : le fil ne grossit pas au-delà de trois cents.
-    for (let i = 1; i <= MAX_CHAT_MESSAGES + 5; i++) {
+    // Cent cinq messages : le canal ne grossit pas au-delà de cent.
+    for (let i = 1; i <= MAX_CHAT_PER_CHANNEL + 5; i++) {
       partie.agir(orateur, { type: 'dire', channel: 'village', text: `message ${i}` });
     }
-    expect(MAX_CHAT_MESSAGES).toBe(300);
-    expect(partie.state.chat.length).toBe(MAX_CHAT_MESSAGES);
+    expect(MAX_CHAT_PER_CHANNEL).toBe(100);
+    expect(MAX_CHAT_MESSAGES).toBe(4 * MAX_CHAT_PER_CHANNEL);
+    expect(partie.state.chat.length).toBe(MAX_CHAT_PER_CHANNEL);
     // Les plus anciens sont tombés ; les suivants se suivent sans trou.
     expect(partie.state.chat[0]!.id).toBe(6);
-    expect(partie.state.chat.at(-1)!.id).toBe(MAX_CHAT_MESSAGES + 5);
+    expect(partie.state.chat.at(-1)!.id).toBe(MAX_CHAT_PER_CHANNEL + 5);
     // La chute ne remet pas la numérotation à zéro : le fil continue sa suite.
     const pas = partie.agir(orateur, { type: 'dire', channel: 'village', text: 'et encore.' });
-    expect(pas.state.chat.length).toBe(MAX_CHAT_MESSAGES);
-    expect(pas.state.chat.at(-1)).toMatchObject({ id: MAX_CHAT_MESSAGES + 6, text: 'et encore.' });
+    expect(pas.state.chat.length).toBe(MAX_CHAT_PER_CHANNEL);
+    expect(pas.state.chat.at(-1)).toMatchObject({ id: MAX_CHAT_PER_CHANNEL + 6, text: 'et encore.' });
+  });
+
+  it('R78 — la borne d’un canal ne dépend que de lui : la meute bavarde n’efface pas le village', () => {
+    const { partie, orateur } = matinBavard();
+    for (let i = 1; i <= 40; i++) {
+      partie.agir(orateur, { type: 'dire', channel: 'village', text: `message ${i}` });
+    }
+    partie.cloturer(); // le village ne vote pas : la nuit 2 tombe
+    const [loup] = sieges(partie.state, 'loup');
+    for (let i = 1; i <= MAX_CHAT_PER_CHANNEL * 2; i++) {
+      partie.agir(loup!, { type: 'dire', channel: 'loups', text: `grognement ${i}` });
+    }
+    const ids = (canal: ChatChannel) =>
+      partie.state.chat.filter((m) => m.channel === canal).map((m) => m.id);
+    const unAQuarante = Array.from({ length: 40 }, (_, i) => i + 1);
+    // Deux cents grognements n’ont pas fait tomber un seul message du village :
+    // le premier numéro visible au village ne dit rien de la meute.
+    expect(ids('village')).toEqual(unAQuarante);
+    expect(ids('loups')).toHaveLength(MAX_CHAT_PER_CHANNEL);
+    expect(ids('loups')[0]).toBe(MAX_CHAT_PER_CHANNEL + 1);
+    expect(viewFor(partie.state, orateur).chat.map((m) => m.id)).toEqual(unAQuarante);
   });
 
   it('R78 — les messages se suivent par canal, sans rien trahir des autres', () => {

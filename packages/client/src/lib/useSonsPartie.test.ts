@@ -83,6 +83,29 @@ describe('useSonsPartie', () => {
     for (const spy of Object.values(spies)) expect(spy).not.toHaveBeenCalled();
   });
 
+  it('ne sonne rien de ce que la reprise rejoue, mais suit l’heure (D22)', () => {
+    renderHook(() => useSonsPartie());
+    act(() => {
+      useStore.setState((s) => ({
+        chronique: [
+          ...s.chronique,
+          ...[
+            { type: 'phase', phase: 'nuit', step: 'principale', day: 2 } as GameEvent,
+            { type: 'morts', deaths: [mort] } as GameEvent,
+            { type: 'vote', tally: {}, executed: 1 } as GameEvent,
+            { type: 'fin', winner: 'village' } as GameEvent,
+          ].map((event) => ({ ...recu(event), rejoue: true as const })),
+        ],
+      }));
+    });
+    act(() => void vi.advanceTimersByTime(5000));
+    for (const spy of Object.values(spies)) expect(spy).not.toHaveBeenCalled();
+
+    // La nuit rejouée est bien comptée : l'aube neuve qui suit sonne.
+    poser({ type: 'phase', phase: 'jour', day: 2 });
+    expect(spies.aube).toHaveBeenCalledTimes(1);
+  });
+
   it('hurle à la tombée de la nuit, une fois', () => {
     const { rerender } = renderHook(() => useSonsPartie());
     poser({ type: 'phase', phase: 'nuit', step: 'principale', day: 1 });

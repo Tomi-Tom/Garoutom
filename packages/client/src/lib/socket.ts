@@ -3,10 +3,11 @@
  *
  * Le moteur fournit déjà la moitié cliente du WebSocket natif (`Channel`, dans
  * `packages/engine/src/channel.ts`) : corrélation des accusés, délai de garde,
- * et reconnexion automatique à backoff doublé. Ce fichier ne la réécrit pas —
- * il lui donne seulement une porte à ouvrir : l'adresse du canal, construite
- * depuis l'origine de la page, et un `WebSocket` de navigateur adapté à ce que
- * le canal attend.
+ * battement et chien de garde du lien, reconnexion qui ne renonce jamais
+ * (D22). Ce fichier ne la réécrit pas — il lui donne seulement une porte à
+ * ouvrir : l'adresse du canal, construite depuis l'origine de la page, un
+ * `WebSocket` de navigateur adapté à ce que le canal attend, et le réveil
+ * branché sur la vie de la page (`brancherReveil`).
  *
  * Deux façons de trouver le canal :
  *
@@ -24,7 +25,7 @@
  * encore en chantier — ait à exister.
  */
 
-import { Channel, CHANNEL_PATH, type SocketLike } from '@garoutom/engine';
+import { Channel, CHANNEL_PATH, withProtocolVersion, type SocketLike } from '@garoutom/engine';
 
 /**
  * L'adresse du canal, en absolu.
@@ -62,14 +63,16 @@ export function canalUrl(origin: string, configuree?: string | null): string {
  * Adapte le `WebSocket` du navigateur à ce que le canal attend.
  *
  * Les signatures ne coïncident pas tout à fait — le navigateur passe un
- * évènement là où le canal n'attend rien — et la charge utile peut arriver en
- * autre chose que du texte. Six lignes suffisent à réconcilier les deux.
+ * évènement là où le canal n'attend que le code de fermeture — et la charge
+ * utile peut arriver en autre chose que du texte. Quelques lignes suffisent à
+ * réconcilier les deux.
  */
 function socketNavigateur(url: string): SocketLike {
   const brut = new WebSocket(url);
   const like: SocketLike = {
     send: (data) => {
-      brut.send(data);
+      // Une socket qui se ferme refuse d'émettre : le canal le saura par `onclose`.
+      if (brut.readyState === WebSocket.OPEN) brut.send(data);
     },
     close: () => {
       brut.close();
@@ -80,7 +83,8 @@ function socketNavigateur(url: string): SocketLike {
     onerror: null,
   };
   brut.onopen = () => like.onopen?.();
-  brut.onclose = () => like.onclose?.();
+  // Le code dit pourquoi : partie ouverte ailleurs, version refusée, table disparue (D22).
+  brut.onclose = (event: CloseEvent) => like.onclose?.({ code: event.code });
   brut.onerror = () => like.onerror?.();
   brut.onmessage = (event: MessageEvent) => {
     like.onmessage?.({ data: String(event.data) });
@@ -88,10 +92,64 @@ function socketNavigateur(url: string): SocketLike {
   return like;
 }
 
-/** La fabrique par défaut : le canal configuré au build, ou l'origine de la page. */
+/**
+ * La fabrique par défaut : le canal configuré au build, ou l'origine de la
+ * page — avec la version du protocole que parle ce client (`?v=2`).
+ */
 function canalNavigateur(): Channel {
-  const adresse = canalUrl(globalThis.location.origin, import.meta.env.VITE_CHANNEL_URL);
+  const adresse = withProtocolVersion(canalUrl(globalThis.location.origin, import.meta.env.VITE_CHANNEL_URL));
   return new Channel(() => socketNavigateur(adresse));
+}
+
+/**
+ * Branche le réveil du canal sur la vie de la page (D22), et rend de quoi le
+ * débrancher :
+ *
+ * - l'onglet redevient visible → `wake({ hiddenMs })` : un ping immédiat, ou
+ *   une reconnexion directe si l'absence a passé 20 s (un téléphone
+ *   verrouillé a souvent perdu sa socket sans le savoir) ;
+ * - la page sort du cache de navigation (`pageshow` persistant) → reconnexion
+ *   directe : rien de ce qui était ouvert n'a survécu au gel ;
+ * - le réseau revient (`online`) → réveil, et le bandeau se retire ;
+ * - le réseau s'en va (`offline`) → le bandeau, tout de suite, sans attendre
+ *   que le chien de garde du canal tranche.
+ */
+export function brancherReveil(
+  leCanal: Pick<Channel, 'wake'>,
+  surReseau: (enLigne: boolean) => void = () => undefined,
+): () => void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return () => undefined;
+
+  let cacheDepuis: number | null = document.visibilityState === 'hidden' ? Date.now() : null;
+  const surVisibilite = (): void => {
+    if (document.visibilityState === 'hidden') {
+      cacheDepuis ??= Date.now();
+      return;
+    }
+    const hiddenMs = cacheDepuis === null ? 0 : Date.now() - cacheDepuis;
+    cacheDepuis = null;
+    leCanal.wake({ hiddenMs });
+  };
+  const surPageshow = (event: PageTransitionEvent): void => {
+    if (event.persisted) leCanal.wake({ hiddenMs: Number.POSITIVE_INFINITY });
+  };
+  const surEnLigne = (): void => {
+    surReseau(true);
+    leCanal.wake();
+  };
+  const surHorsLigne = (): void => surReseau(false);
+
+  document.addEventListener('visibilitychange', surVisibilite);
+  window.addEventListener('pageshow', surPageshow);
+  window.addEventListener('online', surEnLigne);
+  window.addEventListener('offline', surHorsLigne);
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) surReseau(false);
+  return () => {
+    document.removeEventListener('visibilitychange', surVisibilite);
+    window.removeEventListener('pageshow', surPageshow);
+    window.removeEventListener('online', surEnLigne);
+    window.removeEventListener('offline', surHorsLigne);
+  };
 }
 
 let instance: Channel | null = null;

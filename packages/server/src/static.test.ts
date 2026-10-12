@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { adressesEcoute, createGaroutomServer } from './app.js';
-import { cheminSur, clientPret, typeDe } from './static.js';
+import { analyserUrl, cheminSur, clientPret, typeDe } from './static.js';
 
 let racine: string;
 let serveur: Server;
@@ -121,11 +121,35 @@ describe('le client servi', () => {
 
   it('laisse la santé au serveur', async () => {
     const r = await demander('/health');
-    expect(JSON.parse(r.corps)).toEqual({ ok: true });
+    expect(JSON.parse(r.corps)).toMatchObject({ ok: true, persistance: { active: false } });
+  });
+
+  it('pose les en-têtes de sécurité sur chaque réponse', async () => {
+    for (const chemin of ['/', '/favicon.svg', '/assets/manquant.js']) {
+      const r = await demander(chemin);
+      expect(r.entetes['content-security-policy']).toContain("default-src 'self'");
+      expect(r.entetes['content-security-policy']).toContain("style-src 'self' 'unsafe-inline'");
+      expect(r.entetes['x-frame-options']).toBe('DENY');
+      expect(r.entetes['referrer-policy']).toBe('no-referrer');
+    }
+  });
+
+  it('survit à `GET //[` (la cible qui tuait le processus)', async () => {
+    expect((await demander('//[')).statut).toBeLessThan(500);
+    expect((await demander('/health')).statut).toBe(200);
   });
 });
 
 describe('les outils du dossier', () => {
+  it('analyse les cibles sans jamais lever', () => {
+    expect(analyserUrl('//[')?.pathname).toBe('//[');
+    expect(analyserUrl('*')).toBeNull();
+    expect(analyserUrl('http://x/y')).toBeNull();
+    expect(analyserUrl(undefined)).toBeNull();
+    expect(analyserUrl('//hote/chemin?v=2')?.pathname).toBe('//hote/chemin');
+    expect(analyserUrl('/ws?v=2')?.searchParams.get('v')).toBe('2');
+  });
+
   it('juge les chemins une fois décodés', () => {
     expect(cheminSur('/srv/dist', '/assets/a.js')).not.toBeNull();
     expect(cheminSur('/srv/dist', '/../etc/passwd')).toBeNull();

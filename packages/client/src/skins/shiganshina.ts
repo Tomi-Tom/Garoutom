@@ -22,6 +22,8 @@ export const shiganshina: Skin = {
   // suit la phrase élue de SKINS.md (« prend le commandement du district »).
   charge: 'le commandant',
   plurielLoups: { un: 'Titan', plusieurs: 'Titans' },
+  // Esquisse : l’absent est quelque part dehors, comme un éclaireur en retard.
+  absent: 'hors des murs',
 
   /* --- Les rôles : les noms sont tranchés, les cartes sont esquissées --- */
   roles: {
@@ -155,6 +157,8 @@ export const shiganshina: Skin = {
       vote: 'Le district a livré {nom} aux Titans.',
       chasseur: 'La lame du Caporal a atteint {nom}.',
       chagrin: 'Le pacte brisé a eu raison de {nom}.',
+      // Esquisse : R101 — l’absence a trop duré ; le district raye un nom.
+      abandon: '{nom} a disparu au-delà des murs.',
     },
     // Esquisse : même silence, même suffixe — la carte retournée se dit
     // pareil dans tous les univers.

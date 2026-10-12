@@ -1,42 +1,58 @@
 # Le déploiement Cloudflare du canal Garoutom.
 #
-# Rien ici ne déploie quoi que ce soit tant qu'il n'y a pas d'identifiants :
-# cette file est la config prête. Le jour venu (voir docs/DECISIONS.md, D5 —
-# le canal vit dans le Worker) :
+# Wrangler est épinglé dans les devDependencies du paquet (D24) : toujours le
+# lancer par les scripts, jamais par un `npx wrangler` global.
 #
-#   npx wrangler login
-#   npx wrangler deploy
-#   npx wrangler tail garoutom        # suivre les journaux
+#   npm run worker:dev                 # en local (racine) — état dans .wrangler/state
+#   npm run worker:deploy              # passe par scripts/deployer.mjs (garde D24)
+#   npx wrangler tail garoutom         # suivre les journaux en direct
 #
-# Wrangler n'est pas une dépendance du paquet : c'est un outil de bureau,
-# appelé par son nom quand on en a besoin — le typecheck passe avec les
-# @cloudflare/workers-types seuls.
+# La garde refuse de déployer tant que /health?profond=1 compte des parties en
+# cours (sauf --force). Elle lit le secret ADMIN_TOKEN dans l'environnement.
 
 name = "garoutom"
 main = "src/index.ts"
 
 # Une date récente ; elle fige les comportements du runtime qui évoluent.
+# ≥ 2026-04-07 : le runtime rend lui-même la poignée de fermeture des
+# WebSockets hibernables (`web_socket_auto_reply_to_close`).
 compatibility_date = "2026-09-01"
 
 # Toutes les tables vivent dans UN Durable Object, atteint par un nom fixe
-# (`idFromName('tables')` dans index.ts) : l'attribution des codes de salon
-# reste globale, comme au serveur Node. Le pourquoi est documenté dans
-# src/tables.ts ; l'escalade éventuelle (un DO par table, ou du sharding)
-# appartiendra à docs/DECISIONS.md.
+# (`idFromName('tables')` dans index.ts). Le pourquoi est dans src/tables.ts.
 [[durable_objects.bindings]]
 name = "TABLES"
 class_name = "TablesDO"
 
-# Migration initiale : la classe TablesDO naît sur le stockage SQLite du DO —
-# le format courant, requis sur le plan gratuit. Une migration ne se retire
-# jamais après déploiement ; les suivantes s'ajoutent avec un tag neuf.
+# Migration initiale : la classe TablesDO naît sur le stockage SQLite du DO.
+# Une migration ne se retire jamais après déploiement ; les suivantes
+# s'ajoutent avec un tag neuf. Le passage à l'hibernation et aux tables SQL
+# (D21) n'en demande AUCUNE : même classe, même stockage — le schéma SQL
+# interne se migre tout seul au constructeur (src/stockage.ts).
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["TablesDO"]
 
-# Les pages admises à ouvrir le canal (voir src/index.ts). Sans cette
-# variable, toute origine passe — c'est le réglage le plus simple pour
-# commencer. Décommenter une fois le domaine du client fixé :
+# Journaux et traces gardés par Cloudflare (D24). Les lignes sont des objets
+# JSON (src/journal.ts) : on filtre par `evenement`, par `code`.
+[observability]
+enabled = true
+
+# L'identifiant de la version déployée : /health le montre, et l'objet ne
+# restaure ses tables qu'une fois par version (src/tables.ts).
+[version_metadata]
+binding = "VERSION"
+
+# Les pages admises à ouvrir le canal (D23 : obligatoire en production).
+# Tant qu'elle n'est pas posée, la porte laisse passer et l'écrit au journal.
+# À DÉCOMMENTER au prochain déploiement :
 #
 # [vars]
-# ORIGINES = "https://garoutom.tombp.fr,http://localhost:5177"
+# ORIGINES = "https://garoutom.tombp.fr"
+#
+# (Ajouter http://localhost:5177 seulement pour brancher un client local sur
+# le Worker de production — d'ordinaire, `npm run worker:dev` suffit.)
+#
+# Le secret de /health?profond=1 ne s'écrit JAMAIS ici :
+#   npx wrangler secret put ADMIN_TOKEN
+# En local : `npm run dev -w @garoutom/worker -- --var ADMIN_TOKEN:essai`.

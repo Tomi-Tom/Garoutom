@@ -74,8 +74,36 @@ Les amis ouvrent la seconde adresse dans leur navigateur, et c'est tout. Au
 premier lancement, Windows demande s'il faut laisser Node accepter les
 connexions : autoriser les **réseaux privés**. Réglages par l'environnement :
 `PORT` (3004), `HOST` (`0.0.0.0` ; `127.0.0.1` ferme la porte aux voisins).
-Une fois le client construit, `npm start` suffit pour relancer. Les tables
-vivent dans la mémoire du serveur : l'arrêter les efface.
+Une fois le client construit, `npm start` suffit pour relancer.
+
+#### Les parties survivent au redémarrage
+
+Les tables sont écrites sur disque (`.garoutom-data/tables.json`, à la racine
+du dépôt, ignoré par git) quelques instants après chaque changement. Relancez
+le serveur — mise à jour, plantage, coupure — et chaque joueur qui rouvre la
+page reprend son siège, au même point de la partie. Le fichier contient les
+jetons de reconnexion des joueurs : ne le partagez pas. Une écriture coupée
+net n'abîme rien (fichier écrit à côté puis renommé, copie `tables.json.bak`
+gardée).
+
+**Arrêtez le serveur proprement** : Ctrl+C (ou Ctrl+Pause) dans sa console.
+Il prévient les joueurs (« Le serveur redémarre, reprise automatique »), vide
+ses écritures, ferme les connexions et sort en moins de 3 secondes ; leurs
+pages se reconnectent seules dès qu'il revient. Un second Ctrl+C sort sur-le-
+champ. Fermer la fenêtre d'un coup ou tuer le processus marche aussi, mais
+peut perdre les toutes dernières secondes de la partie. `npm run dev` ne
+garde rien sur disque.
+
+`GET /health` répond l'état du serveur : version, protocole, tables par statut,
+connexions, et si la persistance est active.
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `PORT`, `HOST` | port et interface d'écoute | `3004`, `0.0.0.0` |
+| `GAROUTOM_DATA` | dossier de sauvegarde ; `off` pour ne rien écrire | `.garoutom-data/` (rien avec `npm run dev`) |
+| `GAROUTOM_ORIGINES` | sites autorisés à ouvrir le canal, en plus de l'adresse servie (liste, virgules) | adresse de la page seulement |
+| `GAROUTOM_PROXY=1` | croire `x-forwarded-for` (serveur derrière un proxy de confiance) | non |
+| `GAROUTOM_CLIENT` | dossier du client buildé | `packages/client/dist` |
 
 ### En ligne
 

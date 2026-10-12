@@ -64,6 +64,33 @@ const CACHE_IMMUABLE = 'public, max-age=31536000, immutable';
 const CACHE_COURT = 'public, max-age=3600';
 const CACHE_JAMAIS = 'no-cache';
 
+/**
+ * L'analyse protégée d'une cible de requête (`request.url`).
+ *
+ * `new URL('//[', base)` lève : sans filet, une seule requête `GET //[` tuait
+ * le processus. On colle donc la cible à une origine fictive — une cible qui
+ * commence par `//` reste ainsi un chemin, pas un hôte — et on rend `null` au
+ * moindre doute (forme absolue, `*`, hôte illisible) : l'appelant répond 400
+ * ou détruit la socket. Jamais d'exception.
+ */
+export function analyserUrl(cible: string | undefined): URL | null {
+  if (cible === undefined || !cible.startsWith('/')) return null;
+  try {
+    return new URL('http://localhost' + cible);
+  } catch {
+    return null;
+  }
+}
+
+/** Les en-têtes de sécurité de tout ce que sert le dossier (D23). */
+export const ENTETES_SECURITE: Record<string, string> = {
+  'content-security-policy':
+    "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'",
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'no-referrer',
+  'x-content-type-options': 'nosniff',
+};
+
 export function typeDe(fichier: string): string {
   return TYPES[extname(fichier).toLowerCase()] ?? 'application/octet-stream';
 }
@@ -121,7 +148,7 @@ function repondre(
   response.writeHead(statut, {
     ...entetes,
     'content-length': String(octets.length),
-    'x-content-type-options': 'nosniff',
+    ...ENTETES_SECURITE,
   });
   // HEAD reçoit les mêmes en-têtes, sans le corps.
   response.end(methode === 'HEAD' ? undefined : octets);
@@ -145,7 +172,11 @@ export function servirStatique(
       return;
     }
 
-    const cheminUrl = new URL(request.url ?? '/', 'http://localhost').pathname;
+    const cheminUrl = analyserUrl(request.url)?.pathname;
+    if (cheminUrl === undefined) {
+      repondre(response, methode, 400, { 'content-type': TEXTE }, 'Requête illisible');
+      return;
+    }
     const fichier = cheminSur(base, cheminUrl);
     if (fichier === null) {
       repondre(response, methode, 400, { 'content-type': TEXTE }, 'Chemin refusé');

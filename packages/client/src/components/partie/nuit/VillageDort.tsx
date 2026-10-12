@@ -12,22 +12,31 @@
  * Le décor de nuit est posé une fois pour tout l'écran par `Partie` : on ne
  * le redouble pas ici, deux ciels superposés assombriraient la place.
  *
- * Cinq ajouts seulement, chacun réservé à qui le lit déjà dans sa vue :
- * l'au-delà pour les morts, le serment replié pour les amoureux vivants, la
+ * **La silhouette est la même pour tous** (D23, « Silence à l'écran ») : un
+ * voisin à un mètre ne lit pas l'écran, il en voit la forme. Le serment des
+ * amoureux et l'au-delà des morts ne sont donc plus des éléments propres à
+ * leurs écrans : chacun, vivant ou mort, amoureux ou non, a le même bouton
+ * « Fil », replié, de la même teinte, sans compteur — et c'est seulement
+ * ouvert, d'un geste voulu, qu'il montre les canaux que ce siège sait lire.
+ * Sous lui, une même consigne d'une ligne, dont seuls les mots changent.
+ *
+ * Trois ajouts restent propres à un rôle, parce que l'écran de ce rôle en a
+ * besoin et qu'ils ne se montrent que pendant qu'il « agit » en silence : la
  * vision de la nuit pour la Voyante une fois l'étape principale close, la
  * porte entrouverte de la Petite Fille pendant cette étape (`espionnage`,
- * R95) — et, pour un rôle du village qui en avait, la mention de ses
- * pouvoirs éteints avec l'Ancien (R92).
+ * R95), et, pour un rôle du village qui en avait, la mention de ses pouvoirs
+ * éteints avec l'Ancien (R92).
  */
 
-import { motion } from 'motion/react';
-import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useId, useState, type ReactNode } from 'react';
 
 import { RESSORT_CARTE, RESSORT_PANNEAU } from '../../../anim/tokens.js';
 import { useGame, useNoms, useVoix } from '../../../lib/partie.js';
 import { Fil } from '../Fil.js';
+import { ongletsVisibles } from '../fil/logique.js';
 import { Place } from '../Place.js';
-import { CanalReplie, Lune, Pastille, pouvoirsEteints, PouvoirsEteints, usePeau } from './commun.js';
+import { Lune, Pastille, pouvoirsEteints, PouvoirsEteints, usePeau } from './commun.js';
 import { numeroDeNuit } from './textes.js';
 
 /** La première lettre en capitale — « la meute » ouvre une phrase. */
@@ -93,8 +102,14 @@ export function VillageDort() {
   const mort = moi !== null && !moi.alive;
   // Le fil de l'au-delà : ouvert aux morts qui peuvent y écrire, ou qui y lisent déjà.
   const auDela = mort && (game.channels.includes('morts') || game.chat.some((m) => m.channel === 'morts'));
-  // Le serment : seulement tant que les deux amoureux vivent, puisque c'est là qu'ils parlent.
-  const serment = moi !== null && moi.alive && game.channels.includes('amoureux');
+  // La consigne : une ligne pour tous, seuls les mots changent. La mort est
+  // publique, la dire n'apprend rien au voisin.
+  const consigne =
+    moi === null
+      ? 'Vous regardez le village dormir.'
+      : mort
+        ? `Votre nuit est finie.${auDela ? ` ${voix.libelleCanal('morts')} veille avec vous : on y parle librement.` : ''}`
+        : 'Gardez les yeux fermés.';
   // La Voyante retrouve sa vision de la nuit une fois l'étape principale close.
   const vision =
     moi !== null && moi.alive && moi.role === 'voyante'
@@ -146,20 +161,57 @@ export function VillageDort() {
 
       {pouvoirsEteints(game) && <PouvoirsEteints className="max-w-[30rem]" />}
 
-      {mort && (
-        <div className="flex w-[min(32rem,100%)] flex-col gap-3">
-          <p className="text-base" style={{ color: 'var(--lune)' }}>
-            Votre nuit est finie. {auDela ? `${voix.libelleCanal('morts')} veille avec vous : on y parle librement.` : ''}
-          </p>
-          {auDela && <Fil mode="integre" canaux={['morts']} className="text-left" />}
-        </div>
-      )}
-
-      {serment && (
-        <div className="w-[min(32rem,100%)] text-left">
-          <CanalReplie canal="amoureux" teinte="serment" />
-        </div>
-      )}
+      <div className="flex w-[min(32rem,100%)] flex-col gap-3">
+        <p data-testid="consigne-nuit" className="text-base" style={{ color: 'var(--lune)' }}>
+          {consigne}
+        </p>
+        <FilDeNuit />
+      </div>
     </section>
+  );
+}
+
+/**
+ * Le fil de la nuit, replié : le même bouton chez tous — même mot, même
+ * teinte, aucun compteur de non-lus (un badge qui s'allume la nuit dirait
+ * « quelqu'un me parle en secret »). Ouvert d'un geste, il montre tous les
+ * canaux que ce siège sait lire : le village muet pour le villageois, le
+ * serment pour les amoureux, l'au-delà pour les morts.
+ */
+function FilDeNuit() {
+  const game = useGame();
+  const [ouvert, setOuvert] = useState(false);
+  const zone = useId();
+  if (game === null) return null;
+  const canaux = ongletsVisibles(game);
+
+  return (
+    <div className="w-full text-left">
+      <button
+        type="button"
+        aria-expanded={ouvert}
+        aria-controls={zone}
+        onClick={() => setOuvert((valeur) => !valeur)}
+        className="btn-voisin w-full justify-between gap-3"
+        style={{ color: 'var(--lune)' }}
+      >
+        <span>Fil</span>
+        <span aria-hidden="true">{ouvert ? '−' : '+'}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {ouvert && (
+          <motion.div
+            id={zone}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={RESSORT_CARTE}
+            className="overflow-hidden"
+          >
+            <Fil mode="integre" canaux={canaux} className="mt-2" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

@@ -663,8 +663,9 @@ describe('R94 — le Bouc émissaire paie l’égalité', () => {
     refuser(partie.state, bouc, { type: 'designerVotants', seats: [] }, 'target');
     refuser(partie.state, bouc, { type: 'designerVotants', seats: [bouc] }, 'target');
     refuser(partie.state, bouc, { type: 'designerVotants', seats: [99] });
-    refuser(partie.state, bouc, { type: 'designerVotants', seats: [1.5] }, 'target');
-    refuser(partie.state, bouc, { type: 'designerVotants', seats: 'tous' as unknown as number[] }, 'target');
+    // Une charge utile mal formée est refusée à la lecture, avant toute règle (R102).
+    refuser(partie.state, bouc, { type: 'designerVotants', seats: [1.5] }, 'action');
+    refuser(partie.state, bouc, { type: 'designerVotants', seats: 'tous' as unknown as number[] }, 'action');
     refuser(partie.state, a, { type: 'designerVotants', seats: [a] }, 'not-your-turn');
   });
 
@@ -882,16 +883,25 @@ describe('R97 — une nuit sur deux, le Loup Blanc dévore un loup', () => {
   });
 
   it('R97/R36 — mort, son étape se tient quand même, fantôme, chaque nuit paire', () => {
-    const partie = nuitDeux();
-    const blanc = siege(partie.state, 'loupBlanc');
-    partie.state = avecDesMorts(partie.state, [blanc]);
-    partie.meute(null);
-    expect(partie.state.phase).toMatchObject({ kind: 'nuit', step: 'loupBlanc' });
+    /** La nuit 2, le Loup Blanc mort ; `alea` remplace l'aléa de la partie (R104). */
+    const fantome = (alea?: number): Partie => {
+      const partie = nuitDeux();
+      const blanc = siege(partie.state, 'loupBlanc');
+      partie.state = avecDesMorts(partie.state, [blanc]);
+      if (alea !== undefined) partie.state.rng = alea;
+      partie.meute(null);
+      return partie;
+    };
+    const partie = fantome();
+    expect(partie.state.phase).toMatchObject({ kind: 'nuit', step: 'loupBlanc', ghostMs: expect.any(Number) });
     expect(pendingActors(partie.state)).toEqual([]);
     for (let s = 0; s < 10; s++) expect(viewFor(partie.state, s).prompt).toBeNull();
+    // Tirée à l'entrée de l'étape, la durée se relit sans changer…
+    expect(phaseBudgetMs(partie.state)).toBe(phaseBudgetMs(partie.state));
+    // … et change avec l'aléa de la partie.
     const durees = new Set<number>();
     for (let graine = 0; graine < 20; graine++) {
-      const duree = phaseBudgetMs(partie.state, createSeededRng(graine));
+      const duree = phaseBudgetMs(fantome(graine).state);
       expect(duree).toBeGreaterThanOrEqual(GHOST_STEP_MS.min);
       expect(duree).toBeLessThan(GHOST_STEP_MS.min + GHOST_STEP_MS.spread);
       durees.add(duree);

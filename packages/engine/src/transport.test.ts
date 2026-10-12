@@ -9,12 +9,98 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ABANDON_MS,
+  CLOSE_GONE,
+  CLOSE_REPLACED,
+  CLOSE_SERVER_RESTART,
+  CLOSE_VERSION,
+  eventSeqOf,
+  LOBBY_GRACE_MS,
+  negotiateProtocol,
+  PROTOCOL_MIN,
+  PROTOCOL_VERSION,
+  RECONNECT_GRACE_MS,
+} from './protocol.js';
+import {
   decodeClientFrame,
   decodeServerFrame,
   encodeFrame,
+  inspectServerFrame,
   MAX_FRAME_BYTES,
   MAX_SERVER_FRAME_BYTES,
 } from './transport.js';
+
+describe('D22 — le lien se surveille', () => {
+  it('D22 — hello, ping et pong font l’aller-retour', () => {
+    const hello = { t: 'hello', protocol: 2, capabilities: ['ping', 'replay'], heartbeatMs: 20_000 } as const;
+    expect(decodeServerFrame(encodeFrame({ ...hello, capabilities: [...hello.capabilities] }))).toEqual(hello);
+    expect(decodeClientFrame(encodeFrame({ t: 'ping', id: 3 }))).toEqual({ t: 'ping', id: 3 });
+    expect(decodeServerFrame(encodeFrame({ t: 'pong', id: 3, now: 1_760_000_000_000 }))).toEqual({
+      t: 'pong',
+      id: 3,
+      now: 1_760_000_000_000,
+    });
+  });
+
+  it('D22 — un ping ou un pong mal formé est refusé', () => {
+    for (const id of ['1', -1, 1.5, null]) {
+      expect(decodeClientFrame(JSON.stringify({ t: 'ping', id }))).toBeNull();
+      expect(decodeServerFrame(JSON.stringify({ t: 'pong', id, now: 1 }))).toBeNull();
+    }
+    expect(decodeServerFrame(JSON.stringify({ t: 'pong', id: 1, now: 'midi' }))).toBeNull();
+    expect(decodeServerFrame(JSON.stringify({ t: 'hello', protocol: '2', capabilities: [], heartbeatMs: 1 }))).toBeNull();
+    // le serveur n'accepte pas un pong, ni le client un ping
+    expect(decodeClientFrame(encodeFrame({ t: 'pong', id: 1, now: 1 }))).toBeNull();
+    expect(decodeServerFrame(encodeFrame({ t: 'ping', id: 1 }))).toBeNull();
+  });
+
+  it('D22 — une capacité inconnue s’ignore, le hello passe', () => {
+    const lu = decodeServerFrame(
+      JSON.stringify({ t: 'hello', protocol: 3, capabilities: ['ping', 'teleportation', 7], heartbeatMs: 15_000 }),
+    );
+    expect(lu).toEqual({ t: 'hello', protocol: 3, capabilities: ['ping'], heartbeatMs: 15_000 });
+  });
+
+  it('D22 — le client tolère un cadre d’une version future, et dit qu’un cadre est trop gros', () => {
+    expect(inspectServerFrame('{"t":"aurore","x":1}')).toEqual({ kind: 'unknown' });
+    expect(inspectServerFrame('{"t":"ev","e":"bientot","d":null}')).toEqual({ kind: 'unknown' });
+    expect(inspectServerFrame('pas du json')).toEqual({ kind: 'malformed' });
+    expect(inspectServerFrame('{"t":42}')).toEqual({ kind: 'malformed' });
+    const enorme = JSON.stringify({ t: 'ev', e: 'sync', d: 'a'.repeat(MAX_SERVER_FRAME_BYTES) });
+    // trop gros : pas un silence, une raison de se reconnecter (D23)
+    expect(inspectServerFrame(enorme)).toEqual({ kind: 'too-big' });
+    expect(inspectServerFrame(encodeFrame({ t: 'ev', e: 'sync', d: null }))).toEqual({
+      kind: 'frame',
+      frame: { t: 'ev', e: 'sync', d: null },
+    });
+  });
+
+  it('D22 — la version : 2 parlée, 1 encore servie, le reste refusé', () => {
+    expect(PROTOCOL_VERSION).toBe(2);
+    expect(PROTOCOL_MIN).toBe(1);
+    expect(negotiateProtocol('2')).toBe(2);
+    expect(negotiateProtocol('1')).toBe(1);
+    // sans `?v=`, c'est un client d'avant D22
+    expect(negotiateProtocol(null)).toBe(1);
+    expect(negotiateProtocol(undefined)).toBe(1);
+    expect(negotiateProtocol('')).toBe(1);
+    for (const mauvais of ['0', '3', '99', '2.0', ' 2', '-1', 'deux', '1e1']) {
+      expect(negotiateProtocol(mauvais)).toBeNull();
+    }
+  });
+
+  it('D22 — les codes de fermeture et les délais de présence', () => {
+    expect([CLOSE_SERVER_RESTART, CLOSE_VERSION, CLOSE_REPLACED, CLOSE_GONE]).toEqual([1012, 4000, 4001, 4002]);
+    expect(RECONNECT_GRACE_MS).toBe(60_000);
+    expect(LOBBY_GRACE_MS).toBe(30_000);
+    expect(ABANDON_MS).toBe(300_000);
+  });
+
+  it('D22 — les évènements d’un sync se numérotent depuis `seq`', () => {
+    const payload = { seq: 12, events: [{ type: 'debut' }, { type: 'aube-paisible' }, { type: 'debut' }] as const };
+    expect([0, 1, 2].map((i) => eventSeqOf({ seq: payload.seq, events: [...payload.events] }, i))).toEqual([10, 11, 12]);
+  });
+});
 
 describe('aller-retour', () => {
   it('conserve une demande', () => {

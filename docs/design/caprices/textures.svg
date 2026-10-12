@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Garoutom · Caprices — bibliothèque de matières (SPEC.md § 4).
+  Ce fichier est À LA FOIS la source des <defs> à copier et leur planche de
+  démonstration : ouvrez-le dans un navigateur pour voir chaque recette.
+  Règles : aucun dégradé décoratif, aucune ombre portée, aucun flou.
+  La sanguine (#A23B24 / #D9765A) n'apparaît que pour la meute.
+  Les identifiants sont ceux de la spec : on les copie tels quels.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon:ital@0;1&amp;family=IM+Fell+French+Canon+SC&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap');
+.t { font-family: 'IM Fell French Canon', Georgia, serif; fill: #17130F; }
+.ti { font-family: 'IM Fell French Canon', Georgia, serif; font-style: italic; fill: #17130F; }
+.sc { font-family: 'IM Fell French Canon SC', Georgia, serif; fill: #5E554A; letter-spacing: .06em; }
+.c { font-family: 'Source Serif 4', Georgia, serif; fill: #17130F; }
+.cd { font-family: 'Source Serif 4', Georgia, serif; fill: #5E554A; }
+.cv { font-family: 'Source Serif 4', Georgia, serif; fill: #E8DFCB; }
+</style>
+
+<defs>
+  <!-- ============ HACHURES (encre -e, vergé -v) ============ -->
+  <!-- H1 claire : pas 6, trait 0,6 — ombres légères, fonds de jeton -->
+  <pattern id="hach-1-e" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#17130F" stroke-width="0.6"/></pattern>
+  <pattern id="hach-1-v" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#E8DFCB" stroke-width="0.6"/></pattern>
+  <!-- H2 moyenne : pas 4, trait 0,8 — volumes, bustes -->
+  <pattern id="hach-2-e" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#17130F" stroke-width="0.8"/></pattern>
+  <pattern id="hach-2-v" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#E8DFCB" stroke-width="0.8"/></pattern>
+  <!-- H3 serrée : pas 2,6, trait 1,1 — ombres portées gravées, absent -->
+  <pattern id="hach-3-e" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="2.6" stroke="#17130F" stroke-width="1.1"/></pattern>
+  <pattern id="hach-3-v" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="2.6" stroke="#E8DFCB" stroke-width="1.1"/></pattern>
+  <!-- HX croisée : pas 4, trait 0,7, 30° — urgence de la minuterie, absent -->
+  <pattern id="hach-x-e" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V4M0 0H4" stroke="#17130F" stroke-width="0.7" fill="none"/></pattern>
+  <pattern id="hach-x-v" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V4M0 0H4" stroke="#E8DFCB" stroke-width="0.7" fill="none"/></pattern>
+  <!-- HH horizontale : pas 3, trait 0,6 — ciels, bandeaux de décor -->
+  <pattern id="hach-h-e" width="6" height="3" patternUnits="userSpaceOnUse"><line x1="0" y1="0.5" x2="6" y2="0.5" stroke="#17130F" stroke-width="0.6"/></pattern>
+  <!-- HV vert du Bataillon (skin Shiganshina seulement) : jamais en aplat -->
+  <pattern id="hach-vert" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#45523F" stroke-width="1.3"/></pattern>
+  <!-- Hors vote : rayure horizontale serrée dans le médaillon -->
+  <pattern id="hach-barre-e" width="4" height="3" patternUnits="userSpaceOnUse"><line x1="0" y1="1.5" x2="4" y2="1.5" stroke="#17130F" stroke-width="0.9"/></pattern>
+
+  <!-- ============ PAPIER VERGÉ ============ -->
+  <!-- vergeures : 1 trait / 3 px ; pontuseaux : 1 trait / 40 px -->
+  <pattern id="verge" width="40" height="3" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0.5" x2="40" y2="0.5" stroke="#17130F" stroke-opacity="0.035" stroke-width="0.6"/>
+    <line x1="0.5" y1="0" x2="0.5" y2="3" stroke="#17130F" stroke-opacity="0.05" stroke-width="1"/>
+  </pattern>
+
+  <!-- ============ GRAINS D'AQUATINTE (4 paliers) ============ -->
+  <!-- baseFrequency 0.875 = 224/256 : tuile de 256 px parfaitement raccordée -->
+  <!-- Palier I : grain sombre clairsemé sur #A89D8C (opacité 0,18) -->
+  <filter id="aqua-I" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="11" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  9 0 0 0 -5.6" result="g"/>
+    <feComposite in="g" in2="SourceGraphic" operator="in"/>
+  </filter>
+  <!-- Palier II : grain sombre dense sur #7A7064 (opacité 0,22) -->
+  <filter id="aqua-II" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="23" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  9 0 0 0 -5.2" result="g"/>
+    <feComposite in="g" in2="SourceGraphic" operator="in"/>
+  </filter>
+  <!-- Palier III : grain clair (les grains de résine) sur #4A433B (opacité 0,20) -->
+  <filter id="aqua-III" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="37" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.91  0 0 0 0 0.875  0 0 0 0 0.796  9 0 0 0 -5.4" result="g"/>
+    <feComposite in="g" in2="SourceGraphic" operator="in"/>
+  </filter>
+  <!-- Palier IV : grain clair dense sur #17130F (opacité 0,28) — nuit pleine -->
+  <filter id="aqua-IV" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="41" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.91  0 0 0 0 0.875  0 0 0 0 0.796  9 0 0 0 -5.0" result="g"/>
+    <feComposite in="g" in2="SourceGraphic" operator="in"/>
+  </filter>
+
+  <!-- ============ GRAIN DE PAPIER ============ -->
+  <filter id="papier" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="2" stitchTiles="stitch"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  1.2 0 0 0 -0.5"/>
+  </filter>
+
+  <!-- ============ TRAIT MORDU (meute) ============ -->
+  <!-- grand format (≥ 96 px) ; en dessous, la morsure est DESSINÉE dans le tracé -->
+  <filter id="mordu" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.09" numOctaves="2" seed="3" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feMorphology in="d" operator="dilate" radius="0.35"/>
+  </filter>
+  <filter id="mordu-fin" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.14" numOctaves="1" seed="5" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <!-- ============ CARTOUCHES DE CAMP (viewBox 120×30) ============ -->
+  <!-- Village : écu à pans coupés, trait net -->
+  <symbol id="cart-ecu" viewBox="0 0 120 30"><path d="M7 1 H113 L119 7 V23 L113 29 H7 L1 23 V7 Z" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"/></symbol>
+  <!-- Meute : écu mordu à droite -->
+  <symbol id="cart-mordu" viewBox="0 0 120 30"><path d="M7 1 H100 L104 6 L109 2 L111 10 L119 13 L112 17 L118 23 L110 25 L106 29 H7 L1 23 V7 Z" fill="#F5EFE2" stroke="#A23B24" stroke-width="2"/></symbol>
+  <!-- Loup Blanc : mordu des deux côtés -->
+  <symbol id="cart-mordu2" viewBox="0 0 120 30"><path d="M20 1 H100 L104 6 L109 2 L111 10 L119 13 L112 17 L118 23 L110 25 L106 29 H20 L16 24 L11 28 L9 20 L1 17 L8 13 L2 7 L10 5 L14 1 Z" fill="#F5EFE2" stroke="#A23B24" stroke-width="2"/></symbol>
+  <!-- Serment : lacs (double filet arrondi) -->
+  <symbol id="cart-lacs" viewBox="0 0 120 30"><rect x="1.5" y="1.5" width="117" height="27" rx="13.5" fill="#F5EFE2" stroke="#8A3A5C" stroke-width="2"/><rect x="5" y="5" width="110" height="20" rx="10" fill="none" stroke="#8A3A5C" stroke-width="0.9"/></symbol>
+  <!-- Au-delà : écu en pointillé (le village, effacé) -->
+  <symbol id="cart-audela" viewBox="0 0 120 30"><path d="M7 1 H113 L119 7 V23 L113 29 H7 L1 23 V7 Z" fill="none" stroke="#5E554A" stroke-width="1.2" stroke-dasharray="1.5 3"/></symbol>
+  <!-- Inconnu : ovale pointillé -->
+  <symbol id="cart-ovale" viewBox="0 0 120 30"><ellipse cx="60" cy="15" rx="58" ry="13.5" fill="none" stroke="#5E554A" stroke-width="1.4" stroke-dasharray="3 3"/></symbol>
+
+  <!-- ============ GLYPHES D'ÉTAT (viewBox 16×16, trait 1,25) ============ -->
+  <symbol id="g-sceau" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="#17130F"/><path d="M4.5 8.2 L7 10.6 L11.6 5.4" fill="none" stroke="#F5EFE2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-chandelle" viewBox="0 0 16 16"><path d="M6 15 V7 H10 V15 Z" fill="none" stroke="#17130F" stroke-width="1.25"/><path d="M8 6 C7 4.5 9 3.5 8 1.5 M8.8 5.5 C10 4.5 9.4 3 10.4 2" fill="none" stroke="#17130F" stroke-width="0.9" stroke-linecap="round"/><path d="M4 15 H12" stroke="#17130F" stroke-width="1.25"/></symbol>
+  <symbol id="g-corde" viewBox="0 0 16 16"><path d="M8 1 V6.5 M8 9.5 V11" stroke="#17130F" stroke-width="1.25" stroke-linecap="round"/><path d="M6.2 6.6 L9.8 9.4" stroke="#17130F" stroke-width="1"/><circle cx="8" cy="13" r="2" fill="none" stroke="#17130F" stroke-width="1.25"/></symbol>
+  <symbol id="g-horsvote" viewBox="0 0 16 16"><path d="M1.5 5.5 H10 C11 5.5 11 7.5 10 7.5 H6 M10 5.5 C12.5 5.5 14 7 14 9.5 V11 C14 12.8 12.8 14 11 14 H7.5 C6 14 5 13 5 11.5 V7.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linejoin="round"/><path d="M2 14.5 L14.5 2" stroke="#17130F" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="g-chaise" viewBox="0 0 16 16"><path d="M5 1.5 H10 V9 M5 1.5 V15 M5 9 H12.5 M12.5 9 V15 M10 9 V13" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linecap="square"/></symbol>
+  <symbol id="g-index" viewBox="0 0 16 16"><path d="M1.5 5.5 H10 C11 5.5 11 7.5 10 7.5 H6 M10 5.5 C12.5 5.5 14 7 14 9.5 V11 C14 12.8 12.8 14 11 14 H7.5 C6 14 5 13 5 11.5 V7.5 M7.5 10.5 H11.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linejoin="round"/></symbol>
+  <symbol id="g-lacs" viewBox="0 0 16 16"><circle cx="6" cy="8" r="4.2" fill="none" stroke="#8A3A5C" stroke-width="1.6"/><circle cx="10" cy="8" r="4.2" fill="none" stroke="#8A3A5C" stroke-width="1.6"/></symbol>
+  <symbol id="g-plume" viewBox="0 0 16 16"><path d="M14 2 C8 3 4 7 2.5 14 M14 2 C13 7 9 11 4 11.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linecap="round"/><path d="M6 9.5 L9 6.5 M7.5 10.5 L10.5 7.5" stroke="#17130F" stroke-width="0.75"/></symbol>
+
+  <!-- ============ BUSTE DE JETON (exemple : tricorne, siège 1) ============ -->
+  <symbol id="buste-tricorne" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48 Z" fill="url(#hach-2-e)" stroke="#17130F" stroke-width="1"/>
+    <circle cx="24" cy="21" r="8" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="1"/>
+    <path d="M10 15 L24 8 L38 15 L33 17 C28 14 20 14 15 17 Z" fill="#17130F"/>
+  </symbol>
+  <symbol id="buste-coroza" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48 Z" fill="url(#hach-2-e)" stroke="#17130F" stroke-width="1"/>
+    <circle cx="24" cy="22" r="8" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="1"/>
+    <path d="M17 16 L24 0 L31 16 Z" fill="#17130F"/>
+  </symbol>
+  <symbol id="buste-fantome" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48" fill="none" stroke="#A89D8C" stroke-width="1"/>
+    <circle cx="24" cy="22" r="8" fill="none" stroke="#A89D8C" stroke-width="1"/>
+  </symbol>
+
+  <!-- ============ BRUNISSAGE ============ -->
+  <!-- masque à bord franc : le rayon avance par crans de 8 px (8, 16, 24…) -->
+  <mask id="brunir-demo"><rect x="0" y="0" width="1600" height="1180" fill="#fff"/><circle cx="1290" cy="880" r="48" fill="#000"/></mask>
+</defs>
+
+<!-- ======================= PLANCHE DE DÉMONSTRATION ======================= -->
+<rect width="1600" height="1180" fill="#E8DFCB"/>
+<rect width="1600" height="1180" fill="url(#verge)"/>
+<rect width="1600" height="1180" fill="#000" filter="url(#papier)" opacity="0.22"/>
+<!-- rousseurs : ocre #8C6A3F, JAMAIS sanguine -->
+<g fill="#8C6A3F"><circle cx="64" cy="610" r="5" opacity="0.07"/><circle cx="352" cy="38" r="7" opacity="0.05"/><circle cx="1050" cy="1140" r="8" opacity="0.045"/><circle cx="1560" cy="300" r="4" opacity="0.07"/><circle cx="230" cy="890" r="2.5" opacity="0.08"/></g>
+
+<text x="40" y="56" class="t" font-size="40">Caprices — matières</text>
+<text x="40" y="84" class="ti" font-size="18">« Une seule couleur : celle qui mord. »  Recettes de SPEC.md § 4, à copier telles quelles.</text>
+
+<!-- A. Les quatre morsures -->
+<text x="40" y="130" class="sc" font-size="13">A · Les quatre morsures (aplat + grain)</text>
+<g transform="translate(40,142)">
+  <rect width="150" height="110" fill="#A89D8C"/><rect width="150" height="110" fill="#000" filter="url(#aqua-I)" opacity="0.18"/>
+  <rect x="166" width="150" height="110" fill="#7A7064"/><rect x="166" width="150" height="110" fill="#000" filter="url(#aqua-II)" opacity="0.22"/>
+  <rect x="332" width="150" height="110" fill="#4A433B"/><rect x="332" width="150" height="110" fill="#000" filter="url(#aqua-III)" opacity="0.20"/>
+  <rect x="498" width="150" height="110" fill="#17130F"/><rect x="498" width="150" height="110" fill="#000" filter="url(#aqua-IV)" opacity="0.28"/>
+  <text x="10" y="30" class="t" font-size="24">I</text><text x="176" y="30" class="t" font-size="24">II</text>
+  <text x="342" y="30" class="t" font-size="24" fill="#E8DFCB" style="fill:#E8DFCB">III</text><text x="508" y="30" class="t" font-size="24" style="fill:#E8DFCB">IV</text>
+  <text x="0" y="132" class="cd" font-size="12">#A89D8C · aqua-I · 0,18</text><text x="166" y="132" class="cd" font-size="12">#7A7064 · aqua-II · 0,22</text>
+  <text x="332" y="132" class="cd" font-size="12">#4A433B · aqua-III · 0,20</text><text x="498" y="132" class="cd" font-size="12">#17130F · aqua-IV · 0,28</text>
+</g>
+
+<!-- B. Hachures -->
+<text x="740" y="130" class="sc" font-size="13">B · Hachures (eau-forte, trait net)</text>
+<g transform="translate(740,142)">
+  <rect width="110" height="110" fill="url(#hach-1-e)" stroke="#17130F"/>
+  <rect x="126" width="110" height="110" fill="url(#hach-2-e)" stroke="#17130F"/>
+  <rect x="252" width="110" height="110" fill="url(#hach-3-e)" stroke="#17130F"/>
+  <rect x="378" width="110" height="110" fill="url(#hach-x-e)" stroke="#17130F"/>
+  <rect x="504" width="110" height="110" fill="url(#hach-h-e)" stroke="#17130F"/>
+  <rect x="630" width="110" height="110" fill="url(#hach-vert)" stroke="#45523F"/>
+  <text x="0" y="132" class="cd" font-size="12">hach-1 · pas 6</text><text x="126" y="132" class="cd" font-size="12">hach-2 · pas 4</text>
+  <text x="252" y="132" class="cd" font-size="12">hach-3 · pas 2,6</text><text x="378" y="132" class="cd" font-size="12">hach-x · 30°</text>
+  <text x="504" y="132" class="cd" font-size="12">hach-h · ciel</text><text x="630" y="132" class="cd" font-size="12">hach-vert · AoT</text>
+</g>
+<!-- hachures courbes : arcs concentriques du côté de l'ombre (générateur § 4.3) -->
+<g transform="translate(1536,197)" fill="none" stroke="#17130F" stroke-width="0.7">
+  <circle r="42" stroke-width="1.5"/>
+  <path d="M-38 -6 A38.5 38.5 0 0 0 6 38 M-33.5 -5.3 A34 34 0 0 0 5.3 33.5 M-29 -4.6 A29.5 29.5 0 0 0 4.6 29 M-24.5 -3.9 A25 25 0 0 0 3.9 24.5 M-20 -3.2 A20.5 20.5 0 0 0 3.2 20"/>
+</g>
+
+<!-- C. Cuvette de cuivre (jour) et cuivre encré (nuit) -->
+<text x="40" y="330" class="sc" font-size="13">C · La cuvette — l'arête du cuivre pressée dans le papier</text>
+<g transform="translate(40,346)">
+  <rect x="0" y="0" width="340" height="220" fill="#E1D7C1"/>
+  <path d="M0 220 V0 H340" fill="none" stroke="#17130F" stroke-opacity="0.38" stroke-width="1"/>
+  <path d="M340 0 V220 H0" fill="none" stroke="#F5EFE2" stroke-width="1.5"/>
+  <rect x="2.5" y="2.5" width="335" height="215" fill="none" stroke="#17130F" stroke-opacity="0.14" stroke-width="1"/>
+  <text x="170" y="118" class="ti" font-size="20" text-anchor="middle">« Nul ne se connaît. »</text>
+  <rect x="380" y="0" width="340" height="220" fill="#17130F"/>
+  <rect x="380" y="0" width="340" height="220" fill="#000" filter="url(#aqua-IV)" opacity="0.28"/>
+  <rect x="380.5" y="0.5" width="339" height="219" fill="none" stroke="#4A433B" stroke-width="1"/>
+  <rect x="383.5" y="3.5" width="333" height="213" fill="none" stroke="#2A241E" stroke-width="1"/>
+  <text x="550" y="118" class="ti" font-size="20" text-anchor="middle" style="fill:#E8DFCB">« Le sommeil de la raison… »</text>
+  <text x="0" y="242" class="cd" font-size="12">jour : teinte #E1D7C1, arête bistre 38 %, reflet bruni</text>
+  <text x="380" y="242" class="cd" font-size="12">nuit : aqua-IV, arête #4A433B, contre-arête #2A241E</text>
+</g>
+
+<!-- D. Net contre mordu -->
+<text x="800" y="330" class="sc" font-size="13">D · Le camp s'exprime par le trait</text>
+<g transform="translate(800,346)">
+  <circle cx="60" cy="70" r="52" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="1.5"/>
+  <text x="60" y="152" class="cd" font-size="12" text-anchor="middle">net</text>
+  <g filter="url(#mordu)"><circle cx="200" cy="70" r="52" fill="#17130F"/><circle cx="200" cy="70" r="52" fill="#000" filter="url(#aqua-IV)" opacity="0.25"/></g>
+  <path d="M186 64 Q200 56 214 64 Q200 70 186 64 Z" fill="#E8DFCB"/>
+  <text x="200" y="152" class="cd" font-size="12" text-anchor="middle">mordu</text>
+  <circle cx="340" cy="70" r="52" fill="none" stroke="#A89D8C" stroke-width="1"/>
+  <circle cx="340" cy="70" r="47" fill="none" stroke="#A89D8C" stroke-width="0.6"/>
+  <text x="340" y="152" class="cd" font-size="12" text-anchor="middle">bruni</text>
+  <circle cx="480" cy="70" r="52" fill="none" stroke="#8A3A5C" stroke-width="2"/>
+  <circle cx="480" cy="70" r="47" fill="none" stroke="#8A3A5C" stroke-width="0.9"/>
+  <text x="480" y="152" class="cd" font-size="12" text-anchor="middle">lacs</text>
+  <text x="590" y="78" class="t" font-size="34">Village</text>
+  <g filter="url(#mordu)"><text x="590" y="128" class="t" font-size="34" style="fill:#A23B24">Meute</text></g>
+</g>
+
+<!-- E. Cartouches -->
+<text x="40" y="640" class="sc" font-size="13">E · Cartouches : la forme dit le camp, le mot le confirme</text>
+<g transform="translate(40,654)">
+  <use href="#cart-ecu" width="150" height="38"/><text x="75" y="25" class="c" font-size="14" text-anchor="middle">Villageois·e</text>
+  <use href="#cart-mordu" x="170" width="150" height="38"/><text x="236" y="25" class="c" font-size="14" font-weight="600" text-anchor="middle" style="fill:#A23B24">Loup-garou</text>
+  <use href="#cart-mordu2" x="340" width="150" height="38"/><text x="415" y="25" class="c" font-size="14" font-weight="600" text-anchor="middle" style="fill:#A23B24">Loup Blanc</text>
+  <use href="#cart-lacs" x="510" width="150" height="38"/><text x="585" y="25" class="c" font-size="14" text-anchor="middle" style="fill:#8A3A5C">Le serment</text>
+  <use href="#cart-audela" x="680" width="150" height="38"/><text x="755" y="25" class="cd" font-size="14" font-style="italic" text-anchor="middle">L'au-delà</text>
+  <use href="#cart-ovale" x="850" width="150" height="38"/><text x="925" y="25" class="cd" font-size="14" text-anchor="middle">Carte cachée</text>
+</g>
+
+<!-- F. Glyphes d'état -->
+<text x="1080" y="640" class="sc" font-size="13">F · Glyphes d'état (16 px)</text>
+<g transform="translate(1080,654)">
+  <use href="#g-sceau" width="24" height="24"/><use href="#g-chandelle" x="44" width="24" height="24"/><use href="#g-corde" x="88" width="24" height="24"/>
+  <use href="#g-horsvote" x="132" width="24" height="24"/><use href="#g-chaise" x="176" width="24" height="24"/><use href="#g-index" x="220" width="24" height="24"/>
+  <use href="#g-lacs" x="264" width="24" height="24"/><use href="#g-plume" x="308" width="24" height="24"/>
+  <text x="0" y="44" class="cd" font-size="12">a voté · mort · gracié · hors vote · absent · votera · lié · marqué</text>
+</g>
+
+<!-- G. Jetons -->
+<text x="40" y="760" class="sc" font-size="13">G · Jeton (médaillon 64) — normal, choisi, a voté, moi, mort, absent</text>
+<g transform="translate(40,776)">
+  <!-- normal -->
+  <g><circle cx="44" cy="44" r="32" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"/><circle cx="44" cy="44" r="28" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="0.75"/><use href="#buste-tricorne" x="20" y="22" width="48" height="48"/>
+    <text x="44" y="100" class="c" font-size="15" font-weight="600" text-anchor="middle">Anna</text><text x="44" y="116" class="cd" font-size="12" text-anchor="middle">délibère</text></g>
+  <!-- choisi -->
+  <g transform="translate(120,0)"><circle cx="44" cy="44" r="32" fill="#F5EFE2" stroke="#17130F" stroke-width="3.5"/><circle cx="44" cy="44" r="28" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="0.75"/><use href="#buste-coroza" x="20" y="22" width="48" height="48"/>
+    <path d="M44 2 V8 M44 80 V86 M2 44 H8 M80 44 H86" stroke="#17130F" stroke-width="2.4"/>
+    <text x="44" y="100" class="c" font-size="15" font-weight="700" text-anchor="middle" text-decoration="underline">Bastien</text><text x="44" y="116" class="c" font-size="12" font-weight="600" text-anchor="middle">votre choix</text></g>
+  <!-- a voté -->
+  <g transform="translate(240,0)"><circle cx="44" cy="44" r="32" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"/><circle cx="44" cy="44" r="28" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="0.75"/><use href="#buste-tricorne" x="20" y="22" width="48" height="48"/>
+    <use href="#g-sceau" x="58" y="10" width="18" height="18"/>
+    <text x="44" y="100" class="c" font-size="15" font-weight="600" text-anchor="middle">Clément</text><text x="44" y="116" class="cd" font-size="12" text-anchor="middle">a voté</text></g>
+  <!-- moi -->
+  <g transform="translate(360,0)"><rect x="7" y="7" width="74" height="74" fill="none" stroke="#17130F" stroke-width="1.5"/><rect x="10.5" y="10.5" width="67" height="67" fill="none" stroke="#17130F" stroke-width="0.75"/>
+    <circle cx="44" cy="44" r="30" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"/><circle cx="44" cy="44" r="26" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="0.75"/><use href="#buste-coroza" x="22" y="24" width="44" height="44"/>
+    <text x="44" y="100" class="c" font-size="15" font-weight="700" text-anchor="middle">Tom</text><text x="44" y="116" class="cd" font-size="12" text-anchor="middle">vous</text></g>
+  <!-- mort -->
+  <g transform="translate(480,0)"><circle cx="44" cy="44" r="32" fill="none" stroke="#7A7064" stroke-width="1"/><circle cx="44" cy="44" r="28" fill="none" stroke="#A89D8C" stroke-width="0.6"/><use href="#buste-fantome" x="20" y="22" width="48" height="48"/>
+    <text x="44" y="100" class="cd" font-size="15" text-anchor="middle" text-decoration="line-through">Delphine</text>
+    <use href="#cart-ecu" x="4" y="106" width="80" height="20"/><text x="44" y="120" class="c" font-size="12" text-anchor="middle">Villageois·e</text></g>
+  <!-- absent -->
+  <g transform="translate(600,0)"><circle cx="44" cy="44" r="32" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"/><circle cx="44" cy="44" r="28" fill="url(#hach-x-e)" stroke="#17130F" stroke-width="0.75"/><use href="#g-chaise" x="34" y="34" width="20" height="20"/>
+    <text x="44" y="100" class="c" font-size="15" font-weight="600" text-anchor="middle">Étienne</text><text x="44" y="116" class="cd" font-size="12" text-anchor="middle">absent·e · 23 s</text></g>
+</g>
+
+<!-- H. Brunissage -->
+<text x="1000" y="760" class="sc" font-size="13">H · Brunir : gratter la lumière hors du noir (crans de 8 px)</text>
+<g>
+  <rect x="1180" y="776" width="220" height="210" fill="#F5EFE2"/>
+  <text x="1290" y="886" class="t" font-size="17" text-anchor="middle">la Voyante</text>
+  <g mask="url(#brunir-demo)"><rect x="1180" y="776" width="220" height="210" fill="#17130F"/><rect x="1180" y="776" width="220" height="210" fill="#000" filter="url(#aqua-IV)" opacity="0.28"/></g>
+  <circle cx="1290" cy="880" r="56" fill="none" stroke="#7A7064" stroke-width="1"/>
+  <text x="1000" y="1006" class="cd" font-size="12">jour seulement : la nuit, le clair gratté plafonne au palier III (§ 3.4, N3)</text>
+</g>
+
+<text x="40" y="1140" class="cd" font-size="12">Mobile : aucun filtre en direct sur une surface de plus de 200 × 200 px — les grains sont cuits en tuiles PNG 512² (§ 4.8).</text>
+</svg>

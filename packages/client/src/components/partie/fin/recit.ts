@@ -22,6 +22,20 @@
  *   elle garde l'heure de cette mort — « nuit » quand le poison l'emporte à
  *   l'aube, « jour » quand le vote ou la balle du Chasseur l'abattent — et
  *   ne ferme ni ne rouvre rien.
+ * - une `mort` de cause `abandon` (R101, D18) tombe à la **clôture d'une
+ *   échéance**, avant ce que cette clôture inscrit : avant les entrées de la
+ *   nuit (`amoureux`, `loups`…) quand l'étape principale se clôt, avant
+ *   l'aube (`sauvetage`, `poison`, les morts de la meute) à la fin de l'étape
+ *   de la Sorcière ou du Loup Blanc, avant le `vote`, le `capitaine` élu ou
+ *   le `tir` quand c'est une phase de jour qui expire. Elle prend donc
+ *   l'heure de **ce qui la suit** dans la même journée — son chagrin et la
+ *   charge léguée au hasard mis à part, qui font bloc avec elle. Rien ne la
+ *   suit (la partie s'est achevée sur elle) : elle garde l'heure en cours.
+ *   Elle ferme la nuit si elle est de jour, comme toute mort de jour. Un seul
+ *   cas reste indécidable à la lecture du log : une étape de la Sorcière
+ *   close sans aucune entrée d'aube, suivie du vote — l'abandon s'y lit au
+ *   jour ; le narrateur, qui suit les évènements `phase`, le range, lui, sans
+ *   hésiter.
  *
  * Un bloc vide est omis par l'écran. L'élection du capitaine d'avant la nuit 1
  * (`capitaineAvantNuit1`) tombe dans « Jour 1 », même si elle la précède.
@@ -57,6 +71,32 @@ export function estDeNuit(entree: LogEntry, nuitOuverte: boolean): boolean {
   return entree.type === 'mort' && nuitOuverte && CAUSES_DE_NUIT.has(entree.cause);
 }
 
+function estAbandon(entree: LogEntry): boolean {
+  return entree.type === 'mort' && entree.cause === 'abandon';
+}
+
+/** Ce qui fait bloc avec une mort d'abandon : d'autres abandons, leur chagrin, la charge léguée. */
+function faitBlocAvecAbandon(entree: LogEntry): boolean {
+  return entree.type === 'capitaine' || (entree.type === 'mort' && (entree.cause === 'abandon' || entree.cause === 'chagrin'));
+}
+
+/**
+ * L'heure d'une mort d'abandon, lue sur ce qui la suit dans la même journée
+ * (voir l'en-tête) : de nuit si la suite est une entrée de nuit ou une mort
+ * de l'aube, de jour sinon ; l'heure en cours si rien ne suit.
+ */
+function heureDeLAbandon(log: readonly LogEntry[], rang: number, nuitOuverte: boolean): boolean {
+  const jour = log[rang]?.day;
+  for (let suite = rang + 1; suite < log.length; suite += 1) {
+    const entree = log[suite];
+    if (entree === undefined || entree.day !== jour) break;
+    if (faitBlocAvecAbandon(entree)) continue;
+    if (TYPES_DE_NUIT.has(entree.type)) return true;
+    return entree.type === 'mort' && (entree.cause === 'loups' || entree.cause === 'poison');
+  }
+  return nuitOuverte;
+}
+
 /**
  * Le log, entrée par entrée, avec l'heure de chacune : le même parcours sert
  * à découper le récit et à dire où la partie s'est arrêtée.
@@ -65,16 +105,30 @@ function heures(log: readonly LogEntry[]): { entree: LogEntry; nuit: boolean }[]
   const resultat: { entree: LogEntry; nuit: boolean }[] = [];
   let courant = -1;
   let nuitOuverte = true;
-  for (const entree of log) {
+  // L'heure du bloc d'abandon en cours : sa charge léguée la garde.
+  let blocAbandon: boolean | null = null;
+  log.forEach((entree, rang) => {
     if (entree.day !== courant) {
       courant = entree.day;
       nuitOuverte = true;
+      blocAbandon = null;
     }
-    const nuit = estDeNuit(entree, nuitOuverte);
+    let nuit: boolean;
+    if (estAbandon(entree)) {
+      nuit = heureDeLAbandon(log, rang, nuitOuverte);
+      blocAbandon = nuit;
+    } else if (blocAbandon !== null && faitBlocAvecAbandon(entree)) {
+      // Le chagrin suit l'heure ouverte ou fermée par l'abandon ; la charge
+      // léguée au hasard garde celle du bloc, sans rien fermer ni rouvrir.
+      nuit = entree.type === 'capitaine' ? blocAbandon : estDeNuit(entree, nuitOuverte);
+    } else {
+      blocAbandon = null;
+      nuit = estDeNuit(entree, nuitOuverte);
+    }
     if (TYPES_DE_NUIT.has(entree.type)) nuitOuverte = true;
     else if (!nuit) nuitOuverte = false;
     resultat.push({ entree, nuit });
-  }
+  });
   return resultat;
 }
 

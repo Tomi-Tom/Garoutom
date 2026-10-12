@@ -21,6 +21,8 @@
  */
 
 import {
+  CHAT_CHANNELS,
+  DEATH_CAUSES as CAUSES_DU_MOTEUR,
   ROLES,
   type ChatChannel,
   type Camp,
@@ -41,19 +43,20 @@ import { thiercelieux } from './thiercelieux.js';
 /* ------------------------------------------------------------------ */
 
 /*
-  `DeathCause`, `Winner`, `Camp` et `ChatChannel` sont des unions, pas des
-  listes : le moteur n'a jamais à parcourir leurs membres, il n'exporte donc
-  rien de tel. Le registre, lui, parcourt — pour valider un skin à son
-  enregistrement, pour le tester. Ces quatre listes sont tenues à la main, en
-  regard de `packages/engine/src/types.ts` ; le jour où le moteur gagne un
-  membre, les `Record` du type `Skin` refusent de compiler bien avant que ces
-  listes ne prennent du retard, et les assertions ci-dessous verrouillent la
-  cohérence pour de bon.
+  `DeathCause`, `Winner`, `Camp` et `ChatChannel` sont des unions. Le registre
+  parcourt leurs membres — pour valider un skin à son enregistrement, pour le
+  tester. Depuis D18 et D23, le moteur rend lui-même deux de ces listes, parce
+  qu'il les parcourt aussi : les causes de mort (`DEATH_CAUSES`, `abandon`
+  compris) et les canaux (`CHAT_CHANNELS`, que `parseAction` énumère). Les deux
+  autres sont tenues à la main, en regard de `packages/engine/src/types.ts` ;
+  le jour où le moteur gagne un membre, les `Record` du type `Skin` refusent
+  de compiler bien avant que ces listes ne prennent du retard, et les
+  assertions ci-dessous verrouillent la cohérence pour de bon.
 */
-export const DEATH_CAUSES = ['loups', 'poison', 'vote', 'chasseur', 'chagrin'] as const;
+export const DEATH_CAUSES = CAUSES_DU_MOTEUR;
 export const VAINQUEURS = ['village', 'loups', 'amoureux', 'loupBlanc', 'personne'] as const;
 export const CAMPS = ['village', 'loups'] as const;
-export const CANAUX = ['village', 'loups', 'amoureux', 'morts'] as const;
+export const CANAUX = CHAT_CHANNELS;
 
 /** `true` quand rien de `Attendu` manque à `Fourni` ; `never` sinon — et l'assertion casse. */
 type Couvre<Attendu, Fourni> = [Exclude<Attendu, Fourni>] extends [never] ? true : never;
@@ -221,6 +224,12 @@ export interface Skin {
    * est publique, et c'est le skin qui la dit.
    */
   plurielLoups: { un: string; plusieurs: string };
+  /**
+   * Le libellé d'un joueur montré absent — sa place gardée, lui loin (D17,
+   * `PlayerInfo.absent`). Un lieu ou un état, jamais un adjectif accordé :
+   * rien ne s'accorde avec un pseudo (règle de plume n° 1).
+   */
+  absent: string;
   /** Tous les rôles du moteur — les huit de la v1, les cinq optionnels de la v2 —, nom affiché et description de carte. */
   roles: Record<RoleId, TexteRole>;
   /** Le nom de chaque camp. */
@@ -277,6 +286,8 @@ export interface Voix {
   compteLoups(nombre: number): string;
   /** Le mot nu qui nomme les loups — « loups », « Titans » — pour composer les libellés, sans article ni phrase. */
   motLoups(): string;
+  /** Le libellé d'un joueur absent, sa place gardée (D17) — « loin de la place ». */
+  libelleAbsent(): string;
 }
 
 /**
@@ -323,6 +334,7 @@ export function enregistrerSkin(skin: Skin): void {
 
   if (!MOTIF_ID.test(skin.id)) manques.push(`l'identifiant « ${skin.id} » n'a pas la forme d'un skin`);
   if (!ditQuelqueChose(skin.univers)) manques.push("l'univers n'a pas de nom");
+  if (!ditQuelqueChose(skin.absent)) manques.push("l'absent n'a pas de libellé");
 
   for (const role of ROLES) {
     const carte = skin.roles[role] as TexteRole | undefined;
@@ -402,6 +414,7 @@ function voixDe(skin: Skin): Voix {
     compteLoups: (nombre) =>
       `${String(nombre)} ${nombre > 1 ? skin.plurielLoups.plusieurs : skin.plurielLoups.un}`,
     motLoups: () => skin.plurielLoups.plusieurs,
+    libelleAbsent: () => skin.absent,
   };
 }
 

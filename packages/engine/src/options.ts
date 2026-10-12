@@ -33,6 +33,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   chat: true,
   revelerRoles: true,
   mortsVoientTout: true,
+  abandon: true,
   tempsNuit: 40,
   tempsJour: 240,
   skin: 'thiercelieux',
@@ -86,6 +87,7 @@ export function sanitizeOptions(raw: unknown): GameOptions {
     chat: bool(input.chat, DEFAULT_OPTIONS.chat),
     revelerRoles: bool(input.revelerRoles, DEFAULT_OPTIONS.revelerRoles),
     mortsVoientTout: bool(input.mortsVoientTout, DEFAULT_OPTIONS.mortsVoientTout),
+    abandon: bool(input.abandon, DEFAULT_OPTIONS.abandon),
     tempsNuit: fallbackInt(
       input.tempsNuit,
       NIGHT_SECONDS.min,

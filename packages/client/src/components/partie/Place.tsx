@@ -190,9 +190,13 @@ export function Place({
   const enRond = disposition === 'cercle';
   const [cadre, taille] = useTaille(enRond);
 
-  const absents =
-    room?.players.some((joueur) => !joueur.connected && joueur.disconnectedUntil !== null) ?? false;
-  const maintenant = useHeureServeur(absents);
+  // Le compte à rebours de grâce ne court que pour qui se reconnecte ; un
+  // absent (grâce passée) n'a plus rien à décompter.
+  const enGrace =
+    room?.players.some(
+      (joueur) => !joueur.connected && joueur.absent !== true && joueur.disconnectedUntil !== null,
+    ) ?? false;
+  const maintenant = useHeureServeur(enGrace);
 
   if (game === null) return null;
 
@@ -235,6 +239,7 @@ export function Place({
         }
         charge={peau.charge}
         nomRole={voix.nomRole}
+        libelleAbsent={voix.libelleAbsent()}
       />
     );
   });
@@ -334,6 +339,28 @@ interface JetonProps {
   position: { left: number; top: number; width: number } | undefined;
   charge: string;
   nomRole: (role: RoleId) => string;
+  /** Le mot du skin pour un joueur montré absent, sa place gardée (D17). */
+  libelleAbsent: string;
+}
+
+/**
+ * La présence d'un joueur à la table, telle que la table la publie — jamais
+ * pourquoi il n'est pas là (recherche 04, P1 n° 13) :
+ *
+ * - `present` : connecté ;
+ * - `reconnexion` : sa liaison est tombée, la grâce court — le jeton porte
+ *   la lune éteinte et le compte à rebours ;
+ * - `absent` : la grâce est passée (`PlayerInfo.absent`, D17) — sa place
+ *   reste à lui, le jeton prend un cerne en pointillés et le mot du skin.
+ *
+ * Toujours une forme **et** un mot, jamais la seule opacité : un jeton
+ * pâli se lit mal, et se confond avec un jeton qu'on ne peut pas désigner.
+ */
+type Presence = 'present' | 'reconnexion' | 'absent';
+
+function presenceDe(place: RoomView['players'][number] | undefined): Presence {
+  if (place === undefined || place.connected) return 'present';
+  return place.absent === true ? 'absent' : 'reconnexion';
 }
 
 function Jeton({
@@ -355,12 +382,15 @@ function Jeton({
   position,
   charge,
   nomRole,
+  libelleAbsent,
 }: JetonProps) {
   const { seat, alive, role, canVote, isCaptain, isLover } = joueur;
   const place = table?.players.find((p) => p.seat === seat);
-  const absent = place !== undefined && !place.connected;
+  const presence = presenceDe(place);
+  const absent = presence === 'absent';
+  const enReconnexion = presence === 'reconnexion';
   const graceS =
-    absent && place.disconnectedUntil !== null
+    enReconnexion && place?.disconnectedUntil != null
       ? Math.max(0, Math.ceil((place.disconnectedUntil - maintenant) / 1000))
       : null;
   const gracie = alive && !canVote;
@@ -379,7 +409,8 @@ function Jeton({
   if (horsVote) details.push('ne vote pas aujourd’hui');
   if (marque) details.push(`marqué·e par ${nomRole('corbeau')} : deux voix d’office`);
   if (aVote) details.push('a voté');
-  if (absent) details.push(graceS === null ? 'absent·e' : `absent·e, ${String(graceS)} s de grâce`);
+  if (absent) details.push(libelleAbsent);
+  if (enReconnexion) details.push(graceS === null ? 'reconnexion' : `reconnexion, ${String(graceS)} s de grâce`);
   const phrase = details.length > 0 ? `${nom} — ${details.join(', ')}` : nom;
 
   /* --- Les mesures, toutes tirées du médaillon --- */
@@ -405,8 +436,9 @@ function Jeton({
         : 'color-mix(in srgb, var(--nuit-relief) 88%, transparent)',
     ...(choisi ? { borderColor: accent, boxShadow: `0 0 0 1px ${accent}` } : {}),
     // Son propre jeton ne s'efface jamais, même quand on ne peut pas se désigner :
-    // c'est le repère d'où l'on regarde la place.
-    opacity: absent ? 0.6 : enChoix && !choisissable && !choisi && !estMoi ? 0.55 : 1,
+    // c'est le repère d'où l'on regarde la place. Un absent ne s'efface pas
+    // non plus : sa forme et son mot le disent, la pâleur ne dirait rien.
+    opacity: enChoix && !choisissable && !choisi && !estMoi ? 0.55 : 1,
     transition: 'background-color 0.2s ease, border-color 0.2s ease, opacity 0.3s ease',
     // La teinte du survol, lue par la classe `hover:` du bouton.
     ['--teinte-jeton' as string]: accent,
@@ -422,9 +454,13 @@ function Jeton({
             fontSize: initialePx,
             background: 'var(--nuit-creux)',
             color: alive ? 'var(--papier)' : 'var(--papier-doux)',
-            border: `${estMoi ? 2 : 1}px solid ${estMoi ? 'var(--papier-doux)' : 'var(--arcade-trait)'}`,
+            // L'absent : un cerne en pointillés, la place tenue mais vide.
+            border: absent
+              ? '2px dashed var(--lune)'
+              : `${estMoi ? 2 : 1}px solid ${estMoi ? 'var(--papier-doux)' : 'var(--arcade-trait)'}`,
             filter: alive ? undefined : 'grayscale(0.85)',
           }}
+          data-presence={presence === 'present' ? undefined : presence}
         >
           {/* Un mort dont la carte est connue la montre au milieu du médaillon :
               la carte posée sur la place. Sinon, une croix gravée. */}
@@ -461,7 +497,7 @@ function Jeton({
             <SymboleRole role={roleVisible} taille={badgePx} />
           </span>
         )}
-        {absent && <Absence medaillon={medaillon} />}
+        {(absent || enReconnexion) && <Absence medaillon={medaillon} />}
       </span>
 
       <span
@@ -471,16 +507,19 @@ function Jeton({
       >
         {nom}
       </span>
-      {(estMoi || gracie || horsVote || absent) && (
+      {(estMoi || gracie || horsVote || absent || enReconnexion) && (
         <span
           aria-hidden="true"
+          data-testid={absent || enReconnexion ? `presence-${String(seat)}` : undefined}
           className="block truncate text-center text-[11px] leading-tight"
-          style={{ color: absent ? 'var(--lune)' : 'var(--papier-doux)' }}
+          style={{ color: absent || enReconnexion ? 'var(--lune)' : 'var(--papier-doux)' }}
         >
           {absent
-            ? graceS === null
-              ? 'absent·e'
-              : `absent·e · ${String(graceS)} s`
+            ? libelleAbsent
+            : enReconnexion
+              ? graceS === null
+                ? 'reconnexion…'
+                : `reconnexion · ${String(graceS)} s`
             : gracie
               ? 'ne vote plus'
               : horsVote

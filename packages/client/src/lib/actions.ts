@@ -6,13 +6,18 @@
  * fait foi, et il arrive déjà taillé pour le siège de ce joueur. Un refus,
  * lui, doit être dit : le message du serveur part dans le fil des avis, ton
  * erreur, sans jamais casser l'écran qui l'a déclenché.
+ *
+ * Depuis D22, une règle de plus : **tant que la place n'est pas reprise**
+ * (`rattachement` autre que `rattache`), aucune action de jeu ne part. Un
+ * vote lancé sur une socket que le serveur n'a encore rattachée à personne
+ * reviendrait en refus — ou pire, partirait au mauvais moment.
  */
 
-import type { Action, GameOptions, JoinResult } from '@garoutom/engine';
+import { ChannelError, type Action, type GameOptions, type JoinResult } from '@garoutom/engine';
 
 import { forgetToken, loadName, loadToken, saveName, saveToken } from './identity.js';
 import { canal } from './socket.js';
-import { useStore } from './store.js';
+import { actionsSuspendues, useStore } from './store.js';
 
 /** Longueur d'un code de table, telle que le serveur les fabrique. */
 export const CODE_LENGTH = 4;
@@ -77,6 +82,22 @@ async function run<T>(tache: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
+/** Le code machine d'un refus du serveur, s'il en porte un. */
+function codeDuRefus(error: unknown): string | undefined {
+  return error instanceof ChannelError ? error.code : undefined;
+}
+
+/**
+ * Les actions qui supposent une place tenue attendent qu'elle soit reprise.
+ * Rend `true` — et le dit — quand il faut s'abstenir.
+ */
+function suspendu(): boolean {
+  const store = useStore.getState();
+  if (!actionsSuspendues(store)) return false;
+  store.pushNotice('Reprise de votre place… un instant.', 'info');
+  return true;
+}
+
 /* ------------------------------------------------------------------ */
 /* La table                                                            */
 /* ------------------------------------------------------------------ */
@@ -92,12 +113,13 @@ export async function ouvrirTable(nom: string): Promise<void> {
   if (result === undefined) return;
   saveToken(result.code, result.token);
   useStore.getState().setPlayerId(result.playerId);
+  useStore.getState().setRattachement('rattache');
 }
 
 /**
  * Rejoindre une table — ou la reprendre : un jeton connu fait de la demande
- * une rentrée, pas une arrivée, et le serveur rend la place tenue pendant le
- * délai de grâce.
+ * une rentrée, pas une arrivée, et le serveur rend la place, gardée jusqu'à
+ * la fin de la partie (D17).
  */
 export async function rejoindreTable(code: string, nom: string): Promise<void> {
   saveName(nom);
@@ -109,33 +131,172 @@ export async function rejoindreTable(code: string, nom: string): Promise<void> {
       name: nom,
       // `token` absent plutôt que `undefined` : le serveur distingue « je
       // reviens » de « j'arrive », et une clé présente à vide brouillerait ça.
-      ...(jeton === undefined ? {} : { token: jeton }),
+      ...(jeton === undefined ? {} : { token: jeton, lastSeq: dernierSeqPour(propre) }),
     }),
   );
   if (result === undefined) return;
   saveToken(result.code, result.token);
   useStore.getState().setPlayerId(result.playerId);
+  useStore.getState().setRattachement('rattache');
 }
+
+/**
+ * Le dernier évènement vu de cette table, pour `room:join.lastSeq`. Sans
+ * souvenir (un rechargement a vidé le magasin), `0` : le serveur rejoue tout
+ * son journal public, et le narrateur retrouve la partie racontée.
+ */
+function dernierSeqPour(code: string): number {
+  const state = useStore.getState();
+  return state.room?.code === code ? (state.dernierSeq ?? 0) : 0;
+}
+
+/** Les attentes entre deux reprises ratées (D22) : 1, 2, puis 4 s. */
+export const DELAIS_REPRISE_MS: readonly number[] = [1_000, 2_000, 4_000];
+
+/**
+ * Les refus qui ne se retentent pas : la table n'existe plus (`gone`), ou
+ * elle ne connaît plus ce jeton — la partie a commencé sans nous, ou la
+ * place est donnée (`started`, `full`).
+ */
+const REFUS_DEFINITIFS: ReadonlySet<string> = new Set(['gone', 'started', 'full']);
+
+/** Les refus passagers, qui valent un nouvel essai : quota, panne du serveur. */
+const REFUS_PASSAGERS: ReadonlySet<string> = new Set(['rate', 'internal']);
+
+/** Chaque reprise lancée annule la précédente : une seule boucle à la fois. */
+let generation = 0;
+
+/** Oublie la reprise en cours — un départ, une table disparue, une nouvelle socket. */
+export function annulerReprise(): void {
+  generation += 1;
+}
+
+const attendre = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Reprendre sa place après une coupure, en silence.
  *
  * Chaque reconnexion ouvre un WebSocket que le serveur ne rattache à personne :
  * il faut se réinscrire à la table, sinon on reste connecté sans plus rien
- * recevoir. Renvoie `true` si la place a été reprise. Un échec ne vide pas le
- * salon : la coupure peut être passagère, et la tentative repartira à la
- * reconnexion suivante — tant que le serveur dit autre chose qu'un refus.
+ * recevoir. Le jeton suffit : le pseudo n'est pas exigé (un stockage vidé ne
+ * doit pas coûter la place) ; `lastSeq` demande les évènements manqués.
+ *
+ * Tant que la reprise n'est pas confirmée, le magasin dit `reprise` — le
+ * bandeau l'affiche, les actions attendent. Un échec passager (silence,
+ * quota, panne) se retente après 1, 2 puis 4 s ; au-delà, `echec`, et c'est
+ * la prochaine reconnexion ou un geste du joueur qui relance. Un refus
+ * définitif oublie la table (`placePerdue`).
+ *
+ * Renvoie `true` si la place a été reprise.
  */
 export async function reprendrePlace(code: string): Promise<boolean> {
+  const store = useStore.getState();
   const jeton = loadToken(code);
-  const nom = loadName();
-  if (jeton === undefined || nom === '') return false;
-  const result = await run(() =>
-    canal().request<JoinResult>('room:join', { code, name: nom, token: jeton }),
+  if (jeton === undefined) {
+    store.setRattachement('rattache');
+    return false;
+  }
+  annulerReprise();
+  const moi = generation;
+  store.setRattachement('reprise');
+
+  for (let essai = 0; ; essai += 1) {
+    if (moi !== generation) return false;
+    if (!canal().connected) {
+      // La liaison est retombée : la reconnexion relancera la reprise.
+      useStore.getState().setRattachement('perdu');
+      return false;
+    }
+    try {
+      const result = await canal().request<JoinResult>('room:join', {
+        code,
+        name: loadName(),
+        token: jeton,
+        lastSeq: dernierSeqPour(code),
+      });
+      if (moi !== generation) return false;
+      saveToken(result.code, result.token);
+      useStore.getState().setPlayerId(result.playerId);
+      useStore.getState().setRattachement('rattache');
+      return true;
+    } catch (error) {
+      if (moi !== generation) return false;
+      const refus = codeDuRefus(error);
+      if (refus === 'version') {
+        rechargerPourVersion();
+        return false;
+      }
+      if (refus !== undefined && REFUS_DEFINITIFS.has(refus)) {
+        placePerdue(code, refus);
+        return false;
+      }
+      if (!canal().connected) {
+        useStore.getState().setRattachement('perdu');
+        return false;
+      }
+      const passager = refus === undefined || REFUS_PASSAGERS.has(refus);
+      const attente = DELAIS_REPRISE_MS[essai];
+      if (!passager || attente === undefined) {
+        useStore.getState().setRattachement('echec');
+        notify(error);
+        return false;
+      }
+      await attendre(attente);
+    }
+  }
+}
+
+/**
+ * La place n'existe plus : la table a disparu, ou ne connaît plus ce jeton.
+ * On oublie jeton et adresse, on revient à l'accueil, et on le dit.
+ */
+export function placePerdue(code: string, raison: string = 'gone'): void {
+  annulerReprise();
+  forgetToken(code);
+  inscrireCodeDansLUrl(null);
+  const store = useStore.getState();
+  store.reset();
+  store.pushNotice(
+    raison === 'gone' ? 'La table a disparu.' : 'Votre place à cette table n’existe plus.',
+    'error',
   );
-  if (result === undefined) return false;
-  useStore.getState().setPlayerId(result.playerId);
-  return true;
+}
+
+/** La clé de session qui retient le dernier rechargement pour cause de version. */
+const CLE_RECHARGEMENT = 'garoutom.rechargement-version';
+
+/** Deux rechargements pour version à moins de cette durée : on n'insiste pas. */
+const RECHARGEMENT_MIN_MS = 60_000;
+
+/**
+ * Le serveur ne parle plus la version de ce client (`CLOSE_VERSION`) :
+ * recharger la page, qui ira chercher la bonne. Une seule fois par minute —
+ * un cache qui sert encore l'ancienne version ne doit pas faire tourner la
+ * page en boucle ; on le dit alors au joueur.
+ */
+export function rechargerPourVersion(): void {
+  let dernier = 0;
+  try {
+    dernier = Number(sessionStorage.getItem(CLE_RECHARGEMENT) ?? 0);
+  } catch {
+    // Pas de stockage de session : on rechargera, une fois de plus.
+  }
+  if (Date.now() - dernier < RECHARGEMENT_MIN_MS) {
+    useStore
+      .getState()
+      .pushNotice('Une nouvelle version de Garoutom est en ligne : rechargez la page.', 'error');
+    return;
+  }
+  try {
+    sessionStorage.setItem(CLE_RECHARGEMENT, String(Date.now()));
+  } catch {
+    // Idem.
+  }
+  try {
+    globalThis.location.reload();
+  } catch {
+    // Un bac à sable qui refuse : l'avis suffira.
+  }
 }
 
 /**
@@ -153,6 +314,7 @@ let brouillon: GameOptions | null = null;
 export async function reglerOptions(retouche: Partial<GameOptions>): Promise<void> {
   const base = brouillon ?? useStore.getState().room?.options;
   if (base === undefined) return;
+  if (suspendu()) return;
   const options: GameOptions = { ...base, ...retouche };
 
   brouillon = options;
@@ -169,14 +331,15 @@ export async function reglerOptions(retouche: Partial<GameOptions>): Promise<voi
 }
 
 export const lancerPartie = (): Promise<null | undefined> =>
-  run(() => canal().request<null>('room:start', {}));
+  suspendu() ? Promise.resolve(undefined) : run(() => canal().request<null>('room:start', {}));
 
 /** La revanche : l'hôte ramène la table au salon, mêmes options, présents seulement. */
 export const revanche = (): Promise<null | undefined> =>
-  run(() => canal().request<null>('room:rematch', {}));
+  suspendu() ? Promise.resolve(undefined) : run(() => canal().request<null>('room:rematch', {}));
 
 export async function quitterTable(): Promise<void> {
   const code = useStore.getState().room?.code;
+  annulerReprise();
   await run(() => canal().request<null>('room:leave', {}));
   // On part volontairement : garder le jeton ferait reprendre la place tout
   // seul à la reconnexion suivante, ce qui n'est pas ce qu'on a demandé.
@@ -201,6 +364,7 @@ let occupe = false;
 /** Jouer un coup, dans le vocabulaire du moteur ; le siège ne voyage jamais. */
 export async function jouer(action: Action): Promise<void> {
   if (occupe) return;
+  if (suspendu()) return;
   occupe = true;
   try {
     await run(() => canal().request<null>('game:action', { action }));

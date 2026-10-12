@@ -37,7 +37,8 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
 - **R14** — Options de table : `capitaine` (élection ou pas), `chat` (fil du
   village), `revelerRoles` (rôle d'un mort montré), `mortsVoientTout`,
   `chasseurEmpoisonne`, `sorciereSeSauve`, `capitaineAvantNuit1`,
-  `ancienRancunier` (R92) — toutes booléennes, toutes filtrées par R10.
+  `ancienRancunier` (R92), `abandon` (R101) — toutes booléennes, toutes
+  filtrées par R10.
 
 ## 3. La composition
 
@@ -56,8 +57,9 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
 
 ## 4. Distribution et révélation
 
-- **R30** — `createGame` mélange la composition avec le `Rng` injecté et
-  attribue un rôle par siège.
+- **R30** — `createGame` mélange la composition avec l'aléa de la graine —
+  ou du `Rng` fourni, qui revient au même — et attribue un rôle par siège ;
+  l'aléa de la suite part de là, rangé dans l'état (R104).
 - **R31** — La partie s'ouvre en **révélation** : chacun découvre sa carte et
   confirme. La phase dure 25 s (`REVEAL_MS`).
 - **R32** — Le temps écoulé ouvre la nuit,confirmation ou pas : qui n'a pas
@@ -72,7 +74,8 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   Salvateur, Voyante et loups jouent **en même temps**.
 - **R36** — La Sorcière joue seule après, si elle fait partie de la
   distribution — morte comprise : son étape fantôme dure un temps
-  imprévisible, tiré entre 5 et 10 s.
+  imprévisible, tiré entre 5 et 10 s par le moteur à l'entrée de l'étape et
+  rangé avec elle (R104).
 - **R37** — Cupidon désigne deux vivants distincts, lui-même éventuellement,
   la première nuit seulement.
 - **R38** — Le Salvateur protège un vivant, jamais le même deux nuits de
@@ -169,19 +172,21 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
   les morts en tout temps.
 - **R77** — Chaque siège ne lit que ses canaux. Les morts lisent tout si
   `mortsVoientTout` ; à la fin de la partie, plus rien n'est caché.
-- **R78** — Un message : 280 caractères au plus après normalisation des
-  espaces, jamais vide ; le fil garde les 300 derniers — l'état voyage à
-  chaque action. Les messages sont **numérotés par canal** : rien dans la vue
-  d'un siège — ni trou de numérotation, ni évènement — ne trahit l'activité
-  des canaux qu'il ne lit pas.
+- **R78** — Un message : 280 points de code au plus après nettoyage (R103),
+  jamais vide ; le fil garde les **100 derniers de chaque canal** — l'état
+  voyage à chaque action —, et la vue d'un siège, les 100 derniers de chaque
+  canal qu'il lit. Les messages sont **numérotés par canal** : rien dans la
+  vue d'un siège — ni trou de numérotation, ni premier numéro visible, ni
+  évènement — ne trahit l'activité des canaux qu'il ne lit pas.
 
 ## 12. Le temps
 
 - **R80** — Le moteur ne lit jamais l'horloge : il rend la durée d'une phase
-  (`phaseBudgetMs`), le serveur arme la minuterie et clôt la phase par
-  `timeoutPhase`, en présentant le numéro de la phase qui a armé la
-  minuterie — une minuterie en retard ne clôt rien du tout. L'échéance
-  n'appartient qu'au siège qui doit agir : celle des autres est un secret.
+  (`phaseBudgetMs`, pure : la demander ne change rien), le serveur arme la
+  minuterie et clôt la phase par `timeoutPhase`, en présentant le numéro de
+  la phase qui a armé la minuterie — une minuterie en retard ne clôt rien du
+  tout. L'échéance n'appartient qu'au siège qui doit agir : celle des autres
+  est un secret.
 - **R81** — Qui n'a pas agi n'agit pas : un loup muet ne vote pour personne,
   un village silencieux n'exécute personne.
 - **R82** — Durées : révélation 25 s ; tir du Chasseur et succession 30 s ;
@@ -193,7 +198,8 @@ officielle 2016 — vivent dans [`DECISIONS.md`](DECISIONS.md) et
 - **R85** — Aucune fonction du moteur ne modifie l'état reçu : elle rend un
   nouvel état, cloné en profondeur.
 - **R86** — Aucune lecture d'horloge, aucun `Math.random` : tout aléa passe
-  par le `Rng` injecté. Une partie se rejoue à l'identique.
+  par le générateur à graine — celui de l'état en partie (R104). Une partie
+  se rejoue à l'identique.
 - **R87** — Les évènements partent à tous les sièges : aucun ne porte un
   secret. Ce qui ne peut pas être dit à tout le monde ne quitte pas l'état.
 - **R88** — La vue d'un siège est `viewFor(state, seat)`, et c'est le seul
@@ -276,3 +282,50 @@ joue exactement la partie de la v1, état pour état.
   le Corbeau, le Bouc et la Petite Fille dès dix joueurs, le Loup Blanc dès
   douze ; toujours deux villageois simples, toujours dans la borne de R13.
   Sans la demande, R22 tient à l'identique, graine pour graine.
+
+## 15. La robustesse (D17 à D24)
+
+Ouverte le 11 octobre 2026 ([`ROBUSTESSE.md`](ROBUSTESSE.md)). Une table où
+personne ne part, n'écrit de travers ni ne recharge le serveur joue
+exactement la partie d'avant, graine pour graine.
+
+- **R101** — La **mort d'abandon** (D18). Un siège vivant que le serveur dit
+  absent depuis `ABANDON_MS` (5 min, hors pause) meurt d'abandon à la clôture
+  de phase **par l'échéance** qui suit — le serveur passe la liste à
+  `timeoutPhase(state, seq, { abandons })` ; jamais au milieu d'une phase,
+  jamais au fil d'une action. Les partis meurent d'abord, d'un bloc
+  (évènement `morts`, cause `abandon`, rôle montré selon `revelerRoles`) ;
+  la phase se clôt ensuite entre vivants : la voix d'un parti, une voix ou
+  une proie qui le vise, une flèche de Cupidon vers lui ne comptent plus.
+  **Aucun pouvoir** ne part : ni tir — même sous `chasseurEmpoisonne` —, ni
+  rancune de l'Ancien, ni dernier mot du Bouc, ni carte retournée d'office.
+  Le chagrin de l'amoureux suit (R47), avec ses propres déclencheurs. Un
+  capitaine parti lègue sa charge à un vivant tiré au sort, sans phase de
+  succession (évènement `capitaine`). Si ces morts décident la partie —
+  déclencheurs vidés (R50) —, la nuit s'achève aussitôt ; le jour, la
+  victoire se regarde après le dépouillement, comme d'habitude. Un siège
+  mort, inconnu ou mal formé est ignoré ; sans l'option `abandon`, la liste
+  entière l'est.
+- **R102** — Une action venue du réseau se **relit** avant d'être crue
+  (`parseAction`, D23) : schéma strict par verbe — sièges entiers sûrs,
+  bornés par la table ; booléens stricts ; `null` explicite là où le moteur
+  l'entend, jamais un champ absent ; canal dans l'énumération de R75 ; texte
+  d'au plus 2 000 unités avant traitement ; votants du Bouc en liste de
+  sièges distincts, les doublons fondus. L'objet rendu est reconstruit :
+  aucune clé en trop. Un refus est une `IllegalActionError` de code
+  `action`. `applyAction` relit aussi ce qu'on lui passe, et le siège de
+  l'auteur doit être un entier de la table (code `seat`).
+- **R103** — Un texte libre — un message, un pseudo — se **nettoie** : forme
+  NFKC, espaces pliés, caractères de contrôle, de format (marques
+  bidirectionnelles, zéro-largeur…) et demi-paires orphelines retirés, rives
+  rognées, longueur comptée en points de code et jamais coupée au milieu
+  d'une paire. Un message en garde 280 (R78), un pseudo 16 (`cleanName`) ;
+  ce qui ne dit plus rien est refusé — `empty` au fil, `name` au pseudo.
+- **R104** — **L'aléa voyage avec l'état** (D20). Le générateur — un entier
+  de 32 bits, `GameState.rng` — avance à chaque tirage du moteur, et de
+  lui seul : une partie sérialisée, rangée, relue puis reprise rend
+  exactement les mêmes états qu'une partie jamais interrompue. Les durées
+  fantômes (R36, R97) se tirent à l'entrée de l'étape et se rangent dans la
+  phase ; `phaseBudgetMs` ne tire rien. Un `Rng` passé à `applyAction` ou à
+  `timeoutPhase` par un appelant d'avant n'est plus lu. L'aléa ne quitte
+  jamais l'état (R88).

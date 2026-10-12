@@ -15,7 +15,7 @@ import { Salon } from './Salon.js';
 
 /** Un `sync` entier, tel que le serveur le poussera : le magasin seul est touché. */
 function sync(nombre: number, options: GameOptions = DEFAULT_OPTIONS): SyncPayload {
-  return { room: salle(nombre, options), game: null, events: [], serverNow: Date.now() };
+  return { room: salle(nombre, options), game: null, events: [], seq: 0, serverNow: Date.now() };
 }
 
 function salle(nombre: number, options: GameOptions = DEFAULT_OPTIONS): RoomView {
@@ -31,10 +31,12 @@ function salle(nombre: number, options: GameOptions = DEFAULT_OPTIONS): RoomView
       connected: true,
       isHost: seat === 0,
       disconnectedUntil: null,
+      absent: false,
     })),
     reconnectGraceMs: 60_000,
     deadline: null,
     deadlineDurationMs: null,
+    paused: false,
   };
 }
 

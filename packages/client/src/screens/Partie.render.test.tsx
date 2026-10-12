@@ -113,10 +113,12 @@ function salle(nombre: number, options: GameOptions): RoomView {
       connected: true,
       isHost: seat === 0,
       disconnectedUntil: null,
+      absent: false,
     })),
     reconnectGraceMs: 60_000,
     deadline: Date.now() + 60_000,
     deadlineDurationMs: 240_000,
+    paused: false,
   };
 }
 
@@ -131,6 +133,7 @@ function publier(banc: Banc, siege: number | null, depuis = 0): RoomView {
     room,
     game: viewFor(banc.state, siege),
     events: banc.events.slice(depuis),
+    seq: banc.events.length,
     serverNow: Date.now(),
   });
   useStore.setState({ playerId: siege === null ? null : `p${String(siege)}` });

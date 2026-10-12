@@ -140,6 +140,7 @@ describe('les options booléennes', () => {
     'chat',
     'revelerRoles',
     'mortsVoientTout',
+    'abandon',
   ] as const;
 
   it('R14 — true et false passent tels quels, sur chaque option', () => {

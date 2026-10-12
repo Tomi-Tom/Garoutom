@@ -118,8 +118,9 @@ describe('<Nuit />', () => {
     expect(screen.getByTestId('village-dort')).toBeInTheDocument();
     expect(screen.getByText('Nuit 1')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La nuit tombe sur Thiercelieux. Le village s’endort.' })).toBeInTheDocument();
-    // Rien à toucher, aucun pseudo, aucun compte de qui joue.
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // Rien à toucher que le fil replié — le même pour tous (D23) —, aucun
+    // pseudo, aucun compte de qui joue.
+    expect(screen.getAllByRole('button').map((bouton) => bouton.textContent)).toEqual(['Fil+']);
     expect(screen.queryByTestId('place')).toBeNull();
     expect(container.textContent).not.toMatch(/Joueur|joué|attend|\d+\s*(\/|sur)\s*\d+/);
     sansIdentifiantBrut(container);
@@ -138,7 +139,7 @@ describe('<Nuit />', () => {
     expect(screen.getByRole('heading', { name: 'La nuit se poursuit.' })).toBeInTheDocument();
   });
 
-  it('un mort voit le village dormir, et l’au-delà où l’on parle', () => {
+  it('un mort voit le village dormir, et l’au-delà où l’on parle', async () => {
     const { banc, victime } = etapeSorciere();
     agir(banc, siegeDe(banc, 'sorciere'), { type: 'sorciere', save: false, kill: null });
     // La victime est tombée à l'aube ; le jour passe sans potence.
@@ -147,11 +148,15 @@ describe('<Nuit />', () => {
     expect(banc.state.phase).toMatchObject({ kind: 'nuit', step: 'principale' });
 
     installe(banc, victime);
+    const utilisateur = userEvent.setup();
     const { container } = render(<Nuit />);
     expect(screen.getByTestId('village-dort')).toBeInTheDocument();
     expect(screen.getByText('Nuit 2')).toBeInTheDocument();
-    expect(screen.getByTestId('fil')).toHaveAttribute('data-canaux', 'morts');
     expect(screen.getByText(/L’au-delà veille avec vous/)).toBeInTheDocument();
+    // L'au-delà est dans le fil replié, comme le serment chez les amoureux (D23).
+    expect(screen.queryByTestId('fil')).toBeNull();
+    await utilisateur.click(screen.getByRole('button', { name: /Fil/ }));
+    expect(screen.getByTestId('fil').getAttribute('data-canaux')?.split(',')).toContain('morts');
     sansIdentifiantBrut(container);
   });
 
@@ -321,10 +326,12 @@ describe('<Nuit />', () => {
     const utilisateur = userEvent.setup();
     render(<Nuit />);
 
-    const serment = screen.getByRole('button', { name: /Le serment/ });
-    expect(serment).toHaveAttribute('aria-expanded', 'false');
+    // Le serment n'a plus de bouton à lui : le même « Fil » que chez tous (D23).
+    expect(screen.queryByRole('button', { name: /Le serment/ })).toBeNull();
+    const fil = screen.getByRole('button', { name: /Fil/ });
+    expect(fil).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('fil')).toBeNull();
-    await utilisateur.click(serment);
-    expect(screen.getByTestId('fil')).toHaveAttribute('data-canaux', 'amoureux');
+    await utilisateur.click(fil);
+    expect(screen.getByTestId('fil').getAttribute('data-canaux')?.split(',')).toContain('amoureux');
   });
 });

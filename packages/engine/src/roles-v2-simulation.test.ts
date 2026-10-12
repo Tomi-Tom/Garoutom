@@ -287,35 +287,54 @@ interface Bilan {
   etapesDuLoupBlanc: number;
 }
 
-function jouer(graine: number, verifier: boolean): Bilan {
+/** Ce que le banc ajoute à une partie au hasard. */
+interface Reglage {
+  /** À une échéance sur cinq, un vivant tiré au sort est parti depuis trop longtemps (R101). */
+  abandons?: boolean;
+  /** À chaque pas, l'état est sérialisé puis relu, comme un magasin le ferait (R104). */
+  reprise?: boolean;
+  /** Reçoit chaque état, sérialisé, pas après pas. */
+  trace?: string[];
+}
+
+function jouer(graine: number, verifier: boolean, reglage: Reglage = {}): Bilan {
   const joueurs = MIN_PLAYERS + (graine % 13);
-  const rng = createSeededRng(graine);
   const cerveau = createSeededRng(graine ^ 0x5eed);
-  const debut = createGame({ players: joueurs, options: tableAuHasard(graine, joueurs) }, rng);
+  // La reprise part de la graine nue : aucun `Rng` ne survit hors de l'état,
+  // tout l'aléa de la partie doit voyager avec lui (R104).
+  const debut = createGame(
+    { players: joueurs, options: tableAuHasard(graine, joueurs) },
+    reglage.reprise ? graine : createSeededRng(graine),
+  );
   let state = debut.state;
   let vuesVerifiees = 0;
   let etapesDuLoupBlanc = 0;
   const suivre = (evenements: GameEvent[]) => {
     if (verifier) verifierLesEvenements(state, evenements);
     etapesDuLoupBlanc += evenements.filter((e) => e.type === 'phase' && e.step === 'loupBlanc').length;
+    reglage.trace?.push(JSON.stringify({ state, evenements }));
   };
   suivre(debut.events);
 
   for (let pas = 0; pas < PAS_MAX; pas += 1) {
+    // Le serveur range l'état, s'arrête, le relit : rien ne doit changer.
+    if (reglage.reprise) state = JSON.parse(JSON.stringify(state)) as GameState;
     if (verifier) vuesVerifiees += verifierLeSilence(state);
     if (state.over) return { winner: state.winner, jours: state.day, vuesVerifiees, etapesDuLoupBlanc };
     let joue = false;
     for (const seat of pendingActors(state)) {
       const action = coupAuHasard(viewFor(state, seat), cerveau);
       if (!action) continue;
-      const suite = applyAction(state, action, rng, seat);
+      const suite = applyAction(state, action, seat);
       state = suite.state;
       suivre(suite.events);
       joue = true;
       break;
     }
     if (!joue) {
-      const suite = timeoutPhase(state, rng, state.phaseSeq);
+      const vivants = state.players.filter((p) => p.alive).map((p) => p.seat);
+      const parti = reglage.abandons && cerveau.nextInt(5) === 0 ? pioche(vivants, cerveau) : null;
+      const suite = timeoutPhase(state, state.phaseSeq, parti === null ? undefined : { abandons: [parti] });
       state = suite.state;
       suivre(suite.events);
     }
@@ -354,4 +373,54 @@ describe('R99 — aucune partie ne boucle', () => {
         `${String(nuitsBlanches)} étapes du Loup Blanc`,
     );
   }, 120_000);
+});
+
+describe('R101 — les morts d’abandon ne cassent ni le silence ni la fin', () => {
+  it('R101/R88 — avec des partis, chaque vue garde son silence et aucun évènement n’avoue', () => {
+    let vues = 0;
+    for (let graine = 1; graine <= 120; graine += 1) vues += jouer(graine, true, { abandons: true }).vuesVerifiees;
+    expect(vues).toBeGreaterThan(5_000);
+  }, 120_000);
+
+  it('R101/R99 — mille parties semées de partis finissent toutes', () => {
+    const vainqueurs: Record<string, number> = {};
+    for (let graine = 1; graine <= 1000; graine += 1) {
+      const bilan = jouer(graine, false, { abandons: true });
+      expect(bilan.winner).not.toBeNull();
+      vainqueurs[String(bilan.winner)] = (vainqueurs[String(bilan.winner)] ?? 0) + 1;
+    }
+    expect(vainqueurs.village ?? 0).toBeGreaterThan(0);
+    expect(vainqueurs.loups ?? 0).toBeGreaterThan(0);
+  }, 120_000);
+});
+
+describe('R104 — l’aléa voyage avec l’état', () => {
+  it('R104 — deux mille parties, sérialisées et relues à chaque pas, rejouent exactement la partie continue', () => {
+    let pas = 0;
+    for (let graine = 1; graine <= 2000; graine += 1) {
+      const continue_: string[] = [];
+      const reprise: string[] = [];
+      const abandons = graine % 2 === 0;
+      jouer(graine, false, { abandons, trace: continue_ });
+      jouer(graine, false, { abandons, reprise: true, trace: reprise });
+      if (reprise.length !== continue_.length || reprise.some((etat, i) => etat !== continue_[i])) {
+        // Le détail d'abord, pour lire la divergence.
+        const i = reprise.findIndex((etat, k) => etat !== continue_[k]);
+        expect({ graine, pas: i, etat: reprise[i] }).toEqual({ graine, pas: i, etat: continue_[i] });
+      }
+      pas += continue_.length;
+    }
+    expect(pas).toBeGreaterThan(100_000);
+  }, 120_000);
+
+  it('R104 — une partie se rejoue à l’identique depuis la même graine, sans `Rng` en main', () => {
+    const a: string[] = [];
+    const b: string[] = [];
+    jouer(42, false, { abandons: true, trace: a });
+    jouer(42, false, { abandons: true, trace: b });
+    expect(a).toEqual(b);
+    // L'aléa avance dans l'état : deux pas qui tirent ne le laissent pas en place.
+    const etats = a.map((t) => (JSON.parse(t) as { state: GameState }).state.rng);
+    expect(new Set(etats).size).toBeGreaterThan(1);
+  });
 });

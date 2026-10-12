@@ -5,7 +5,8 @@
  *
  * Trois règles tiennent ce fichier :
  * - **jamais de rejeu** : au montage, tout ce que la chronique contient déjà
- *   est de l'histoire (on arrive en cours de partie, on se reconnecte) ;
+ *   est de l'histoire (on arrive en cours de partie, on se reconnecte) ; les
+ *   évènements rejoués à la reprise (`rejoue`, D22) aussi ;
  * - **un message ne fait pas de bruit** : le chat n'est pas dans la
  *   chronique, et rien ici ne le lit ;
  * - **pas de collision** : le glas des morts et la cloche de l'aube qui le
@@ -130,7 +131,16 @@ export function useSonsPartie(): void {
       aLaSuite(atelier.aube, DELAI_CLOCHE_MS);
     };
 
-    for (const { event } of nouveaux) {
+    for (const { event, rejoue } of nouveaux) {
+      if (rejoue) {
+        // Rejoué à la reprise (D22) : de l'histoire, pas un son. On suit
+        // seulement l'heure, pour que l'aube suivante sonne à son heure.
+        if (event.type === 'phase') {
+          if (event.phase === 'nuit') aubeJouee.current = false;
+          phasePrecedente.current = event.phase;
+        }
+        continue;
+      }
       switch (event.type) {
         case 'phase': {
           if (event.phase === 'nuit') {

@@ -24,6 +24,9 @@ export const thiercelieux: Skin = {
   univers: 'Les Loups-Garous de Thiercelieux',
   charge: 'le capitaine',
   plurielLoups: { un: 'loup', plusieurs: 'loups' },
+  // D17 : la place est gardée, son joueur est loin — un lieu, pas un
+  // adjectif : rien ne s’accorde avec le pseudo.
+  absent: 'loin de la place',
 
   /* --- Les rôles : le nom affiché et le texte de la carte --- */
   roles: {
@@ -143,6 +146,9 @@ export const thiercelieux: Skin = {
       vote: 'Le village a exécuté {nom}.',
       chasseur: 'La balle du Chasseur a atteint {nom}.',
       chagrin: 'Le chagrin a eu raison de {nom}.',
+      // R101 : l’absence a trop duré. Le narrateur ne juge pas, il constate
+      // — la carte se retourne, ou non, selon la table.
+      abandon: '{nom} a quitté le village sans un mot.',
     },
     roleRevele: '— c’était {role}.',
 

@@ -203,8 +203,8 @@ describe('<Nuit /> — les rôles optionnels', () => {
     expect(screen.getByTestId('village-dort')).toBeInTheDocument();
     expect(screen.getByTestId('porte-entrouverte')).toHaveTextContent('Vous entrouvrez la porte…');
     expect(screen.getByTestId(`annotation-${String(proie)}`)).toHaveTextContent('×1');
-    // Rien à toucher : elle regarde, elle n'agit pas.
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    // Rien à toucher que le fil replié de tous (D23) : elle regarde, elle n'agit pas.
+    expect(screen.getAllByRole('button').map((bouton) => bouton.textContent)).toEqual(['Fil+']);
 
     const aucunLoupNomme = () => {
       const texte = container.textContent ?? '';
