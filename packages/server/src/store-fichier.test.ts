@@ -145,11 +145,25 @@ describe('FileRoomStore', () => {
 // La suite de contrat commune, quand le lot A l'a livrée.
 const chemin = './store.contract.js';
 const contrat = (await import(/* @vite-ignore */ chemin).catch(() => null)) as {
-  contratMagasin: (nom: string, fabrique: () => Promise<unknown>) => void;
+  contratMagasin: (nom: string, fabrique: () => Promise<unknown>, nettoyer?: () => Promise<void>) => void;
 } | null;
 if (contrat) {
-  contrat.contratMagasin('FileRoomStore', async () => {
-    const parent = await mkdtemp(join(tmpdir(), 'garoutom-contrat-'));
-    return FileRoomStore.ouvrir(parent, { delaiMs: 5, journal: muet });
-  });
+  /** Ce que chaque épreuve du contrat a ouvert : vidé puis effacé après elle. */
+  const contrats: { magasin: FileRoomStore<unknown>; dossier: string }[] = [];
+  contrat.contratMagasin(
+    'FileRoomStore',
+    async () => {
+      const parent = await mkdtemp(join(tmpdir(), 'garoutom-contrat-'));
+      const magasin = await FileRoomStore.ouvrir<unknown>(parent, { delaiMs: 5, journal: muet });
+      contrats.push({ magasin, dossier: parent });
+      return magasin;
+    },
+    async () => {
+      // Vider d'abord : une écriture en attente recréerait le dossier effacé.
+      for (const { magasin, dossier: parent } of contrats.splice(0)) {
+        await magasin.vider();
+        await rm(parent, { recursive: true, force: true });
+      }
+    },
+  );
 }

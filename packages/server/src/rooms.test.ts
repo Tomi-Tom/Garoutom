@@ -37,8 +37,10 @@ import {
 } from './banc.js';
 import {
   EMPTY_LOBBY_TTL_MS,
+  fnv1a64,
   IDLE_ROOM_MS,
   MAX_ROOMS,
+  MemorySessionDirectory,
   nextWake,
   RoomManager,
   upgradeRoom,
@@ -503,6 +505,44 @@ describe('le silence est la loi (R87–R88, D23)', () => {
     // La Voyante, elle, voit son geste compté ; le loup, son message.
     expect(lastSyncOf(b.sent, sieges[voyante]!.socketId).game?.acted).toBe(true);
     expect(syncsOf(b.sent, sieges[loup]!.socketId).length).toBe(recusLoup + 1);
+  });
+
+  it('un annuaire qui garde les empreintes garde le silence pour un gestionnaire neuf (hibernation)', async () => {
+    /** L'annuaire d'un Worker, en petit : les empreintes survivent au gestionnaire. */
+    class AnnuaireDurable extends MemorySessionDirectory {
+      readonly empreintes = new Map<string, string>();
+      fingerprint(socketId: string): string | undefined {
+        return this.empreintes.get(socketId);
+      }
+      setFingerprint(socketId: string, fingerprint: string): void {
+        if (fingerprint === '') this.empreintes.delete(socketId);
+        else this.empreintes.set(socketId, fingerprint);
+      }
+    }
+    const sessions = new AnnuaireDurable();
+    const store = new MemoryRoomStore<Room>();
+    const horloge = { now: DEBUT };
+    const avant = banc({ sessions, store, horloge });
+    const { code, sieges } = await lancer(avant, 6, AVEC_VOYANTE);
+    await passerRevelation(avant, sieges);
+    // Ce que l'annuaire range est court : un hachage, pas la vue.
+    expect([...sessions.empreintes.values()].every((fp) => /^[0-9a-f]{16}$/.test(fp))).toBe(true);
+
+    // Le gestionnaire renaît : mémoire vierge, même annuaire, même magasin.
+    const apres = banc({ sessions, store, horloge });
+    const voyante = await siegeDuRole(apres, code, 'voyante');
+    const villageois = await siegeDuRole(apres, code, 'villageois');
+    await apres.manager.action(sieges[voyante]!.socketId, { type: 'sonder', target: villageois });
+
+    expect(syncsOf(apres.sent, sieges[villageois]!.socketId)).toHaveLength(0);
+    expect(lastSyncOf(apres.sent, sieges[voyante]!.socketId).game?.acted).toBe(true);
+  });
+
+  it('l’empreinte est un FNV-1a 64 bits', () => {
+    expect(fnv1a64('')).toBe('cbf29ce484222325');
+    expect(fnv1a64('a')).toBe('af63dc4c8601ec8c');
+    expect(fnv1a64('foobar')).toBe('85944171f73967e8');
+    expect(fnv1a64('{"a":1}')).not.toBe(fnv1a64('{"a":2}'));
   });
 
   it('un sync qui porte des évènements part toujours, même à vue inchangée', async () => {

@@ -11,14 +11,18 @@
  *
  * ```ts
  * import { contratMagasin } from '@garoutom/server/store.contract';
- * contratMagasin('FileRoomStore', async () => new FileRoomStore(await dossierTemporaire()));
+ * contratMagasin('FileRoomStore', async () => new FileRoomStore(await dossierTemporaire()), effacerDossiers);
  * ```
+ *
+ * Le troisième argument, facultatif, passe après chaque épreuve : un magasin
+ * sur disque y efface ses dossiers temporaires, pour ne pas en semer un par
+ * épreuve dans `%TEMP%`.
  *
  * Ce fichier n'est pas exporté par `lib.ts` : il importe Vitest, qui n'a rien
  * à faire dans un serveur en production.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { createGame, DEFAULT_OPTIONS } from '@garoutom/engine';
 
@@ -55,8 +59,15 @@ function tableEssai(code: string): Record<string, unknown> {
   };
 }
 
-export function contratMagasin(nom: string, fabrique: () => Promise<RoomStore<unknown>>): void {
+export function contratMagasin(
+  nom: string,
+  fabrique: () => Promise<RoomStore<unknown>>,
+  /** Après chaque épreuve : vider et effacer ce que la fabrique a ouvert (dossiers temporaires…). */
+  nettoyer?: () => Promise<void>,
+): void {
   describe(`contrat du magasin — ${nom}`, () => {
+    if (nettoyer) afterEach(nettoyer);
+
     it('rend null pour un code inconnu, et ne le compte pas', async () => {
       const store = await fabrique();
       expect(await store.load('ZZZZ')).toBeNull();

@@ -124,6 +124,15 @@ export interface SessionDirectory {
   delete(socketId: string): void;
   /** La socket est-elle encore ouverte sur cette instance ? (réconciliation) */
   isLive(socketId: string): boolean;
+  /**
+   * L'empreinte de la dernière vue envoyée à cette connexion (D23), si
+   * l'annuaire sait la garder. Facultatif : sans ces deux méthodes, le cœur
+   * la garde dans sa mémoire — ce qui suffit à Node, pas à un Worker qui
+   * s'endort et renaît avec un cœur neuf.
+   */
+  fingerprint?(socketId: string): string | undefined;
+  /** Range l'empreinte (courte : un hachage). La chaîne vide l'oublie. */
+  setFingerprint?(socketId: string, fingerprint: string): void;
 }
 
 /**
@@ -266,6 +275,38 @@ function journaliser(message: string, details?: unknown): void {
   console.error(`[garoutom] ${message}`, details ?? '');
 }
 
+/**
+ * FNV-1a 64 bits sur les unités UTF-16 d'une chaîne, en 16 caractères
+ * hexadécimaux.
+ *
+ * L'empreinte d'une vue tient alors en 16 octets au lieu de plusieurs Kio :
+ * un Worker peut la ranger dans l'attachement de chaque socket (16 Kio au
+ * plus), et Node garde une `Map` légère. Calculée par mots de 16 bits, sans
+ * `BigInt` : une vue de 20 Kio se hache en une fraction de milliseconde.
+ * Une collision ferait taire un `sync` utile ; à 2⁻⁶⁴ par comparaison, on
+ * l'accepte.
+ */
+export function fnv1a64(texte: string): string {
+  // Base de décalage 0xcbf29ce484222325, mot de poids faible d'abord.
+  let h0 = 0x2325;
+  let h1 = 0x8422;
+  let h2 = 0x9ce4;
+  let h3 = 0xcbf2;
+  for (let i = 0; i < texte.length; i += 1) {
+    h0 ^= texte.charCodeAt(i);
+    // Multiplication par le nombre premier 0x100000001b3 = 2⁴⁰ + 0x1b3.
+    const t0 = h0 * 0x1b3;
+    const t1 = h1 * 0x1b3 + (t0 >>> 16);
+    const t2 = h2 * 0x1b3 + h0 * 0x100 + (t1 >>> 16);
+    const t3 = h3 * 0x1b3 + h1 * 0x100 + (t2 >>> 16);
+    h0 = t0 & 0xffff;
+    h1 = t1 & 0xffff;
+    h2 = t2 & 0xffff;
+    h3 = t3 & 0xffff;
+  }
+  return [h3, h2, h1, h0].map((mot) => mot.toString(16).padStart(4, '0')).join('');
+}
+
 /* ------------------------------------------------------------------ */
 /* Le gestionnaire de tables                                           */
 /* ------------------------------------------------------------------ */
@@ -273,7 +314,10 @@ function journaliser(message: string, details?: unknown): void {
 export class RoomManager {
   /** Une file d'attente par table : deux demandes sur la même ne se croisent jamais. */
   private readonly queues = new Map<string, Promise<void>>();
-  /** La dernière vue envoyée à chaque connexion, pour ne pas la renvoyer (D23). */
+  /**
+   * La dernière vue envoyée à chaque connexion, pour ne pas la renvoyer
+   * (D23) — quand l'annuaire ne sait pas la garder lui-même.
+   */
   private readonly fingerprints = new Map<string, string>();
   /** Les tables dont `tick` a échoué : combien de fois, et quand réessayer. */
   private readonly failures = new Map<string, { attempts: number; retryAt: number }>();
@@ -390,8 +434,8 @@ export class RoomManager {
       }
     }
     for (const delivery of deliveries) {
-      if (!delivery.force && this.fingerprints.get(delivery.socketId) === delivery.fingerprint) continue;
-      this.fingerprints.set(delivery.socketId, delivery.fingerprint);
+      if (!delivery.force && this.lastFingerprint(delivery.socketId) === delivery.fingerprint) continue;
+      this.rememberFingerprint(delivery.socketId, delivery.fingerprint);
       this.send(delivery.socketId, 'sync', delivery.payload);
     }
     if (tx.notices.length > 0) {
@@ -438,16 +482,55 @@ export class RoomManager {
     }
   }
 
+  /**
+   * L'empreinte de la dernière vue envoyée — rangée par l'annuaire s'il le
+   * sait (le Worker, dans l'attachement de la socket, pour qu'elle survive à
+   * une hibernation), sinon dans notre mémoire.
+   */
+  private lastFingerprint(socketId: string): string | undefined {
+    const { fingerprint, setFingerprint } = this.sessions;
+    if (fingerprint && setFingerprint) {
+      try {
+        return fingerprint.call(this.sessions, socketId);
+      } catch (error) {
+        journaliser(`empreinte illisible pour ${socketId}`, error);
+        return undefined;
+      }
+    }
+    return this.fingerprints.get(socketId);
+  }
+
+  /** Range l'empreinte envoyée ; la chaîne vide l'oublie. */
+  private rememberFingerprint(socketId: string, fingerprint: string): void {
+    const { fingerprint: read, setFingerprint } = this.sessions;
+    if (read && setFingerprint) {
+      try {
+        setFingerprint.call(this.sessions, socketId, fingerprint);
+      } catch (error) {
+        // Au pire, la prochaine vue identique repartira : un `sync` de trop
+        // vaut mieux qu'un envoi perdu.
+        journaliser(`empreinte non rangée pour ${socketId}`, error);
+      }
+      return;
+    }
+    if (fingerprint === '') this.fingerprints.delete(socketId);
+    else this.fingerprints.set(socketId, fingerprint);
+  }
+
+  private forgetFingerprint(socketId: string): void {
+    this.rememberFingerprint(socketId, '');
+  }
+
   /** Une connexion s'assoit : sa session, et une vue neuve. */
   private seatSocket(socketId: string, code: string, playerId: string): void {
     this.sessions.set(socketId, { code, playerId });
-    this.fingerprints.delete(socketId);
+    this.forgetFingerprint(socketId);
   }
 
   /** Une connexion se lève : plus de session, plus d'empreinte. */
   private unseatSocket(socketId: string): void {
     this.sessions.delete(socketId);
-    this.fingerprints.delete(socketId);
+    this.forgetFingerprint(socketId);
   }
 
   /** Comme `transact`, en résolvant d'abord la session de la connexion. */
@@ -1019,7 +1102,7 @@ export class RoomManager {
           if (socketId === null) continue;
           if (!this.sessions.isLive(socketId)) {
             this.markDisconnected(table, player, tx.now);
-            this.fingerprints.delete(socketId);
+            this.forgetFingerprint(socketId);
           } else if (this.sessions.get(socketId)?.playerId !== player.id) {
             const playerId = player.id;
             tx.effects.push(() => {
@@ -1077,7 +1160,7 @@ export class RoomManager {
   async disconnect(socketId: string): Promise<void> {
     const session = this.sessions.get(socketId);
     if (!session) {
-      this.fingerprints.delete(socketId);
+      this.forgetFingerprint(socketId);
       return;
     }
     try {
@@ -1188,7 +1271,7 @@ export class RoomManager {
       if (replay) payload.replay = true;
       deliveries.push({
         socketId,
-        fingerprint: JSON.stringify([view, game, seq]),
+        fingerprint: fnv1a64(JSON.stringify([view, game, seq])),
         force: fresh !== undefined || events.length > 0,
         payload,
       });

@@ -87,6 +87,8 @@ export interface SessionDirectory {
   delete(socketId: string): void;
   /** La socket est-elle encore ouverte sur cette instance ? (réconciliation) */
   isLive(socketId: string): boolean;
+  fingerprint?(socketId: string): string | undefined;            // facultatives : empreinte (FNV-1a 64, hex) de la dernière vue envoyée, pour que le silence D23 survive à une hibernation ; '' l'oublie ; absentes → Map du cœur
+  setFingerprint?(socketId: string, fingerprint: string): void;
 }
 export class MemorySessionDirectory implements SessionDirectory { … }   // pour Node et les tests
 

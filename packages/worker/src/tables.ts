@@ -29,7 +29,9 @@
  *   — aucun `setTimeout`, qui mourrait avec l'instance et l'empêcherait de
  *   dormir ;
  * - le lien socket → (table, joueur) est dans l'attachement de chaque socket
- *   (`annuaire.ts`), et l'identifiant de connexion est son étiquette.
+ *   (`annuaire.ts`), et l'identifiant de connexion est son étiquette ;
+ *   l'empreinte de la dernière vue envoyée y dort aussi, pour que le silence
+ *   (D23) survive au sommeil.
  *
  * Au réveil (constructeur rejoué), l'objet reconstruit un concentrateur et
  * un gestionnaire neufs, et rattache au concentrateur les sockets encore
@@ -179,7 +181,16 @@ export class TablesDO implements DurableObject {
   brancher(serveur: WebSocket, protocole: number, ip: string | null): string {
     const id = crypto.randomUUID();
     const maintenant = Date.now();
-    const attache: Attache = { id, protocol: protocole, code: null, playerId: null, depuis: maintenant, vu: maintenant, ip };
+    const attache: Attache = {
+      id,
+      protocol: protocole,
+      code: null,
+      playerId: null,
+      depuis: maintenant,
+      vu: maintenant,
+      ip,
+      empreinte: null,
+    };
     this.ctx.acceptWebSocket(serveur, [id]);
     serveur.serializeAttachment(attache);
     this.hub.attach(prise(serveur, attache, false), id);

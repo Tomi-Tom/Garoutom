@@ -10,13 +10,21 @@
  *   de connexion que le concentrateur et le cœur connaissent — on retrouve la
  *   socket par `ctx.getWebSockets(id)` ;
  * - son **attachement** (`serializeAttachment`, 16 Kio au plus — on en prend
- *   une centaine d'octets) porte le reste : version de protocole, table et
- *   joueur assis, adresse du client, heure d'ouverture, dernier signe de vie.
+ *   deux cents octets) porte le reste : version de protocole, table et
+ *   joueur assis, adresse du client, heure d'ouverture, dernier signe de vie,
+ *   et l'empreinte de la dernière vue envoyée (D23).
  *
  * C'est le `SessionDirectory` du contrat (lot A) : le cœur y lit et y écrit
  * le lien socket → (table, joueur) comme dans une `Map`, sans savoir qu'il
  * dort dans les sockets. `isLive` sert à la réconciliation : au chargement
  * d'une table, tout `socketId` qui n'est plus ici devient absent.
+ *
+ * L'empreinte (`fingerprint`/`setFingerprint`, facultatives au contrat) est
+ * ce qui garde le silence à travers le sommeil : sans elle, le cœur neuf d'un
+ * réveil ne sait plus ce que chaque siège a déjà vu, et sa première
+ * transaction renvoie un `sync` identique à tous — la nuit, un villageois
+ * apprendrait qu'un rôle vient d'agir. Le cœur la donne déjà hachée (FNV-1a
+ * 64 bits, seize caractères) : l'attachement reste minuscule.
  *
  * Un déploiement, lui, ferme toutes les sockets : leurs attachements partent
  * avec elles. Rien de grave — la place appartient au joueur par son jeton,
@@ -43,6 +51,8 @@ export interface Attache {
   vu: number;
   /** Adresse du client (`CF-Connecting-IP`), pour les quotas du concentrateur. */
   ip: string | null;
+  /** L'empreinte (hachée) de la dernière vue envoyée, ou `null` : la prochaine part (D23). */
+  empreinte?: string | null;
 }
 
 /** Ce qu'il faut d'une socket hibernable. Le `WebSocket` de Cloudflare le satisfait. */
@@ -61,6 +71,12 @@ export interface PorteSockets<S extends SocketHibernable = SocketHibernable> {
 
 /** On ne réécrit `vu` qu'après ce délai : un attachement par cadre serait du gâchis. */
 export const PAS_VU_MS = 10_000;
+
+/**
+ * Une empreinte plus longue n'est pas un hachage du cœur : on l'ignore plutôt
+ * que de gonfler l'attachement vers sa limite de 16 Kio.
+ */
+export const EMPREINTE_MAX = 64;
 
 /** Lit un attachement sans rien croire : `null` s'il n'a pas la forme attendue. */
 export function lireAttache(socket: SocketHibernable): Attache | null {
@@ -81,6 +97,10 @@ export function lireAttache(socket: SocketHibernable): Attache | null {
     depuis: a.depuis,
     vu: typeof a.vu === 'number' ? a.vu : a.depuis,
     ip: typeof a.ip === 'string' ? a.ip : null,
+    empreinte:
+      typeof a.empreinte === 'string' && a.empreinte.length > 0 && a.empreinte.length <= EMPREINTE_MAX
+        ? a.empreinte
+        : null,
   };
 }
 
@@ -153,17 +173,33 @@ export class AnnuaireSockets<S extends SocketHibernable = SocketHibernable> impl
 
   set(socketId: string, session: { code: string; playerId: string }): void {
     const socket = this.socket(socketId);
-    if (socket) this.modifier(socket, { code: session.code, playerId: session.playerId });
+    // Une session neuve, une vue neuve : l'empreinte s'oublie dans la même écriture.
+    if (socket) this.modifier(socket, { code: session.code, playerId: session.playerId, empreinte: null });
   }
 
   delete(socketId: string): void {
     const socket = this.socket(socketId);
-    if (socket) this.modifier(socket, { code: null, playerId: null });
+    if (socket) this.modifier(socket, { code: null, playerId: null, empreinte: null });
   }
 
   isLive(socketId: string): boolean {
     // `getWebSockets` peut encore rendre une socket en cours de fermeture :
     // seule une socket ouverte compte comme présente.
     return this.porte.getWebSockets(socketId).some((socket) => socket.readyState === OUVERTE);
+  }
+
+  fingerprint(socketId: string): string | undefined {
+    return this.attache(socketId)?.empreinte ?? undefined;
+  }
+
+  setFingerprint(socketId: string, fingerprint: string): void {
+    const socket = this.socket(socketId);
+    if (!socket) return;
+    const empreinte = fingerprint === '' || fingerprint.length > EMPREINTE_MAX ? null : fingerprint;
+    const attache = lireAttache(socket);
+    // Rien à réécrire si rien ne change : l'oubli d'une empreinte déjà oubliée
+    // suit chaque `set`, et ne doit pas coûter une sérialisation.
+    if (!attache || (attache.empreinte ?? null) === empreinte) return;
+    this.modifier(socket, { empreinte });
   }
 }

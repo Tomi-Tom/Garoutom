@@ -23,8 +23,15 @@ export interface Quotas {
   direBurst: number;
   /** Tables ouvertes par minute et par adresse. */
   createsPerMinute: number;
-  /** `room:join` refusés par minute et par adresse — la devinette de codes. */
+  /**
+   * `room:join` refusés par minute et par adresse — la devinette de codes.
+   * Une reprise par jeton n'est pas refusée d'avance par ce quota : sur un
+   * Wi-Fi commun, un voisin qui devine des codes ne doit pas retarder la
+   * reprise des autres. Seul son échec éventuel compte.
+   */
   failedJoinsPerMinute: number;
+  /** `room:join` portant un jeton, par minute et par socket : un plafond large contre le martelage. */
+  tokenJoinsPerMinute: number;
   /** Une socket assise à aucune table est fermée au bout de ce délai. */
   unseatedMs: number;
   /**
@@ -44,6 +51,7 @@ export const DEFAULT_QUOTAS: Quotas = {
   direBurst: 5,
   createsPerMinute: 3,
   failedJoinsPerMinute: 10,
+  tokenJoinsPerMinute: 30,
   unseatedMs: 30_000,
   socketsPerIp: 40,
   refusalsBeforeClose: 50,

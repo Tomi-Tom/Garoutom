@@ -119,6 +119,46 @@ describe('l’objet des tables — l’hibernation', () => {
     expect(await apres.magasin.has(code)).toBe(true);
   });
 
+  it('garde le silence à travers le sommeil : la Voyante sonde, le villageois ne reçoit rien (D23)', async () => {
+    const ctx = new FauxCtx(await FauxStockage.ouvrir());
+    const avant = await objet(ctx);
+    const hote = ouvrir(avant);
+    const options = { auto: false, loups: 1, roles: ['voyante'], capitaine: false };
+    const creee = await demander(avant, hote, 'room:create', { name: 'Hôte', options });
+    const code = String(creee.data?.code);
+    const sockets = [hote];
+    for (let i = 1; i < 6; i += 1) {
+      const socket = ouvrir(avant);
+      expect(await demander(avant, socket, 'room:join', { code, name: `Joueur ${String(i)}` })).toMatchObject({ ok: true });
+      sockets.push(socket);
+    }
+    expect(await demander(avant, hote, 'room:start', {})).toMatchObject({ ok: true });
+    // Tout le monde confirme sa carte : la nuit tombe.
+    for (const socket of sockets) await demander(avant, socket, 'game:action', { action: { type: 'pret' } });
+
+    const rangee = (await avant.magasin.load(code)) as { game: { players: { seat: number; role: string }[] } };
+    const siege = (role: string): number => rangee.game.players.find((joueur) => joueur.role === role)?.seat ?? -1;
+    const voyante = sockets[siege('voyante')]!;
+    const villageois = sockets[siege('villageois')]!;
+    const syncs = (socket: FausseSocket): number => socket.cadres('ev').filter((cadre) => cadre.e === 'sync').length;
+
+    const avantSommeil = syncs(villageois);
+    // L'objet s'endort : mémoire vierge, mêmes sockets (attachements compris), même base.
+    const apres = await objet(ctx);
+    expect(await demander(apres, voyante, 'game:action', { action: { type: 'sonder', target: siege('villageois') } })).toMatchObject({
+      ok: true,
+    });
+
+    expect(syncs(villageois)).toBe(avantSommeil);
+    // La Voyante, elle, voit son geste compté.
+    const derniere = voyante.cadres('ev').filter((cadre) => cadre.e === 'sync').at(-1) as { d: { game: { acted: boolean } } };
+    expect(derniere.d.game.acted).toBe(true);
+    // L'empreinte dort dans l'attachement : seize caractères, loin des 16 Kio.
+    const attache = villageois.deserializeAttachment() as { empreinte: string };
+    expect(attache.empreinte).toMatch(/^[0-9a-f]{16}$/);
+    expect(JSON.stringify(attache).length).toBeLessThan(400);
+  });
+
   it('rend la fermeture d’une socket au cœur, même après un sommeil', async () => {
     const ctx = new FauxCtx(await FauxStockage.ouvrir());
     const avant = await objet(ctx);

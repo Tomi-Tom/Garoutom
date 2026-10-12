@@ -368,6 +368,57 @@ describe('le concentrateur : quotas (D23)', () => {
     expect(await devin.req('room:join', { code, name: 'Devin' })).toMatchObject({ ok: false, code: 'rate' });
   });
 
+  it('un voisin qui devine des codes ne retarde pas la reprise par jeton des autres', async () => {
+    const { hub, manager } = monter();
+    const wifi = '203.0.113.9';
+    const { code, places } = await remplir(hub, 2);
+    const devin = new Client(hub, { ip: wifi });
+    for (let i = 0; i < 10; i += 1) await devin.req('room:join', { code: 'ZZZZ', name: 'Devin' });
+    expect(await devin.req('room:join', { code, name: 'Devin' })).toMatchObject({ code: 'rate' });
+
+    // Brice perd sa connexion, et revient par le même Wi-Fi : son jeton passe.
+    const brice = places[1]!;
+    await brice.client.session.close();
+    const retour = new Client(hub, { ip: wifi });
+    const reprise = await retour.ok<JoinResult>('room:join', { code, name: 'Brice', token: brice.token, lastSeq: 0 });
+    expect(reprise.playerId).toBe(brice.playerId);
+    expect(manager.seated(retour.session.id)).toBe(true);
+  });
+
+  it('quota épuisé, un jeton bidon ne rouvre pas la devinette : refus `rate`, et personne ne s’assoit', async () => {
+    const { hub, manager } = monter();
+    const { code } = await remplir(hub, 1);
+    const devin = new Client(hub, { ip: '203.0.113.9' });
+    for (let i = 0; i < 10; i += 1) await devin.req('room:join', { code: 'ZZZZ', name: 'Devin' });
+
+    // Ni `gone` pour un code libre, ni place prise au salon d'un code juste.
+    expect(await devin.req('room:join', { code: 'ZZZZ', name: 'Devin', token: 'bidon' })).toMatchObject({
+      ok: false,
+      code: 'rate',
+    });
+    expect(await devin.req('room:join', { code, name: 'Devin', token: 'bidon' })).toMatchObject({
+      ok: false,
+      code: 'rate',
+    });
+    expect(manager.seated(devin.session.id)).toBe(false);
+    expect((await manager.peek(code))?.players).toHaveLength(1);
+  });
+
+  it('borne les reprises par jeton d’une même socket : trente par minute', async () => {
+    const { hub } = monter();
+    const { code, places } = await remplir(hub, 1);
+    const marteau = new Client(hub, { ip: '198.51.100.4' });
+    const reponses: Ack<unknown>[] = [];
+    for (let i = 0; i < 31; i += 1) {
+      reponses.push(await marteau.req('room:join', { code, token: places[0]!.token }));
+      horloge.now += 40; // assez pour la cadence des cadres, trop peu pour regagner un jeton
+    }
+    expect(reponses.slice(0, 30).every((r) => r.ok || r.code !== 'rate')).toBe(true);
+    expect(reponses[30]).toMatchObject({ ok: false, code: 'rate' });
+    horloge.now += 60_000;
+    expect(await marteau.req('room:join', { code, token: places[0]!.token })).toMatchObject({ ok: true });
+  });
+
   it('une socket assise à aucune table est fermée au bout de 30 s', async () => {
     const { hub } = monter();
     const oisive = new Client(hub);

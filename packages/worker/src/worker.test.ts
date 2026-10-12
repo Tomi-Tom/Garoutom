@@ -95,6 +95,34 @@ describe('l’annuaire des sockets', () => {
     expect(lireAttache(socket)?.vu).toBe(100 + PAS_VU_MS);
   });
 
+  it('garde l’empreinte de la dernière vue à travers un « réveil », et l’oublie avec la session (D23)', async () => {
+    const { ctx, annuaire, socket } = await monter();
+    expect(annuaire.fingerprint('s1')).toBeUndefined();
+    annuaire.set('s1', { code: 'ABCD', playerId: 'p1' });
+    annuaire.setFingerprint('s1', '0123456789abcdef');
+    expect(new AnnuaireSockets(ctx).fingerprint('s1')).toBe('0123456789abcdef');
+
+    // Une empreinte inchangée ne coûte pas d'écriture ; une démesurée est ignorée.
+    const ecrire = vi.spyOn(socket, 'serializeAttachment');
+    annuaire.setFingerprint('s1', '0123456789abcdef');
+    expect(ecrire).not.toHaveBeenCalled();
+    annuaire.setFingerprint('s1', 'x'.repeat(10_000));
+    expect(annuaire.fingerprint('s1')).toBeUndefined();
+
+    annuaire.setFingerprint('s1', 'fedcba9876543210');
+    annuaire.setFingerprint('s1', '');
+    expect(annuaire.fingerprint('s1')).toBeUndefined();
+    annuaire.setFingerprint('s1', 'fedcba9876543210');
+    annuaire.set('s1', { code: 'WXYZ', playerId: 'p2' });
+    expect(annuaire.fingerprint('s1')).toBeUndefined();
+    annuaire.setFingerprint('s1', 'fedcba9876543210');
+    annuaire.delete('s1');
+    expect(annuaire.fingerprint('s1')).toBeUndefined();
+    // Une socket inconnue ne lève pas.
+    annuaire.setFingerprint('inconnue', 'fedcba9876543210');
+    expect(annuaire.fingerprint('inconnue')).toBeUndefined();
+  });
+
   it('ignore un attachement qui n’a pas la forme attendue', () => {
     const socket = new FausseSocket();
     socket.serializeAttachment({ id: 3 });

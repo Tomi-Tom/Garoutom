@@ -92,6 +92,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Une demande qui porte un jeton de reprise (sa validité, seule la table la connaît). */
+function carriesToken(data: unknown): boolean {
+  return isRecord(data) && typeof data.token === 'string' && data.token.length > 0;
+}
+
+/** Le refus d'un `join` de trop — devinette de codes ou martelage de jetons. */
+const TOO_MANY_JOINS: Ack<unknown> = { ok: false, error: 'Trop d’essais : réessayez dans une minute', code: 'rate' };
+
 /** Une connexion attachée, et ce qu'on sait d'elle. */
 interface Connexion {
   id: string;
@@ -99,6 +107,8 @@ interface Connexion {
   ip: string | undefined;
   frames: Bucket;
   dire: Bucket;
+  /** Les `room:join` portant un jeton : un plafond large, par socket. */
+  tokenJoins: Bucket;
   /** La demande en cours et celles qui attendent : une à la fois. */
   chain: Promise<void>;
   /** La fermeture est demandée : plus rien n'entre. */
@@ -165,6 +175,7 @@ export class Hub implements Emitter {
       ip: socket.ip,
       frames: new Bucket(perSecond(this.quotas.framesPerSecond), this.quotas.frameBurst, now),
       dire: new Bucket(perSecond(this.quotas.direPerSecond), this.quotas.direBurst, now),
+      tokenJoins: new Bucket(perMinute(this.quotas.tokenJoinsPerMinute), this.quotas.tokenJoinsPerMinute, now),
       chain: Promise.resolve(),
       closing: false,
       detached: null,
@@ -278,10 +289,23 @@ export class Hub implements Emitter {
       return Promise.resolve();
     }
 
+    // Une reprise par jeton passe même quand l'adresse a épuisé ses `join`
+    // ratés — mais alors **par son jeton seulement** : sans pseudo, elle ne
+    // peut pas s'asseoir comme nouvelle venue, et tout refus devient le refus
+    // du quota. Un jeton bidon ne rouvre donc ni la devinette de codes, ni ce
+    // qu'un refus (`gone`, `started`…) dirait de l'existence d'une table.
+    const tokenOnly =
+      frame.e === 'room:join' &&
+      carriesToken(frame.d) &&
+      connexion.ip !== undefined &&
+      !this.failedJoins.available(connexion.ip, now);
+    const data = tokenOnly && isRecord(frame.d) ? { ...frame.d, name: undefined } : frame.d;
+
     const run = connexion.chain.then(async () => {
-      const result = await this.run(connexion, frame.e, frame.d);
+      let result = await this.run(connexion, frame.e, data);
       if (frame.e === 'room:join' && !result.ok && connexion.ip !== undefined) {
         this.failedJoins.take(connexion.ip, this.now());
+        if (tokenOnly) result = TOO_MANY_JOINS;
       }
       this.refreshSeat(connexion);
       this.push(connexion, { t: 'ack', id: frame.id, r: result });
@@ -302,9 +326,13 @@ export class Hub implements Emitter {
       if (event === 'room:create' && !this.creates.take(connexion.ip, now)) {
         return rate('Trop de tables ouvertes : réessayez dans une minute');
       }
-      if (event === 'room:join' && !this.failedJoins.available(connexion.ip, now)) {
-        return rate('Trop d’essais : réessayez dans une minute');
+      // Une reprise par jeton n'est pas refusée d'avance : seul son échec compte.
+      if (event === 'room:join' && !carriesToken(data) && !this.failedJoins.available(connexion.ip, now)) {
+        return TOO_MANY_JOINS;
       }
+    }
+    if (event === 'room:join' && carriesToken(data) && !connexion.tokenJoins.take(now)) {
+      return TOO_MANY_JOINS;
     }
     return null;
   }
