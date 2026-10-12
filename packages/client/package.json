@@ -12,9 +12,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource/alegreya-sans": "^5.3.0",
-    "@fontsource/cormorant": "^5.3.0",
-    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
+    "@fontsource/im-fell-french-canon": "^5.3.0",
+    "@fontsource/im-fell-french-canon-sc": "^5.3.0",
     "@garoutom/engine": "*",
     "@tombp/arcade": "file:../../vendor/tombp-arcade-0.1.2.tgz",
     "motion": "^12.0.6",
@@ -23,6 +23,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.0.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

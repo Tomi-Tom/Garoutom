@@ -400,6 +400,41 @@ Le récit dit tout ce que le log dit — protections, voyances, victimes,
 grâces, tirs, votes — et rien de plus : c'est le log qui parle, le skin qui
 récite.
 
+### Les légendes du graveur
+
+Direction artistique « Caprices » : le graveur légende les **planches**
+(moments plein écran, cartes de rôle, blocs du récit), jamais les commandes.
+Le skin les porte dans `legendes`, et les écrans les demandent à la voix
+(`legendeRole`, `legendeEcran`, `legendeRecit`) ; le registre exige la
+complétude, comme pour tout le reste.
+
+| Champ | Contenu | Clés |
+|---|---|---|
+| `legendes.roles` | une légende par rôle, imprimée sur la carte | les 13 `RoleId` |
+| `legendes.ecrans` | une légende par planche plein écran | `accueil`, `salon`, `revelation`, `nuitDormeur`, `mort`, `aubeMorts`, `aubePaisible`, `election`, `vote`, `depouillement`, `chasseurAttente`, `succession`, `boucDernierMot`, `fin`, `tableDisparue` (15) |
+| `legendes.recit` | une légende par bloc de la nuit racontée | `loupBlanc`, `rancune`, `poison`, `tir`, `chagrin`, `grace`, `bouc`, `voteMeute`, `voteVillage`, `sauvetage`, `loups`, `resistance`, `protection`, `corbeau`, `voyance`, `amoureux`, `nuitDefaut`, `jourDefaut`, `derniere` (19) |
+| `couvreChefs` | le nom des 18 couvre-chefs, par numéro de siège (`nomCouvreChef(numero)`) | 18 noms, sans rapport avec le rôle |
+
+Un bloc du récit prend la légende du **premier** évènement présent, dans
+l'ordre de la table ci-dessus (SPEC § 6.4), puis `nuitDefaut` ou `jourDefaut` ;
+la dernière planche prend `derniere`.
+
+Règles de plume propres aux légendes :
+
+- **Une légende ne nomme jamais un pseudo** : ce n'est pas un modèle, elle ne
+  contient aucune variable (`{nom}` y est interdit, le test le vérifie). Elle
+  s'accorde au rôle ou à personne — jamais à un joueur.
+- Elle est **sèche** : une phrase, parfois deux, sans commentaire ni jeu de
+  mots qui explique son propre effet. Elle ne dit pas ce que l'évènement dit
+  déjà ; elle le regarde de côté.
+- Thiercelieux cite les *Caprichos* de Goya (« Le sommeil de la raison
+  engendre des loups. »), Shiganshina les *Désastres de la guerre* (« Tristes
+  pressentiments. », « Rien. Le temps le dira. ») — pas d'héroïsme, des corps.
+  Une légende sans titre de Goya reste dans la même veine, et se marque
+  « Esquisse » tant qu'un connaisseur ne l'a pas relue.
+- La Petite Fille de Thiercelieux est légendée « Ne crie pas, petite sotte. »
+  (validée par le propriétaire ; la variante douce est écartée).
+
 ## 3. Shiganshina — le second habit
 
 **Esquisse.** Le mapping est celui de [`refs/design.md`](refs/design.md),

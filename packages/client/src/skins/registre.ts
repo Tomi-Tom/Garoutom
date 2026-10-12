@@ -144,6 +144,72 @@ export interface LignesRecit {
   loupBlanc: { cible: string; personne: string };
 }
 
+/**
+ * Les quinze planches plein écran qui portent une légende du graveur (SPEC
+ * § 6.4) — le graveur légende les planches, pas les commandes. Clés en
+ * français sans accents ; l'ordre est celui du tableau du SPEC.
+ */
+export const CLES_LEGENDE_ECRAN = [
+  'accueil',
+  'salon',
+  'revelation',
+  'nuitDormeur',
+  'mort',
+  'aubeMorts',
+  'aubePaisible',
+  'election',
+  'vote',
+  'depouillement',
+  'chasseurAttente',
+  'succession',
+  'boucDernierMot',
+  'fin',
+  'tableDisparue',
+] as const;
+export type CleLegendeEcran = (typeof CLES_LEGENDE_ECRAN)[number];
+
+/**
+ * Les dix-neuf légendes de la nuit racontée (SPEC § 6.4) : une planche prend
+ * la légende du premier évènement présent, dans l'ordre de priorité ci-dessous
+ * (les 18 premières), puis `derniere` pour la planche finale.
+ */
+export const CLES_LEGENDE_RECIT = [
+  'loupBlanc',
+  'rancune',
+  'poison',
+  'tir',
+  'chagrin',
+  'grace',
+  'bouc',
+  'voteMeute',
+  'voteVillage',
+  'sauvetage',
+  'loups',
+  'resistance',
+  'protection',
+  'corbeau',
+  'voyance',
+  'amoureux',
+  'nuitDefaut',
+  'jourDefaut',
+  'derniere',
+] as const;
+export type CleLegendeRecit = (typeof CLES_LEGENDE_RECIT)[number];
+
+/** Le nombre de couvre-chefs, un par siège (SPEC § 5.1.2). */
+export const NB_COUVRE_CHEFS = 18;
+
+/**
+ * Les légendes du graveur : une par rôle, par planche plein écran, par
+ * planche du récit. Jamais un modèle de phrase — une légende ne nomme jamais
+ * un pseudo, elle s'accorde au rôle ou à personne (règle de plume n° 2).
+ */
+export interface Legendes {
+  roles: Record<RoleId, string>;
+  ecrans: Record<CleLegendeEcran, string>;
+  recit: Record<CleLegendeRecit, string>;
+}
+
 /** Le récit de fin de partie : deux titres de bloc, une phrase par ligne de log. */
 export interface TextesRecit {
   nuit: string;
@@ -243,6 +309,13 @@ export interface Skin {
   /** Les compositions suggérées, par position : la référence, la chasse, le village outillé. */
   suggestions: readonly [Suggestion, Suggestion, Suggestion];
   recit: TextesRecit;
+  /** Les légendes du graveur (SPEC § 6) : 13 rôles, 15 écrans, 19 planches du récit. */
+  legendes: Legendes;
+  /**
+   * Les 18 couvre-chefs, par numéro de siège (SPEC § 5.1.2) : le skin les
+   * nomme, l'atelier les dessine. Sans rapport avec le rôle.
+   */
+  couvreChefs: readonly string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -288,6 +361,14 @@ export interface Voix {
   motLoups(): string;
   /** Le libellé d'un joueur absent, sa place gardée (D17) — « loin de la place ». */
   libelleAbsent(): string;
+  /** La légende du graveur d'un rôle — « Rien vu, rien entendu, tout compris. » Jamais un pseudo. */
+  legendeRole(role: RoleId): string;
+  /** La légende d'une planche plein écran. */
+  legendeEcran(cle: CleLegendeEcran): string;
+  /** La légende d'une planche de la nuit racontée. */
+  legendeRecit(cle: CleLegendeRecit): string;
+  /** Le couvre-chef d'un siège : numéro de siège de 1 à 18, repris en boucle au-delà. */
+  nomCouvreChef(numero: number): string;
 }
 
 /**
@@ -346,6 +427,25 @@ export function enregistrerSkin(skin: Skin): void {
   for (const cause of DEATH_CAUSES) {
     const phrase = skin.narrateur.morts[cause] as string | undefined;
     if (!ditQuelqueChose(phrase)) manques.push(`la cause de mort « ${cause} » n'a pas de phrase`);
+  }
+  for (const role of ROLES) {
+    const legende = skin.legendes?.roles?.[role] as string | undefined;
+    if (!ditQuelqueChose(legende)) manques.push(`le rôle « ${role} » n'a pas de légende`);
+  }
+  for (const cle of CLES_LEGENDE_ECRAN) {
+    const legende = skin.legendes?.ecrans?.[cle] as string | undefined;
+    if (!ditQuelqueChose(legende)) manques.push(`l'écran « ${cle} » n'a pas de légende`);
+  }
+  for (const cle of CLES_LEGENDE_RECIT) {
+    const legende = skin.legendes?.recit?.[cle] as string | undefined;
+    if (!ditQuelqueChose(legende)) manques.push(`la planche du récit « ${cle} » n'a pas de légende`);
+  }
+  if (!Array.isArray(skin.couvreChefs) || skin.couvreChefs.length !== NB_COUVRE_CHEFS) {
+    manques.push(`il faut ${String(NB_COUVRE_CHEFS)} couvre-chefs`);
+  } else {
+    skin.couvreChefs.forEach((nom, i) => {
+      if (!ditQuelqueChose(nom)) manques.push(`le couvre-chef n° ${String(i + 1)} n'a pas de nom`);
+    });
   }
   for (const canal of CANAUX) {
     const libelle = skin.canaux[canal] as string | undefined;
@@ -415,6 +515,14 @@ function voixDe(skin: Skin): Voix {
       `${String(nombre)} ${nombre > 1 ? skin.plurielLoups.plusieurs : skin.plurielLoups.un}`,
     motLoups: () => skin.plurielLoups.plusieurs,
     libelleAbsent: () => skin.absent,
+    legendeRole: (role) => skin.legendes.roles[role],
+    legendeEcran: (cle) => skin.legendes.ecrans[cle],
+    legendeRecit: (cle) => skin.legendes.recit[cle],
+    nomCouvreChef: (numero) => {
+      // Le siège 1 porte le premier couvre-chef ; au-delà de 18, on reprend.
+      const n = skin.couvreChefs.length;
+      return skin.couvreChefs[(((Math.trunc(numero) - 1) % n) + n) % n] as string;
+    },
   };
 }
 

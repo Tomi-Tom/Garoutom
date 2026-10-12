@@ -290,4 +290,89 @@ export const shiganshina: Skin = {
       },
     },
   },
+
+  /*
+    --- Les légendes du graveur (SPEC § 8) ---
+    Les Désastres de la guerre : secs, sans héroïsme, des corps. Les titres de
+    Goya sont cités quand ils existent (numéro du Désastre en commentaire) ; le
+    reste est de la même veine — Esquisse, à relire avec un connaisseur.
+  */
+  legendes: {
+    roles: {
+      villageois: 'Tristes pressentiments.', // Désastre 1
+      loup: 'On ne sait pas pourquoi.', // Désastre 35
+      voyante: 'Je l’ai vu.', // Désastre 44
+      sorciere: 'Ceci est pire.', // Désastre 37
+      chasseur: 'Et il n’y a pas de remède.', // Désastre 15
+      cupidon: 'Avec raison ou sans.', // Désastre 2
+      salvateur: 'Elle garde la Porte ; ils passent par le Mur.',
+      idiot: 'Graciée, la bouche pleine.',
+      ancien: 'Il en a vu d’autres. Il en verra moins.',
+      corbeau: 'Enterrer et se taire.', // Désastre 18
+      bouc: 'C’est pour cela que vous êtes nés.', // Désastre 12
+      petiteFille: 'On ne peut pas regarder.', // Désastre 26
+      loupBlanc: 'Les Titans ne se mangent pas entre eux, dit-on.',
+    },
+    ecrans: {
+      accueil: 'Ils étaient trop grands pour la place.',
+      salon: 'Serrés derrière le Mur, comme si cela suffisait.',
+      revelation: 'Nul ne sait ce qui bout sous la peau.',
+      nuitDormeur: 'Dormez : d’autres montent la garde.',
+      mort: 'Voir enfin, et de trop près.',
+      aubeMorts: 'On ne les a pas entendus venir.',
+      aubePaisible: 'Tous sont là. Personne ne respire.',
+      election: 'Qui crie le plus fort porte le commandement.',
+      vote: 'Tous d’accord, donc personne de coupable.',
+      depouillement: 'Les voix sont comptées ; les morts, jamais.',
+      chasseurAttente: 'Et il n’y a pas de remède.',
+      succession: 'Le commandement change de main, pas de mur.',
+      boucDernierMot: 'C’est pour cela que vous êtes nés.',
+      fin: 'Rien. Le temps le dira.', // Désastre 69
+      tableDisparue: 'Le district s’est vidé sans vous.',
+    },
+    recit: {
+      loupBlanc: 'Les Titans ne se mangent pas entre eux, dit-on.',
+      rancune: 'Le district a abattu son dernier rempart.',
+      poison: 'Deux sérums, et le mauvais.',
+      tir: 'Et il n’y a pas de remède.',
+      chagrin: 'Liés par un pacte, enterrés ensemble.',
+      grace: 'Graciée, la bouche pleine.',
+      bouc: 'C’est pour cela que vous êtes nés.',
+      voteMeute: 'Cette fois, c’était le bon.',
+      voteVillage: 'Tous d’accord, donc personne de coupable.',
+      sauvetage: 'Le sérum a servi ; nul ne l’a su.',
+      loups: 'On ne les a pas entendus venir.',
+      resistance: 'Il en a vu d’autres. Il en verra moins.',
+      protection: 'Pour une fois, le bon mur.',
+      corbeau: 'Enterrer et se taire.',
+      voyance: 'Je l’ai vu.',
+      amoureux: 'Avec raison ou sans.',
+      nuitDefaut: 'Derrière le Mur, la peau bout.',
+      jourDefaut: 'Ils ont parlé longtemps.',
+      derniere: 'Rien. Le temps le dira.',
+    },
+  },
+
+  // Les dix-huit coiffes du district, une par siège (SPEC § 8) : les six
+  // premières sont celles du SPEC, les douze autres sont esquissées.
+  couvreChefs: [
+    'capuche du Bataillon',
+    'képi de la Garnison',
+    'casquette de la Brigade',
+    'foulard de marchande',
+    'toque de boulanger',
+    'casque de mineur',
+    'bonnet de laine',
+    'chapeau de paille',
+    'béret de cadet',
+    'calot de la Police militaire',
+    'fichu de lavandière',
+    'casquette de docker',
+    'bandeau de forgeron',
+    'coiffe d’infirmière',
+    'chapeau de feutre',
+    'calotte de précepteur',
+    'capuchon de pèlerin',
+    'casque de cuir',
+  ],
 };
