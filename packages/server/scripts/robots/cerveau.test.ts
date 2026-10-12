@@ -26,6 +26,11 @@ import { cleDeMoment, decider, parler } from './cerveau.js';
 const PARTIES = 400;
 const PARTIES_V2 = 1500;
 const PAS_MAX = 4000;
+/**
+ * Près de deux mille parties complètes : quelques secondes au repos, bien
+ * plus quand les quatre paquets se testent en même temps sur la machine.
+ */
+const DELAI_SIMULATION_MS = 60_000;
 
 interface Bilan {
   winner: Winner | null;
@@ -75,11 +80,11 @@ function optionsV2(graine: number, joueurs: number): GameOptions {
 
 /** Joue une partie complète ; lève avec la graine si un coup légal est refusé. */
 function jouePartie(graine: number, v2 = false): Bilan {
-  const rng = createSeededRng(graine);
   const cerveau = createSeededRng(graine + 1_000_003);
   const joueurs = 6 + (graine % 13);
   const options = v2 ? optionsV2(graine, joueurs) : optionsDe(graine);
-  let state: GameState = createGame({ players: joueurs, options }, rng).state;
+  // Le chemin du serveur depuis D20 : une graine, puis l'aléa voyage dans l'état.
+  let state: GameState = createGame({ players: joueurs, options }, graine).state;
   const roles = state.players.map((p) => p.role);
   let coups = 0;
   const sequence: string[] = [];
@@ -93,7 +98,7 @@ function jouePartie(graine: number, v2 = false): Bilan {
       if (!action) continue;
       sequence.push(`${String(seat)}:${JSON.stringify(action)}`);
       try {
-        state = applyAction(state, action, rng, seat).state;
+        state = applyAction(state, action, seat).state;
       } catch (error) {
         throw new Error(
           `Coup refusé (graine ${String(graine)}, ${String(joueurs)} joueurs, phase ${state.phase.kind}) : ` +
@@ -106,7 +111,7 @@ function jouePartie(graine: number, v2 = false): Bilan {
     }
     if (!agi) {
       // Plus personne à attendre : la minuterie du serveur clôt la phase.
-      state = timeoutPhase(state, rng, state.phaseSeq).state;
+      state = timeoutPhase(state, state.phaseSeq).state;
     }
   }
   throw new Error(
@@ -129,7 +134,7 @@ describe('cerveau des robots', () => {
       `Simulation : ${String(PARTIES)} parties, vainqueurs ${JSON.stringify(vainqueurs)}, ` +
         `durée moyenne ${(jours / PARTIES).toFixed(2)} jours`,
     );
-  });
+  }, DELAI_SIMULATION_MS);
 
   it(`joue ${String(PARTIES_V2)} parties avec les rôles de la v2, sans coup refusé ni partie sans fin`, () => {
     const vainqueurs: Record<string, number> = {};
@@ -153,7 +158,7 @@ describe('cerveau des robots', () => {
         `rôles joués ${JSON.stringify(presences)}, durée moyenne ${(jours / PARTIES_V2).toFixed(2)} jours, ` +
         `la plus longue ${String(plusLongue)} jours`,
     );
-  });
+  }, DELAI_SIMULATION_MS);
 
   it('ne joue rien sans invite, ni une fois agi', () => {
     const rng = createSeededRng(3);
@@ -194,9 +199,7 @@ describe('cerveau des robots', () => {
     const phrase = parler(viewFor(state, 0), rng);
     expect(phrase).not.toBeNull();
     if (phrase) {
-      expect(() =>
-        applyAction(state, { type: 'dire', channel: phrase.channel, text: phrase.text }, rng, 0),
-      ).not.toThrow();
+      expect(() => applyAction(state, { type: 'dire', channel: phrase.channel, text: phrase.text }, 0)).not.toThrow();
     }
   });
 });

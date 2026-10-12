@@ -10,22 +10,21 @@
  *        [--creer [--lancer]] [--rejouer] [--sortir]
  */
 
-import WebSocket from 'ws';
-
 import {
   CHANNEL_PATH,
-  Channel,
+  ChannelError,
+  type Channel,
   MIN_PLAYERS,
   createSeededRng,
   type GameView,
   type JoinResult,
   type RoomView,
   type Rng,
-  type SocketLike,
   type SyncPayload,
   type Action,
 } from '@garoutom/engine';
 
+import { canalNode } from './canal-node.js';
 import { cleDeMoment, decider, parler } from './robots/cerveau.js';
 
 /* ------------------------------------------------------------------ */
@@ -136,32 +135,6 @@ function lireArguments(argv: string[]): Config | string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Socket                                                              */
-/* ------------------------------------------------------------------ */
-
-/** Adapte le `ws` de Node à ce que le `Channel` attend, comme le client le fait pour le navigateur. */
-function ouvrirSocket(url: string): SocketLike {
-  const brut = new WebSocket(url);
-  const like: SocketLike = {
-    send: (data) => {
-      if (brut.readyState === WebSocket.OPEN) brut.send(data);
-    },
-    close: () => {
-      brut.close();
-    },
-    onopen: null,
-    onclose: null,
-    onmessage: null,
-    onerror: null,
-  };
-  brut.on('open', () => like.onopen?.());
-  brut.on('close', () => like.onclose?.());
-  brut.on('error', () => like.onerror?.());
-  brut.on('message', (raw: unknown) => like.onmessage?.({ data: String(raw) }));
-  return like;
-}
-
-/* ------------------------------------------------------------------ */
 /* Le banc                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -204,6 +177,8 @@ class Robot {
   private rejoint = false;
   private rematchPlanifie = false;
   private partieVue = false;
+  /** Le dernier évènement vu (D22) : la reprise ne rejoue que la suite. */
+  private dernierSeq = 0;
 
   constructor(
     readonly index: number,
@@ -212,8 +187,19 @@ class Robot {
   ) {
     this.nom = `Bot ${PRENOMS[index % PRENOMS.length]!}`.slice(0, 16);
     this.rng = createSeededRng((commun.graine + index * 7919) >>> 0);
-    this.canal = new Channel(() => ouvrirSocket(commun.config.url));
+    // Le canal du moteur, comme le navigateur : battement, chien de garde,
+    // reconnexion, codes de fermeture (D22).
+    this.canal = canalNode(commun.config.url);
     this.canal.on('connect', () => void this.entrer());
+    this.canal.on('replaced', () => {
+      // 4001 : la place a été reprise ailleurs (un humain avec le même jeton ?).
+      // Le canal ne se reconnecte plus ; on ne la lui vole pas en retour.
+      this.dire('place reprise depuis une autre connexion : le robot se retire');
+    });
+    this.canal.on('gone', () => {
+      this.dire('la table n’existe plus');
+      this.join = null;
+    });
     this.canal.on('sync', (p) => {
       this.recevoir(p);
     });
@@ -244,12 +230,29 @@ class Robot {
   private async entrer(): Promise<void> {
     try {
       if (this.join) {
-        // Reprise après coupure : le jeton rend la place.
-        await this.canal.request('room:join', {
-          code: this.join.code,
-          name: this.nom,
-          token: this.join.token,
-        });
+        // Reprise après coupure : le jeton rend la place, et `lastSeq` les
+        // évènements manqués. Un refus passager (quota, panne) se retente
+        // comme le fait le client (1, 2, 4 s) ; un refus définitif oublie la table.
+        for (const attente of [1_000, 2_000, 4_000, null]) {
+          try {
+            await this.canal.request('room:join', {
+              code: this.join.code,
+              name: this.nom,
+              token: this.join.token,
+              lastSeq: this.dernierSeq,
+            });
+            break;
+          } catch (error) {
+            const code = error instanceof ChannelError ? error.code : undefined;
+            if (code === 'gone' || code === 'started' || code === 'full') {
+              this.dire(`place perdue (${code}) : ${(error as Error).message}`);
+              this.join = null;
+              return;
+            }
+            if (attente === null || !this.canal.connected) throw error;
+            await pause(attente);
+          }
+        }
         this.dire('de retour à la table');
       } else if (this.creer) {
         this.join = await this.canal.request<JoinResult>('room:create', { name: this.nom });
@@ -326,6 +329,7 @@ class Robot {
   // ── écoute ───────────────────────────────────────────────────────────
 
   private recevoir(payload: SyncPayload): void {
+    if (payload.seq > this.dernierSeq) this.dernierSeq = payload.seq;
     this.room = payload.room;
     this.game = payload.game;
     const game = payload.game;

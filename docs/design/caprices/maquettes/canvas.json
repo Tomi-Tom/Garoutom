@@ -1,0 +1,881 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "A-Canard.dc.html": {
+      "h": 1400,
+      "title": "A — Canard",
+      "w": 1600,
+      "x": 0,
+      "y": 1400,
+      "page": "directions"
+    },
+    "B-ChatNoir.dc.html": {
+      "h": 1400,
+      "title": "B — Le Chat Noir",
+      "w": 1600,
+      "x": 1680,
+      "y": 1400,
+      "page": "directions"
+    },
+    "C-Caprices.dc.html": {
+      "h": 1400,
+      "title": "C — Caprices",
+      "w": 1600,
+      "x": 3360,
+      "y": 1400,
+      "page": "directions"
+    },
+    "D-Plakat.dc.html": {
+      "h": 1400,
+      "title": "D — Plakat",
+      "w": 1600,
+      "x": 3405,
+      "y": 2917,
+      "page": "directions"
+    },
+    "Main.dc.html": {
+      "h": 900,
+      "title": "Le brief",
+      "w": 1600,
+      "x": 0,
+      "y": 0,
+      "page": "directions"
+    },
+    "Caprices-F-Encres.dc.html": {
+      "x": 1680,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Encres",
+      "page": "caprices"
+    },
+    "Caprices-F-Lettres.dc.html": {
+      "x": 3360,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Lettres",
+      "page": "caprices"
+    },
+    "Caprices-F-Matieres.dc.html": {
+      "x": 5040,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Matieres",
+      "page": "caprices"
+    },
+    "Caprices-F-Jeton.dc.html": {
+      "x": 6720,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Jeton",
+      "page": "caprices"
+    },
+    "Caprices-F-Commandes.dc.html": {
+      "x": 8400,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Commandes",
+      "page": "caprices"
+    },
+    "Caprices-F-Voix.dc.html": {
+      "x": 10080,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Voix",
+      "page": "caprices"
+    },
+    "Caprices-F-Icones.dc.html": {
+      "x": 11760,
+      "y": 0,
+      "w": 1600,
+      "h": 1400,
+      "title": "F-Icones",
+      "page": "caprices"
+    },
+    "Caprices-C-Faces-1.dc.html": {
+      "x": 0,
+      "y": 1520,
+      "w": 1600,
+      "h": 1400,
+      "title": "C-Faces-1",
+      "page": "caprices"
+    },
+    "Caprices-C-Faces-2.dc.html": {
+      "x": 1680,
+      "y": 1520,
+      "w": 1600,
+      "h": 1400,
+      "title": "C-Faces-2",
+      "page": "caprices"
+    },
+    "Caprices-C-Formats.dc.html": {
+      "x": 3360,
+      "y": 1520,
+      "w": 1600,
+      "h": 1400,
+      "title": "C-Formats",
+      "page": "caprices"
+    },
+    "Caprices-C-Vignettes.dc.html": {
+      "x": 5040,
+      "y": 1520,
+      "w": 1600,
+      "h": 1400,
+      "title": "C-Vignettes",
+      "page": "caprices"
+    },
+    "Caprices-C-Shiganshina.dc.html": {
+      "x": 6720,
+      "y": 1520,
+      "w": 1600,
+      "h": 1400,
+      "title": "C-Shiganshina",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Dos.dc.html": {
+      "x": 8400,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Revelation-Dos",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Appui.dc.html": {
+      "x": 8870,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Revelation-Appui",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Loup.dc.html": {
+      "x": 9340,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Revelation-Loup",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Pret.dc.html": {
+      "x": 9810,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Revelation-Pret",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Spectateur.dc.html": {
+      "x": 10280,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Revelation-Spectateur",
+      "page": "caprices"
+    },
+    "Caprices-C-MaCarte-Jour.dc.html": {
+      "x": 10750,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-MaCarte-Jour",
+      "page": "caprices"
+    },
+    "Caprices-C-MaCarte-Nuit.dc.html": {
+      "x": 11220,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-MaCarte-Nuit",
+      "page": "caprices"
+    },
+    "Caprices-C-Fin-Verdict.dc.html": {
+      "x": 11690,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Fin-Verdict",
+      "page": "caprices"
+    },
+    "Caprices-C-Fin-Distribution.dc.html": {
+      "x": 12160,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Fin-Distribution",
+      "page": "caprices"
+    },
+    "Caprices-C-Fin-NuitRacontee.dc.html": {
+      "x": 12630,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Fin-NuitRacontee",
+      "page": "caprices"
+    },
+    "Caprices-C-Fin-Planche.dc.html": {
+      "x": 13100,
+      "y": 1520,
+      "w": 390,
+      "h": 844,
+      "title": "C-Fin-Planche",
+      "page": "caprices"
+    },
+    "Caprices-C-Revelation-Desktop.dc.html": {
+      "x": 0,
+      "y": 3040,
+      "w": 1440,
+      "h": 900,
+      "title": "C-Revelation-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-C-Fin-Desktop.dc.html": {
+      "x": 1520,
+      "y": 3040,
+      "w": 1440,
+      "h": 900,
+      "title": "C-Fin-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E1-Accueil.dc.html": {
+      "x": 0,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Accueil",
+      "page": "caprices"
+    },
+    "Caprices-E1-Accueil-Rejoindre.dc.html": {
+      "x": 470,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Accueil-Rejoindre",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Joueur.dc.html": {
+      "x": 940,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Salon-Joueur",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Hote-Table.dc.html": {
+      "x": 1410,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Salon-Hote-Table",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Hote-Composition.dc.html": {
+      "x": 1880,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Salon-Hote-Composition",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Hote-Options.dc.html": {
+      "x": 2350,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Salon-Hote-Options",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Hote-Lancer.dc.html": {
+      "x": 2820,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Salon-Hote-Lancer",
+      "page": "caprices"
+    },
+    "Caprices-E1-Regles.dc.html": {
+      "x": 3290,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Regles",
+      "page": "caprices"
+    },
+    "Caprices-E1-Reglages.dc.html": {
+      "x": 3760,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Reglages",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Tombe.dc.html": {
+      "x": 4230,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Tombe",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Dort.dc.html": {
+      "x": 4700,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Dort",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Dort-Mort.dc.html": {
+      "x": 5170,
+      "y": 4060,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Dort-Mort",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Dort-Serment.dc.html": {
+      "x": 0,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Dort-Serment",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-PetiteFille.dc.html": {
+      "x": 470,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-PetiteFille",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Meute.dc.html": {
+      "x": 940,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Meute",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Meute-Fil.dc.html": {
+      "x": 1410,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Meute-Fil",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Voyante.dc.html": {
+      "x": 1880,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Voyante",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Voyante-Lecture.dc.html": {
+      "x": 2350,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Voyante-Lecture",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Sorciere.dc.html": {
+      "x": 2820,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Sorciere",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Sorciere-SansVictime.dc.html": {
+      "x": 3290,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Sorciere-SansVictime",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Salvateur.dc.html": {
+      "x": 3760,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Salvateur",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Cupidon.dc.html": {
+      "x": 4230,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Cupidon",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Corbeau.dc.html": {
+      "x": 4700,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Corbeau",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-LoupBlanc.dc.html": {
+      "x": 5170,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-LoupBlanc",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Recap.dc.html": {
+      "x": 5640,
+      "y": 5024,
+      "w": 390,
+      "h": 844,
+      "title": "E1-Nuit-Recap",
+      "page": "caprices"
+    },
+    "Caprices-E1-Accueil-Desktop.dc.html": {
+      "x": 0,
+      "y": 5988,
+      "w": 1440,
+      "h": 900,
+      "title": "E1-Accueil-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E1-Salon-Desktop.dc.html": {
+      "x": 1520,
+      "y": 5988,
+      "w": 1440,
+      "h": 900,
+      "title": "E1-Salon-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Dort-Desktop.dc.html": {
+      "x": 3040,
+      "y": 5988,
+      "w": 1440,
+      "h": 900,
+      "title": "E1-Nuit-Dort-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E1-Nuit-Meute-Desktop.dc.html": {
+      "x": 4560,
+      "y": 5988,
+      "w": 1440,
+      "h": 900,
+      "title": "E1-Nuit-Meute-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E2-Aube-Planche.dc.html": {
+      "x": 0,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Aube-Planche",
+      "page": "caprices"
+    },
+    "Caprices-E2-Aube-Paisible.dc.html": {
+      "x": 470,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Aube-Paisible",
+      "page": "caprices"
+    },
+    "Caprices-E2-Aube-Corbeau.dc.html": {
+      "x": 940,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Aube-Corbeau",
+      "page": "caprices"
+    },
+    "Caprices-E2-Election.dc.html": {
+      "x": 1410,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Election",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-6.dc.html": {
+      "x": 1880,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-6",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-12.dc.html": {
+      "x": 2350,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-12",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-18.dc.html": {
+      "x": 2820,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-18",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Arme.dc.html": {
+      "x": 3290,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Arme",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Abstention.dc.html": {
+      "x": 3760,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Abstention",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Fil-Tiers.dc.html": {
+      "x": 4230,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Fil-Tiers",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Fil-Plein.dc.html": {
+      "x": 4700,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Fil-Plein",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Mort.dc.html": {
+      "x": 5170,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Mort",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-12-Cuivre.dc.html": {
+      "x": 5640,
+      "y": 7008,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-12-Cuivre",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Gracie.dc.html": {
+      "x": 0,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Gracie",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Bouc-Votants.dc.html": {
+      "x": 470,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Jour-Bouc-Votants",
+      "page": "caprices"
+    },
+    "Caprices-E2-Depouillement.dc.html": {
+      "x": 940,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Depouillement",
+      "page": "caprices"
+    },
+    "Caprices-E2-Chasseur-Tireur.dc.html": {
+      "x": 1410,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Chasseur-Tireur",
+      "page": "caprices"
+    },
+    "Caprices-E2-Chasseur-Attente.dc.html": {
+      "x": 1880,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Chasseur-Attente",
+      "page": "caprices"
+    },
+    "Caprices-E2-Succession.dc.html": {
+      "x": 2350,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Succession",
+      "page": "caprices"
+    },
+    "Caprices-E2-Bouc-DernierMot.dc.html": {
+      "x": 2820,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Bouc-DernierMot",
+      "page": "caprices"
+    },
+    "Caprices-E2-Menu-Table.dc.html": {
+      "x": 3290,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Menu-Table",
+      "page": "caprices"
+    },
+    "Caprices-E2-Journal.dc.html": {
+      "x": 3760,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Journal",
+      "page": "caprices"
+    },
+    "Caprices-E2-Reseau-Reconnexion.dc.html": {
+      "x": 4230,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Reseau-Reconnexion",
+      "page": "caprices"
+    },
+    "Caprices-E2-Reseau-TableDisparue.dc.html": {
+      "x": 4700,
+      "y": 7972,
+      "w": 390,
+      "h": 844,
+      "title": "E2-Reseau-TableDisparue",
+      "page": "caprices"
+    },
+    "Caprices-E2-Etroit-320.dc.html": {
+      "x": 5170,
+      "y": 7972,
+      "w": 320,
+      "h": 568,
+      "title": "E2-Etroit-320",
+      "page": "caprices"
+    },
+    "Caprices-E2-Paysage.dc.html": {
+      "x": 5640,
+      "y": 7972,
+      "w": 844,
+      "h": 390,
+      "title": "E2-Paysage",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Cercle-12.dc.html": {
+      "x": 0,
+      "y": 8936,
+      "w": 1440,
+      "h": 900,
+      "title": "E2-Jour-Cercle-12",
+      "page": "caprices"
+    },
+    "Caprices-E2-Jour-Cercle-18.dc.html": {
+      "x": 1520,
+      "y": 8936,
+      "w": 1440,
+      "h": 900,
+      "title": "E2-Jour-Cercle-18",
+      "page": "caprices"
+    },
+    "Caprices-E2-Depouillement-Desktop.dc.html": {
+      "x": 3040,
+      "y": 8936,
+      "w": 1440,
+      "h": 900,
+      "title": "E2-Depouillement-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E2-Chasseur-Desktop.dc.html": {
+      "x": 4560,
+      "y": 8936,
+      "w": 1440,
+      "h": 900,
+      "title": "E2-Chasseur-Desktop",
+      "page": "caprices"
+    },
+    "Caprices-E2-Scene-TV.dc.html": {
+      "x": 6080,
+      "y": 8936,
+      "w": 1440,
+      "h": 900,
+      "title": "E2-Scene-TV",
+      "page": "caprices"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-11T20:25:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas",
+    "page": "caprices"
+  },
+  "notes": {
+    "titreDirections": {
+      "kind": "title1",
+      "maxW": 6640,
+      "text": "Quatre directions — commentez celle qui vous parle",
+      "w": 240,
+      "x": 0,
+      "y": 1120,
+      "page": "directions"
+    },
+    "capricesFondations": {
+      "x": 1680,
+      "y": -300,
+      "text": "Caprices — fondations",
+      "kind": "title1",
+      "maxW": 11680,
+      "page": "caprices"
+    },
+    "capricesCartes": {
+      "x": 0,
+      "y": 1220,
+      "text": "Les cartes et la révélation",
+      "kind": "title1",
+      "maxW": 13490,
+      "page": "caprices"
+    },
+    "capricesE1": {
+      "x": 0,
+      "y": 3760,
+      "text": "Hors partie et la nuit",
+      "kind": "title1",
+      "maxW": 6030,
+      "page": "caprices"
+    },
+    "capricesE2": {
+      "x": 0,
+      "y": 6708,
+      "text": "Le jour et les états transverses",
+      "kind": "title1",
+      "maxW": 7520,
+      "page": "caprices"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "A-Canard.dc.html",
+    "B-ChatNoir.dc.html",
+    "C-Caprices.dc.html",
+    "D-Plakat.dc.html",
+    "Caprices-F-Encres.dc.html",
+    "Caprices-F-Lettres.dc.html",
+    "Caprices-F-Matieres.dc.html",
+    "Caprices-F-Jeton.dc.html",
+    "Caprices-F-Commandes.dc.html",
+    "Caprices-F-Voix.dc.html",
+    "Caprices-F-Icones.dc.html",
+    "Caprices-C-Faces-1.dc.html",
+    "Caprices-C-Faces-2.dc.html",
+    "Caprices-C-Formats.dc.html",
+    "Caprices-C-Vignettes.dc.html",
+    "Caprices-C-Shiganshina.dc.html",
+    "Caprices-C-Revelation-Dos.dc.html",
+    "Caprices-C-Revelation-Appui.dc.html",
+    "Caprices-C-Revelation-Loup.dc.html",
+    "Caprices-C-Revelation-Pret.dc.html",
+    "Caprices-C-Revelation-Spectateur.dc.html",
+    "Caprices-C-MaCarte-Jour.dc.html",
+    "Caprices-C-MaCarte-Nuit.dc.html",
+    "Caprices-C-Fin-Verdict.dc.html",
+    "Caprices-C-Fin-Distribution.dc.html",
+    "Caprices-C-Fin-NuitRacontee.dc.html",
+    "Caprices-C-Fin-Planche.dc.html",
+    "Caprices-C-Revelation-Desktop.dc.html",
+    "Caprices-C-Fin-Desktop.dc.html",
+    "Caprices-E1-Accueil.dc.html",
+    "Caprices-E1-Accueil-Rejoindre.dc.html",
+    "Caprices-E1-Salon-Joueur.dc.html",
+    "Caprices-E1-Salon-Hote-Table.dc.html",
+    "Caprices-E1-Salon-Hote-Composition.dc.html",
+    "Caprices-E1-Salon-Hote-Options.dc.html",
+    "Caprices-E1-Salon-Hote-Lancer.dc.html",
+    "Caprices-E1-Regles.dc.html",
+    "Caprices-E1-Reglages.dc.html",
+    "Caprices-E1-Nuit-Tombe.dc.html",
+    "Caprices-E1-Nuit-Dort.dc.html",
+    "Caprices-E1-Nuit-Dort-Mort.dc.html",
+    "Caprices-E1-Nuit-Dort-Serment.dc.html",
+    "Caprices-E1-Nuit-PetiteFille.dc.html",
+    "Caprices-E1-Nuit-Meute.dc.html",
+    "Caprices-E1-Nuit-Meute-Fil.dc.html",
+    "Caprices-E1-Nuit-Voyante.dc.html",
+    "Caprices-E1-Nuit-Voyante-Lecture.dc.html",
+    "Caprices-E1-Nuit-Sorciere.dc.html",
+    "Caprices-E1-Nuit-Sorciere-SansVictime.dc.html",
+    "Caprices-E1-Nuit-Salvateur.dc.html",
+    "Caprices-E1-Nuit-Cupidon.dc.html",
+    "Caprices-E1-Nuit-Corbeau.dc.html",
+    "Caprices-E1-Nuit-LoupBlanc.dc.html",
+    "Caprices-E1-Nuit-Recap.dc.html",
+    "Caprices-E1-Accueil-Desktop.dc.html",
+    "Caprices-E1-Salon-Desktop.dc.html",
+    "Caprices-E1-Nuit-Dort-Desktop.dc.html",
+    "Caprices-E1-Nuit-Meute-Desktop.dc.html",
+    "Caprices-E2-Aube-Planche.dc.html",
+    "Caprices-E2-Aube-Paisible.dc.html",
+    "Caprices-E2-Aube-Corbeau.dc.html",
+    "Caprices-E2-Election.dc.html",
+    "Caprices-E2-Jour-6.dc.html",
+    "Caprices-E2-Jour-12.dc.html",
+    "Caprices-E2-Jour-18.dc.html",
+    "Caprices-E2-Jour-Arme.dc.html",
+    "Caprices-E2-Jour-Abstention.dc.html",
+    "Caprices-E2-Jour-Fil-Tiers.dc.html",
+    "Caprices-E2-Jour-Fil-Plein.dc.html",
+    "Caprices-E2-Jour-Mort.dc.html",
+    "Caprices-E2-Jour-12-Cuivre.dc.html",
+    "Caprices-E2-Jour-Gracie.dc.html",
+    "Caprices-E2-Jour-Bouc-Votants.dc.html",
+    "Caprices-E2-Depouillement.dc.html",
+    "Caprices-E2-Chasseur-Tireur.dc.html",
+    "Caprices-E2-Chasseur-Attente.dc.html",
+    "Caprices-E2-Succession.dc.html",
+    "Caprices-E2-Bouc-DernierMot.dc.html",
+    "Caprices-E2-Menu-Table.dc.html",
+    "Caprices-E2-Journal.dc.html",
+    "Caprices-E2-Reseau-Reconnexion.dc.html",
+    "Caprices-E2-Reseau-TableDisparue.dc.html",
+    "Caprices-E2-Etroit-320.dc.html",
+    "Caprices-E2-Paysage.dc.html",
+    "Caprices-E2-Jour-Cercle-12.dc.html",
+    "Caprices-E2-Jour-Cercle-18.dc.html",
+    "Caprices-E2-Depouillement-Desktop.dc.html",
+    "Caprices-E2-Chasseur-Desktop.dc.html",
+    "Caprices-E2-Scene-TV.dc.html"
+  ],
+  "pages": [
+    {
+      "id": "directions",
+      "name": "Directions"
+    },
+    {
+      "id": "caprices",
+      "name": "Caprices"
+    }
+  ],
+  "title": "Garoutom — Directions artistiques"
+}

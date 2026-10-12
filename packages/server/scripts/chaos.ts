@@ -5,16 +5,30 @@
  *   npm run chaos -w @garoutom/server -- [options]
  *
  * Par défaut, le banc démarre lui-même un serveur (`src/index.ts --canal-seul`)
- * sur un port libre, glisse un relais TCP entre les robots et lui (pour geler
- * ou tuer une connexion sans la fermer), lance les tables, injecte les pannes,
- * vérifie les invariants, puis range tout et tue ce qu'il a lancé.
+ * sur un port libre — persistant (`GAROUTOM_DATA` dans un dossier jetable),
+ * derrière un « proxy » (`GAROUTOM_PROXY=1` : chaque table joue depuis son
+ * adresse) —, ou le Worker avec `--wrangler`. Il glisse un relais TCP entre
+ * les robots et lui (pour geler ou tuer une connexion sans la fermer), lance
+ * les tables, injecte les pannes, vérifie les invariants, puis range tout et
+ * tue ce qu'il a lancé (Windows : `taskkill /T /F`).
+ *
+ * Les campagnes de la preuve (lot E du chantier robustesse) :
+ *
+ *   --tables 3 --duree 6 --graine 20261011                       # référence
+ *   --tables 2 --duree 4 --pannes-par-minute 8 --crash-serveur 2 # crash, persistance
+ *   --redemarrage-serveur 2                                      # arrêt gracieux (1012)
+ *   --seulement mobile,coupure,veille --pannes-par-minute 2      # D17
+ *   --seulement mobile --absence-mobile 420-480 --temps-jour 120
+ *     --temps-nuit 30 --delai-max-ms 12000 --pannes-par-minute 1 # D18
+ *   --seulement tousPartent[,coupure] --pannes-par-minute 3      # D19
+ *   --wrangler --tables 2 --duree 4 --crash-serveur 2            # le Worker
  *
  * Voir `--help` pour les options, et `scripts/chaos/table.ts` pour les pannes.
  */
 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 
 import { CHANNEL_PATH, MAX_PLAYERS, MIN_PLAYERS, createSeededRng } from '@garoutom/engine';
 
@@ -42,6 +56,11 @@ interface Options {
   horsGrace: number;
   poids: Record<TypePanne, number>;
   crashMin: number | null;
+  redemarrageMin: number | null;
+  persistance: boolean;
+  ipParRobot: boolean;
+  mobileS: [number, number];
+  wrangler: boolean;
   sortie: string;
   bavard: boolean;
   margePhaseS: number;
@@ -61,7 +80,12 @@ const USAGE = `Usage : npm run chaos -w @garoutom/server -- [options]
   --hors-grace F              part des coupures au-delà de la grâce de 60 s (0.25)
   --sans a,b                  désactive des types de panne (${TYPES_PANNE.join(', ')})
   --seulement a,b             n'injecte que ces types
-  --crash-serveur M           tue et relance le serveur à la minute M (serveur enfant seulement)
+  --crash-serveur M           tue (taskkill /F) et relance le serveur à la minute M (serveur enfant seulement)
+  --redemarrage-serveur M     arrêt gracieux (1012) et relance à la minute M (serveur enfant seulement)
+  --sans-persistance          serveur enfant sans GAROUTOM_DATA (les tables meurent avec lui)
+  --wrangler                  le serveur enfant est le Worker (wrangler dev, état persistant), pas Node
+  --absence-mobile MIN-MAX    absence d'une panne « mobile », en secondes (90-360)
+  --ip-par-robot              une adresse par robot (défaut : une par table, le Wi-Fi commun)
   --marge-phase S             marge au-delà du budget d'une phase avant « phase figée » (10)
   --reprise-max-ms N          au-delà, une reprise est jugée lente (3000)
   --sortie DOSSIER            rapport JSON + journal JSONL (défaut : dossier temporaire)
@@ -83,6 +107,11 @@ function lire(argv: string[]): Options | string {
     horsGrace: 0.25,
     poids: { ...POIDS_DEFAUT },
     crashMin: null,
+    redemarrageMin: null,
+    persistance: true,
+    ipParRobot: false,
+    mobileS: [90, 360],
+    wrangler: false,
     sortie: join(tmpdir(), 'garoutom-chaos'),
     bavard: false,
     margePhaseS: 10,
@@ -144,11 +173,30 @@ function lire(argv: string[]): Options | string {
           break;
         case '--seulement': {
           const garder = new Set(types(v()));
-          for (const t of TYPES_PANNE) if (!garder.has(t)) o.poids[t] = 0;
+          // Un type gardé qui ne pèse rien par défaut (`mobile`, `tousPartent`) reçoit un poids de 1.
+          for (const t of TYPES_PANNE) o.poids[t] = garder.has(t) ? o.poids[t] || 1 : 0;
           break;
         }
         case '--crash-serveur':
           o.crashMin = nombre(v(), a);
+          break;
+        case '--redemarrage-serveur':
+          o.redemarrageMin = nombre(v(), a);
+          break;
+        case '--sans-persistance':
+          o.persistance = false;
+          break;
+        case '--wrangler':
+          o.wrangler = true;
+          break;
+        case '--absence-mobile': {
+          const [a1, a2] = (v() ?? '').split('-').map(Number);
+          if (!Number.isFinite(a1) || !Number.isFinite(a2) || a1! > a2!) throw new Error('--absence-mobile demande MIN-MAX en secondes');
+          o.mobileS = [a1!, a2!];
+          break;
+        }
+        case '--ip-par-robot':
+          o.ipParRobot = true;
           break;
         case '--marge-phase':
           o.margePhaseS = nombre(v(), a);
@@ -173,7 +221,7 @@ function lire(argv: string[]): Options | string {
     return (error as Error).message;
   }
   if (o.joueurs !== null && (o.joueurs < MIN_PLAYERS || o.joueurs > MAX_PLAYERS)) return `--joueurs : entre ${String(MIN_PLAYERS)} et ${String(MAX_PLAYERS)}`;
-  if (o.crashMin !== null && o.url !== null) return '--crash-serveur demande un serveur enfant (pas de --url)';
+  if ((o.crashMin !== null || o.redemarrageMin !== null) && o.url !== null) return '--crash-serveur / --redemarrage-serveur demandent un serveur enfant (pas de --url)';
   return o;
 }
 
@@ -198,6 +246,7 @@ async function main(): Promise<number> {
 
   // ── le serveur ─────────────────────────────────────────────────────
   let serveur: ServeurEnfant | null = null;
+  let dossierDonnees: string | null = null;
   let hote = '127.0.0.1';
   let port: number;
   if (o.url) {
@@ -206,9 +255,19 @@ async function main(): Promise<number> {
     port = Number(u.port || (u.protocol === 'wss:' ? 443 : 80));
   } else {
     port = await portLibre();
-    serveur = new ServeurEnfant(port, (ligne) => {
-      journal.ecrire({ type: 'serveur', ligne });
-    });
+    // Le serveur de production : persistance dans un dossier jetable (D21),
+    // et l'adresse du client lue dans `x-forwarded-for` — chaque table du
+    // banc joue depuis « son » Wi-Fi, comme dans la vraie vie.
+    // Avec `--wrangler`, le même dossier sert d'état au Durable Object.
+    if (o.persistance || o.wrangler) dossierDonnees = mkdtempSync(join(tmpdir(), 'garoutom-chaos-donnees-'));
+    serveur = new ServeurEnfant(
+      port,
+      (ligne) => {
+        journal.ecrire({ type: 'serveur', ligne });
+      },
+      { GAROUTOM_PROXY: '1', GAROUTOM_DATA: dossierDonnees ?? 'off' },
+      o.wrangler && dossierDonnees ? { etat: dossierDonnees } : null,
+    );
   }
 
   let nettoye = false;
@@ -220,6 +279,7 @@ async function main(): Promise<number> {
     await Promise.race([Promise.all(tables.map((t) => t.arreter())), pause(5_000)]);
     await relais?.fermer();
     await serveur?.tuer();
+    if (dossierDonnees) rmSync(dossierDonnees, { recursive: true, force: true });
   };
   process.on('exit', () => {
     serveur?.tuerSync();
@@ -231,7 +291,7 @@ async function main(): Promise<number> {
 
   if (serveur) {
     await serveur.demarrer();
-    console.log(`Serveur Garoutom lancé (pid ${String(serveur.pid)}) sur 127.0.0.1:${String(port)}`);
+    console.log(`Serveur Garoutom lancé (pid ${String(serveur.pid)}) sur 127.0.0.1:${String(port)}${dossierDonnees ? `, tables persistées dans ${dossierDonnees}` : ', sans persistance'}`);
   }
   relais = new Relais(hote, port);
   const portRelais = await relais.ouvrir();
@@ -249,8 +309,11 @@ async function main(): Promise<number> {
     margePhaseMs: o.margePhaseS * 1_000,
     repriseMaxMs: o.repriseMaxMs,
     desyncMs: 10_000,
-    partieMaxMs: 15 * 60_000,
+    // Au-delà de huit journées entières menées au chrono, une partie est interminable.
+    partieMaxMs: Math.max(15 * 60_000, 8 * (o.tempsJour + 3 * o.tempsNuit) * 1_000),
     finSansHoteMs: 30_000,
+    ipParRobot: o.ipParRobot,
+    mobileMs: [o.mobileS[0] * 1_000, o.mobileS[1] * 1_000],
   };
   const ctx = { config, journal, relais };
 
@@ -292,25 +355,29 @@ async function main(): Promise<number> {
     console.log(`  table ${String(i)} : ${t.code ?? 'ÉCHEC'} — ${String(t.taille)} robots${prets[i] ? '' : ' (création impossible)'}`);
   });
 
-  // ── le crash optionnel ──────────────────────────────────────────────
-  let crash: { a: number; indisponibleMs: number } | null = null;
-  if (o.crashMin !== null && serveur) {
+  // ── le crash ou le redémarrage optionnel ────────────────────────────
+  let crash: { a: number; indisponibleMs: number; gracieux: boolean } | null = null;
+  const panneServeur = o.crashMin ?? o.redemarrageMin;
+  if (panneServeur !== null && serveur) {
     const s = serveur;
+    const gracieux = o.crashMin === null;
     setTimeout(() => {
       void (async () => {
         crashEnCours = true;
         const t = Date.now();
-        console.log(`${journal.t()} ⚡ crash du serveur (taskkill /F) et redémarrage`);
-        for (const table of tables) table.marquerPerdue();
-        await s.tuer();
+        console.log(`${journal.t()} ⚡ ${gracieux ? 'arrêt gracieux (1012)' : 'crash du serveur (taskkill /F)'} et redémarrage`);
+        for (const table of tables) table.serveurArrete(t);
+        if (gracieux && !o.wrangler) await s.arreterProprement();
+        else await s.tuer();
         await pause(1_500);
         await s.demarrer();
-        crash = { a: t, indisponibleMs: Date.now() - t };
-        journal.inc('crash-serveur');
+        crash = { a: t, indisponibleMs: Date.now() - t, gracieux };
+        for (const table of tables) table.serveurRevenu(Date.now());
+        journal.inc(gracieux ? 'redemarrage-serveur' : 'crash-serveur');
         crashEnCours = false;
         console.log(`${journal.t()} serveur relancé (pid ${String(s.pid)}) après ${String(crash.indisponibleMs)} ms`);
       })();
-    }, o.crashMin * 60_000);
+    }, panneServeur * 60_000);
   }
 
   // ── déroulement ─────────────────────────────────────────────────────
@@ -378,6 +445,7 @@ async function main(): Promise<number> {
   await journal.fermer();
   await relais.fermer();
   await serveur?.tuer();
+  if (dossierDonnees) rmSync(dossierDonnees, { recursive: true, force: true });
   nettoye = true;
   const graves = journal.violations.filter((v) => v.gravite === 'critique' || v.gravite === 'majeure').length;
   return graves > 0 ? 1 : 0;
@@ -399,7 +467,7 @@ interface Entrees {
   santeOk: number;
   santeKo: number;
   santeFinale: boolean;
-  crash: { a: number; indisponibleMs: number } | null;
+  crash: { a: number; indisponibleMs: number; gracieux: boolean } | null;
   dureeMs: number;
   serveur: ServeurEnfant | null;
 }
@@ -417,9 +485,9 @@ function construireRapport(e: Entrees): { texte: string; json: unknown } {
   L.push('', '══════════════════ Rapport de chaos Garoutom ══════════════════');
   L.push(`graine ${String(o.graine)} · durée ${String(Math.round(e.dureeMs / 1000))} s · ${String(tables.length)} tables (${tables.map((t) => `${t.code ?? '?'}:${String(t.taille)}`).join(', ')}) · nuit ${String(o.tempsNuit)} s / jour ${String(o.tempsJour)} s · ${String(o.pannesParMinute)} pannes/min/table`);
   L.push('', '── Parties');
-  L.push(`lancées ${String(parties.length)} · terminées ${String(terminees.length)} · phases observées ${String(j.get('phases'))}`);
+  L.push(`lancées ${String(parties.length)} · terminées ${String(terminees.length)} · phases observées ${String(j.get('phases'))} · morts d'abandon ${String(j.get('morts-abandon'))}`);
   for (const p of parties) {
-    L.push(`  T${String(p.table)} #${String(p.numero)} : ${String(p.joueurs)} joueurs, ${p.fin === null ? 'NON TERMINÉE' : `${String(Math.round((p.fin - p.debut) / 1000))} s, victoire « ${String(p.gagnant)} » au jour ${String(p.jour)}`}, ${String(p.phases)} phases (dont ${String(p.phasesAuChrono)} closes par la minuterie), ${String(p.pannes)} pannes, ${String(p.placesPerdues)} place(s) perdue(s)`);
+    L.push(`  T${String(p.table)} #${String(p.numero)} : ${String(p.joueurs)} joueurs, ${p.fin === null ? 'NON TERMINÉE' : `${String(Math.round((p.fin - p.debut) / 1000))} s, victoire « ${String(p.gagnant)} » au jour ${String(p.jour)}`}, ${String(p.phases)} phases (dont ${String(p.phasesAuChrono)} closes par la minuterie), ${String(p.pannes)} pannes, ${String(p.placesPerdues)} place(s) perdue(s), ${String(p.abandons)} abandon(s)`);
   }
   L.push('', '── Pannes injectées');
   let totalPannes = 0;
@@ -428,7 +496,7 @@ function construireRapport(e: Entrees): { texte: string; json: unknown } {
     totalPannes += n;
     if (n > 0) L.push(`  ${t.padEnd(18)} ${String(n).padStart(4)}   (${FAMILLE[t]})`);
   }
-  L.push(`  total ${String(totalPannes)}${e.crash ? ` + 1 crash serveur (indisponible ${String(e.crash.indisponibleMs)} ms)` : ''}`);
+  L.push(`  total ${String(totalPannes)}${e.crash ? ` + 1 ${e.crash.gracieux ? 'redémarrage gracieux' : 'crash'} du serveur (indisponible ${String(e.crash.indisponibleMs)} ms, persistance ${o.persistance ? 'oui' : 'non'})` : ''}`);
 
   L.push('', '── Reconnexions');
   L.push(`réussies ${String(j.get('reprises-reussies'))} · refusées ${String(j.get('reprises-refusees'))} · nouvelle identité ${String(j.get('reprise-nouvelle-identite'))} · fermetures inattendues ${String(j.get('fermetures-inattendues'))}`);
@@ -442,9 +510,17 @@ function construireRapport(e: Entrees): { texte: string; json: unknown } {
   }
   const ratt = stats(j.latences.get('rattrapage-apres-veille'));
   L.push(`rattrapage après veille (dégel → vue à jour) : n=${String(ratt.n)} p50=${String(ratt.p50)} ms p95=${String(ratt.p95)} ms`);
+  L.push(`rattrapages par lastSeq : ${String(j.get('rattrapages'))} (${String(j.get('evenements-rejoues'))} évènements rejoués, ${String(j.get('rattrapages-partiels'))} partiels) · hello reçus ${String(j.get('hello'))} · fermetures 4001 ${String(j.get('fermetures-4001'))} · 4002 ${String(j.get('fermetures-4002'))}`);
+  const pauses = stats(j.latences.get('pause-tous-partis'));
+  if (pauses.n > 0 || j.get('panne:tousPartent') > 0) {
+    const ecart = stats(j.latences.get('pause-ecart-echeance'));
+    L.push(`départs généraux (D19) : ${String(j.get('panne:tousPartent'))} · vérifiés ${String(j.get('pause-verifiee'))} · pause p50=${String(pauses.p50)} ms max=${String(pauses.max)} ms · écart d'échéance max ${String(ecart.max)} ms · pause vue par un mort ${String(j.get('pause-observee-par-un-mort'))}`);
+  }
+  const nuits = j.get('nuits-villageois');
+  L.push(`silence (D23) : ${String(j.get('syncs-nuit-villageois'))} sync reçus par des villageois sur ${String(nuits)} nuits (${nuits ? (j.get('syncs-nuit-villageois') / nuits).toFixed(1) : '-'} par nuit, dont ${String(j.get('syncs-nuit-villageois-sans-evenement'))} sans évènement) · syncs identiques ${String(j.get('syncs-identiques'))}`);
 
   L.push('', '── Requêtes');
-  for (const k of ['coups-joues', 'coups-refuses', 'coups-perdus-par-coupure', 'coups-sans-accuse', 'accuses-tardifs', 'accuses-inconnus', 'requetes-sans-accuse-excusees', 'cadres-illisibles', 'avis']) {
+  for (const k of ['coups-joues', 'coups-refuses', 'coups-perdus-par-coupure', 'coups-sans-accuse', 'requetes-sans-accuse-excusees', 'avis']) {
     L.push(`  ${k} : ${String(j.get(k))}`);
   }
 

@@ -89,7 +89,32 @@ export class ServeurEnfant {
   constructor(
     readonly port: number,
     private readonly journaliser: (ligne: string) => void,
+    /** Variables d'environnement en plus (`GAROUTOM_DATA`, `GAROUTOM_PROXY`…). */
+    private readonly env: Record<string, string> = {},
+    /**
+     * Le Worker plutôt que Node : `wrangler dev` sur ce port, son état
+     * (Durable Object, SQLite) rangé dans `etat` — le même à chaque relance.
+     */
+    private readonly wrangler: { etat: string } | null = null,
   ) {}
+
+  /** La commande du serveur : Node (`src/index.ts`) avec la sonde, ou `wrangler dev`. */
+  private commande(): { args: string[]; cwd: string; ipc: boolean } {
+    if (this.wrangler) {
+      const bin = fileURLToPath(new URL('../../../../node_modules/wrangler/bin/wrangler.js', import.meta.url));
+      return {
+        args: [bin, 'dev', '--port', String(this.port), '--ip', '127.0.0.1', '--persist-to', this.wrangler.etat, '--log-level', 'warn'],
+        cwd: fileURLToPath(new URL('../../../worker/', import.meta.url)),
+        ipc: false,
+      };
+    }
+    const sonde = pathToFileURL(fileURLToPath(new URL('./sonde.ts', import.meta.url))).href;
+    return {
+      args: ['--import', 'tsx', '--import', sonde, 'src/index.ts', '--canal-seul'],
+      cwd: fileURLToPath(new URL('../../', import.meta.url)),
+      ipc: true,
+    };
+  }
 
   get pid(): number | null {
     return this.enfant?.pid ?? null;
@@ -100,19 +125,14 @@ export class ServeurEnfant {
   }
 
   async demarrer(): Promise<void> {
-    const dossierServeur = fileURLToPath(new URL('../../', import.meta.url));
-    const sonde = pathToFileURL(fileURLToPath(new URL('./sonde.ts', import.meta.url))).href;
+    const { args, cwd, ipc } = this.commande();
     this.arretVolontaire = false;
-    const enfant = spawn(
-      process.execPath,
-      ['--import', 'tsx', '--import', sonde, 'src/index.ts', '--canal-seul'],
-      {
-        cwd: dossierServeur,
-        env: { ...process.env, PORT: String(this.port), HOST: '127.0.0.1' },
-        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-        windowsHide: true,
-      },
-    );
+    const enfant = spawn(process.execPath, args, {
+      cwd,
+      env: { ...process.env, PORT: String(this.port), HOST: '127.0.0.1', WRANGLER_SEND_METRICS: 'false', ...this.env },
+      stdio: ipc ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
     this.enfant = enfant;
     this.demarrages += 1;
     const lire = (flux: 'out' | 'err') => (morceau: Buffer) => {
@@ -157,13 +177,13 @@ export class ServeurEnfant {
       }
     });
 
-    const limite = Date.now() + 30_000;
+    const limite = Date.now() + (this.wrangler ? 120_000 : 30_000);
     while (Date.now() < limite) {
       if (!this.vivant) throw new Error(`Le serveur est mort au démarrage :\n${this.dernieresLignes.join('\n')}`);
       if (await sante('127.0.0.1', this.port, 1_000)) return;
       await new Promise((r) => setTimeout(r, 300));
     }
-    throw new Error('Le serveur ne répond pas sur /health après 30 s');
+    throw new Error('Le serveur ne répond pas sur /health');
   }
 
   /** Mémoire et sockets du processus serveur, ou `null` s'il ne répond pas. */
@@ -200,6 +220,29 @@ export class ServeurEnfant {
     } else {
       enfant.kill('SIGKILL');
     }
+  }
+
+  /**
+   * L'arrêt gracieux (D21) : le message IPC `garoutom:arret` — Windows n'a pas
+   * de SIGTERM —, puis on attend la sortie ; au-delà de `delai`, arrêt brutal.
+   * Rend la durée de l'arrêt.
+   */
+  async arreterProprement(delai = 6_000): Promise<number> {
+    const enfant = this.enfant;
+    const debut = Date.now();
+    if (!enfant || !this.vivant) return 0;
+    this.arretVolontaire = true;
+    try {
+      enfant.send('garoutom:arret');
+    } catch {
+      await this.tuer();
+      return Date.now() - debut;
+    }
+    const limite = Date.now() + delai;
+    while (this.vivant && Date.now() < limite) await new Promise((r) => setTimeout(r, 50));
+    if (this.vivant) await this.tuer();
+    this.enfant = null;
+    return Date.now() - debut;
   }
 
   /** Arrêt brutal de tout l'arbre de processus (Windows : taskkill /T /F). */

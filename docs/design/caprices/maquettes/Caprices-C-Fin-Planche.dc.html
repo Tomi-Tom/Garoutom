@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>C-Fin-Planche</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon:ital@0;1&amp;family=IM+Fell+French+Canon+SC&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#666}a:hover{color:#333}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background-color: #E8DFCB; background-image: repeating-linear-gradient(90deg, rgba(23,19,15,.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgba(23,19,15,.035) 0 .6px, transparent .6px 3px); color: #17130F; font-family: 'Source Serif 4', Georgia, serif;">
+<svg width="0" height="0" style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+<defs>
+  <!-- ============ HACHURES (encre -e, vergé -v) ============ -->
+  <!-- H1 claire : pas 6, trait 0,6 — ombres légères, fonds de jeton -->
+  <pattern id="hach-1-e" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#17130F" stroke-width="0.6"></line></pattern>
+  <pattern id="hach-1-v" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#E8DFCB" stroke-width="0.6"></line></pattern>
+  <!-- H2 moyenne : pas 4, trait 0,8 — volumes, bustes -->
+  <pattern id="hach-2-e" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#17130F" stroke-width="0.8"></line></pattern>
+  <pattern id="hach-2-v" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#E8DFCB" stroke-width="0.8"></line></pattern>
+  <!-- H3 serrée : pas 2,6, trait 1,1 — ombres portées gravées, absent -->
+  <pattern id="hach-3-e" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="2.6" stroke="#17130F" stroke-width="1.1"></line></pattern>
+  <pattern id="hach-3-v" width="2.6" height="2.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="2.6" stroke="#E8DFCB" stroke-width="1.1"></line></pattern>
+  <!-- HX croisée : pas 4, trait 0,7, 30° — urgence de la minuterie, absent -->
+  <pattern id="hach-x-e" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V4M0 0H4" stroke="#17130F" stroke-width="0.7" fill="none"></path></pattern>
+  <pattern id="hach-x-v" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V4M0 0H4" stroke="#E8DFCB" stroke-width="0.7" fill="none"></path></pattern>
+  <!-- HH horizontale : pas 3, trait 0,6 — ciels, bandeaux de décor -->
+  <pattern id="hach-h-e" width="6" height="3" patternUnits="userSpaceOnUse"><line x1="0" y1="0.5" x2="6" y2="0.5" stroke="#17130F" stroke-width="0.6"></line></pattern>
+  <!-- HV vert du Bataillon (skin Shiganshina seulement) : jamais en aplat -->
+  <pattern id="hach-vert" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#45523F" stroke-width="1.3"></line></pattern>
+  <!-- Hors vote : rayure horizontale serrée dans le médaillon -->
+  <pattern id="hach-barre-e" width="4" height="3" patternUnits="userSpaceOnUse"><line x1="0" y1="1.5" x2="4" y2="1.5" stroke="#17130F" stroke-width="0.9"></line></pattern>
+
+  <!-- ============ PAPIER VERGÉ ============ -->
+  <!-- vergeures : 1 trait / 3 px ; pontuseaux : 1 trait / 40 px -->
+  <pattern id="verge" width="40" height="3" patternUnits="userSpaceOnUse">
+    <line x1="0" y1="0.5" x2="40" y2="0.5" stroke="#17130F" stroke-opacity="0.035" stroke-width="0.6"></line>
+    <line x1="0.5" y1="0" x2="0.5" y2="3" stroke="#17130F" stroke-opacity="0.05" stroke-width="1"></line>
+  </pattern>
+
+  <!-- ============ GRAINS D'AQUATINTE (4 paliers) ============ -->
+  <!-- baseFrequency 0.875 = 224/256 : tuile de 256 px parfaitement raccordée -->
+  <!-- Palier I : grain sombre clairsemé sur #A89D8C (opacité 0,18) -->
+  <filter id="aqua-I" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="11" stitchTiles="stitch" result="n"></feTurbulence>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  9 0 0 0 -5.6" result="g"></feColorMatrix>
+    <feComposite in="g" in2="SourceGraphic" operator="in"></feComposite>
+  </filter>
+  <!-- Palier II : grain sombre dense sur #7A7064 (opacité 0,22) -->
+  <filter id="aqua-II" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="23" stitchTiles="stitch" result="n"></feTurbulence>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  9 0 0 0 -5.2" result="g"></feColorMatrix>
+    <feComposite in="g" in2="SourceGraphic" operator="in"></feComposite>
+  </filter>
+  <!-- Palier III : grain clair (les grains de résine) sur #4A433B (opacité 0,20) -->
+  <filter id="aqua-III" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="37" stitchTiles="stitch" result="n"></feTurbulence>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.91  0 0 0 0 0.875  0 0 0 0 0.796  9 0 0 0 -5.4" result="g"></feColorMatrix>
+    <feComposite in="g" in2="SourceGraphic" operator="in"></feComposite>
+  </filter>
+  <!-- Palier IV : grain clair dense sur #17130F (opacité 0,28) — nuit pleine -->
+  <filter id="aqua-IV" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.875" numOctaves="2" seed="41" stitchTiles="stitch" result="n"></feTurbulence>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.91  0 0 0 0 0.875  0 0 0 0 0.796  9 0 0 0 -5.0" result="g"></feColorMatrix>
+    <feComposite in="g" in2="SourceGraphic" operator="in"></feComposite>
+  </filter>
+
+  <!-- ============ GRAIN DE PAPIER ============ -->
+  <filter id="papier" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" seed="2" stitchTiles="stitch"></feTurbulence>
+    <feColorMatrix type="matrix" values="0 0 0 0 0.09  0 0 0 0 0.075  0 0 0 0 0.06  1.2 0 0 0 -0.5"></feColorMatrix>
+  </filter>
+
+  <!-- ============ TRAIT MORDU (meute) ============ -->
+  <!-- grand format (≥ 96 px) ; en dessous, la morsure est DESSINÉE dans le tracé -->
+  <filter id="mordu" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.09" numOctaves="2" seed="3" result="t"></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"></feDisplacementMap>
+    <feMorphology in="d" operator="dilate" radius="0.35"></feMorphology>
+  </filter>
+  <filter id="mordu-fin" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.14" numOctaves="1" seed="5" result="t"></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="1.2" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+
+  <!-- ============ CARTOUCHES DE CAMP (viewBox 120×30) ============ -->
+  <!-- Village : écu à pans coupés, trait net -->
+  <symbol id="cart-ecu" viewBox="0 0 120 30"><path d="M7 1 H113 L119 7 V23 L113 29 H7 L1 23 V7 Z" fill="#F5EFE2" stroke="#17130F" stroke-width="1.5"></path></symbol>
+  <!-- Meute : écu mordu à droite -->
+  <symbol id="cart-mordu" viewBox="0 0 120 30"><path d="M7 1 H100 L104 6 L109 2 L111 10 L119 13 L112 17 L118 23 L110 25 L106 29 H7 L1 23 V7 Z" fill="#F5EFE2" stroke="#A23B24" stroke-width="2"></path></symbol>
+  <!-- Loup Blanc : mordu des deux côtés -->
+  <symbol id="cart-mordu2" viewBox="0 0 120 30"><path d="M20 1 H100 L104 6 L109 2 L111 10 L119 13 L112 17 L118 23 L110 25 L106 29 H20 L16 24 L11 28 L9 20 L1 17 L8 13 L2 7 L10 5 L14 1 Z" fill="#F5EFE2" stroke="#A23B24" stroke-width="2"></path></symbol>
+  <!-- Serment : lacs (double filet arrondi) -->
+  <symbol id="cart-lacs" viewBox="0 0 120 30"><rect x="1.5" y="1.5" width="117" height="27" rx="13.5" fill="#F5EFE2" stroke="#8A3A5C" stroke-width="2"></rect><rect x="5" y="5" width="110" height="20" rx="10" fill="none" stroke="#8A3A5C" stroke-width="0.9"></rect></symbol>
+  <!-- Au-delà : écu en pointillé (le village, effacé) -->
+  <symbol id="cart-audela" viewBox="0 0 120 30"><path d="M7 1 H113 L119 7 V23 L113 29 H7 L1 23 V7 Z" fill="none" stroke="#5E554A" stroke-width="1.2" stroke-dasharray="1.5 3"></path></symbol>
+  <!-- Inconnu : ovale pointillé -->
+  <symbol id="cart-ovale" viewBox="0 0 120 30"><ellipse cx="60" cy="15" rx="58" ry="13.5" fill="none" stroke="#5E554A" stroke-width="1.4" stroke-dasharray="3 3"></ellipse></symbol>
+
+  <!-- ============ GLYPHES D'ÉTAT (viewBox 16×16, trait 1,25) ============ -->
+  <symbol id="g-sceau" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="#17130F"></circle><path d="M4.5 8.2 L7 10.6 L11.6 5.4" fill="none" stroke="#F5EFE2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+  <symbol id="g-chandelle" viewBox="0 0 16 16"><path d="M6 15 V7 H10 V15 Z" fill="none" stroke="#17130F" stroke-width="1.25"></path><path d="M8 6 C7 4.5 9 3.5 8 1.5 M8.8 5.5 C10 4.5 9.4 3 10.4 2" fill="none" stroke="#17130F" stroke-width="0.9" stroke-linecap="round"></path><path d="M4 15 H12" stroke="#17130F" stroke-width="1.25"></path></symbol>
+  <symbol id="g-corde" viewBox="0 0 16 16"><path d="M8 1 V6.5 M8 9.5 V11" stroke="#17130F" stroke-width="1.25" stroke-linecap="round"></path><path d="M6.2 6.6 L9.8 9.4" stroke="#17130F" stroke-width="1"></path><circle cx="8" cy="13" r="2" fill="none" stroke="#17130F" stroke-width="1.25"></circle></symbol>
+  <symbol id="g-horsvote" viewBox="0 0 16 16"><path d="M1.5 5.5 H10 C11 5.5 11 7.5 10 7.5 H6 M10 5.5 C12.5 5.5 14 7 14 9.5 V11 C14 12.8 12.8 14 11 14 H7.5 C6 14 5 13 5 11.5 V7.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linejoin="round"></path><path d="M2 14.5 L14.5 2" stroke="#17130F" stroke-width="1.5" stroke-linecap="round"></path></symbol>
+  <symbol id="g-chaise" viewBox="0 0 16 16"><path d="M5 1.5 H10 V9 M5 1.5 V15 M5 9 H12.5 M12.5 9 V15 M10 9 V13" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linecap="square"></path></symbol>
+  <symbol id="g-index" viewBox="0 0 16 16"><path d="M1.5 5.5 H10 C11 5.5 11 7.5 10 7.5 H6 M10 5.5 C12.5 5.5 14 7 14 9.5 V11 C14 12.8 12.8 14 11 14 H7.5 C6 14 5 13 5 11.5 V7.5 M7.5 10.5 H11.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linejoin="round"></path></symbol>
+  <symbol id="g-lacs" viewBox="0 0 16 16"><circle cx="6" cy="8" r="4.2" fill="none" stroke="#8A3A5C" stroke-width="1.6"></circle><circle cx="10" cy="8" r="4.2" fill="none" stroke="#8A3A5C" stroke-width="1.6"></circle></symbol>
+  <symbol id="g-plume" viewBox="0 0 16 16"><path d="M14 2 C8 3 4 7 2.5 14 M14 2 C13 7 9 11 4 11.5" fill="none" stroke="#17130F" stroke-width="1.25" stroke-linecap="round"></path><path d="M6 9.5 L9 6.5 M7.5 10.5 L10.5 7.5" stroke="#17130F" stroke-width="0.75"></path></symbol>
+
+  <!-- ============ BUSTE DE JETON (exemple : tricorne, siège 1) ============ -->
+  <symbol id="buste-tricorne" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48 Z" fill="url(#hach-2-e)" stroke="#17130F" stroke-width="1"></path>
+    <circle cx="24" cy="21" r="8" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="1"></circle>
+    <path d="M10 15 L24 8 L38 15 L33 17 C28 14 20 14 15 17 Z" fill="#17130F"></path>
+  </symbol>
+  <symbol id="buste-coroza" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48 Z" fill="url(#hach-2-e)" stroke="#17130F" stroke-width="1"></path>
+    <circle cx="24" cy="22" r="8" fill="url(#hach-1-e)" stroke="#17130F" stroke-width="1"></circle>
+    <path d="M17 16 L24 0 L31 16 Z" fill="#17130F"></path>
+  </symbol>
+  <symbol id="buste-fantome" viewBox="0 0 48 48">
+    <path d="M8 48 C9 36 16 31 24 31 C32 31 39 36 40 48" fill="none" stroke="#A89D8C" stroke-width="1"></path>
+    <circle cx="24" cy="22" r="8" fill="none" stroke="#A89D8C" stroke-width="1"></circle>
+  </symbol>
+
+  <!-- ============ BRUNISSAGE ============ -->
+  <!-- masque à bord franc : le rayon avance par crans de 8 px (8, 16, 24…) -->
+  <mask id="brunir-demo"><rect x="0" y="0" width="1600" height="1180" fill="#fff"></rect><circle cx="1290" cy="880" r="48" fill="#000"></circle></mask>
+</defs>
+</svg>
+<svg width="390" height="844" viewBox="0 0 390 844" style="position: absolute; left: 0; top: 0; pointer-events: none;" aria-hidden="true"><rect width="390" height="844" fill="#000" filter="url(#papier)" opacity="0.22"></rect><g fill="#8C6A3F"><circle cx="307" cy="348" r="3.3" opacity="0.048"></circle><circle cx="375" cy="209" r="7.0" opacity="0.043"></circle><circle cx="389" cy="597" r="3.0" opacity="0.074"></circle><circle cx="242" cy="502" r="3.7" opacity="0.075"></circle><circle cx="334" cy="477" r="8.0" opacity="0.054"></circle><circle cx="98" cy="11" r="5.2" opacity="0.068"></circle><circle cx="293" cy="531" r="4.5" opacity="0.059"></circle><circle cx="106" cy="527" r="6.4" opacity="0.072"></circle><circle cx="355" cy="519" r="6.4" opacity="0.066"></circle></g></svg><div style="position: absolute; left: 0; top: 0; width: 390px; height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px 0 32px; box-sizing: border-box; color: #17130F; background: #E8DFCB;">
+<span style="font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums lining-nums;">9:41</span>
+<svg width="64" height="12" viewBox="0 0 64 12" aria-hidden="true"><g fill="#17130F"><rect x="0" y="8" width="3" height="4"></rect><rect x="5" y="6" width="3" height="6"></rect><rect x="10" y="3.5" width="3" height="8.5"></rect><rect x="15" y="1" width="3" height="11"></rect></g><rect x="36.5" y="0.5" width="22" height="11" fill="none" stroke="#17130F" stroke-width="1"></rect><rect x="38.5" y="2.5" width="15" height="7" fill="#17130F"></rect><rect x="59.5" y="4" width="2" height="4" fill="#17130F"></rect></svg>
+</div><div style="position: absolute; left: 24px; top: 71px; width: 342px; height: 643px; box-sizing: border-box; background: #E1D7C1; border: 1px solid; border-color: rgba(23,19,15,.38) #F5EFE2 #F5EFE2 rgba(23,19,15,.38); border-right-width: 1.5px; border-bottom-width: 1.5px; border-radius: 2px; overflow: hidden; "><div aria-hidden="true" style="position: absolute; inset: 2px; border: 1px solid rgba(23,19,15,.14); pointer-events: none;"></div><div style="position: absolute; left: 0; top: 24px; width: 342px; display: flex; flex-direction: column; align-items: center; text-align: center;"><div style="font-family: 'IM Fell French Canon SC', Georgia, serif; font-size: 13px; line-height: 16px; letter-spacing: .06em; color: #17130F;">Pl. 3 — Nuit II</div>
+<div style="margin-top: 20px;"><svg width="192" height="192" viewBox="0 0 96 96" style="display: block; overflow: hidden;" role="img" aria-label="Vignette : main à l’œil"><rect width="96" height="96" fill="#E1D7C1"></rect><clipPath id="cFN-cl1"><path d="M0 0h96v96h-96Z" clip-rule="nonzero"></path></clipPath><g clip-path="url(#cFN-cl1)"><path d="M-24.08 -24.08H120.08M-24.08 -19.88H120.08M-24.08 -15.68H120.08M-24.08 -11.48H120.08M-24.08 -7.28H120.08M-24.08 -3.08H120.08M-24.08 1.12H120.08M-24.08 5.32H120.08M-24.08 9.52H120.08M-24.08 13.72H120.08M-24.08 17.92H120.08M-24.08 22.12H120.08M-24.08 26.32H120.08M-24.08 30.52H120.08M-24.08 34.72H120.08M-24.08 38.92H120.08M-24.08 43.12H120.08M-24.08 47.32H120.08M-24.08 51.52H120.08M-24.08 55.72H120.08M-24.08 59.92H120.08M-24.08 64.12H120.08M-24.08 68.32H120.08M-24.08 72.52H120.08M-24.08 76.72H120.08M-24.08 80.92H120.08M-24.08 85.12H120.08M-24.08 89.32H120.08M-24.08 93.52H120.08M-24.08 97.72H120.08M-24.08 101.92H120.08M-24.08 106.12H120.08M-24.08 110.32H120.08M-24.08 114.52H120.08M-24.08 118.72H120.08" transform="rotate(-45 48 48)" stroke="#17130F" stroke-width="0.31" fill="none"></path></g><ellipse cx="48" cy="48" rx="40" ry="44" fill="#E1D7C1"></ellipse><ellipse cx="48" cy="48" rx="40" ry="44" fill="none" stroke="#17130F" stroke-width="0.496"></ellipse><svg x="10" y="8" width="76" height="76" viewBox="0 0 32 32" style="display: block; overflow: visible;" aria-hidden="true"><clipPath id="cFN-cl3"><path d="M10.4 26.2L5.2 19.4C4.2 18 4.6 16.2 6.2 16.4C7.2 16.6 8.2 17.6 9.4 19.4L10.4 23Z" clip-rule="nonzero"></path></clipPath><g clip-path="url(#cFN-cl3)"><path d="M-7.68 -7.68H39.68M-7.68 -6.63H39.68M-7.68 -5.58H39.68M-7.68 -4.53H39.68M-7.68 -3.48H39.68M-7.68 -2.43H39.68M-7.68 -1.38H39.68M-7.68 -0.33H39.68M-7.68 0.72H39.68M-7.68 1.77H39.68M-7.68 2.82H39.68M-7.68 3.87H39.68M-7.68 4.92H39.68M-7.68 5.97H39.68M-7.68 7.02H39.68M-7.68 8.07H39.68M-7.68 9.12H39.68M-7.68 10.17H39.68M-7.68 11.22H39.68M-7.68 12.27H39.68M-7.68 13.32H39.68M-7.68 14.37H39.68M-7.68 15.42H39.68M-7.68 16.47H39.68M-7.68 17.52H39.68M-7.68 18.57H39.68M-7.68 19.62H39.68M-7.68 20.67H39.68M-7.68 21.72H39.68M-7.68 22.77H39.68M-7.68 23.82H39.68M-7.68 24.87H39.68M-7.68 25.92H39.68M-7.68 26.97H39.68M-7.68 28.02H39.68M-7.68 29.07H39.68M-7.68 30.12H39.68M-7.68 31.17H39.68M-7.68 32.22H39.68M-7.68 33.27H39.68M-7.68 34.32H39.68M-7.68 35.37H39.68M-7.68 36.42H39.68M-7.68 37.47H39.68M-7.68 38.52H39.68M-7.68 39.57H39.68" transform="rotate(-45 16 16)" stroke="#17130F" stroke-width="0.2" fill="none"></path></g><clipPath id="cFN-cl4"><path d="M9.6 22C9.8 25 11 27.6 12.2 29.6L19.6 29.6C20.2 28 20.8 26.4 21 25Z" clip-rule="nonzero"></path></clipPath><g clip-path="url(#cFN-cl4)"><path d="M-7.68 -7.68H39.68M-7.68 -6.63H39.68M-7.68 -5.58H39.68M-7.68 -4.53H39.68M-7.68 -3.48H39.68M-7.68 -2.43H39.68M-7.68 -1.38H39.68M-7.68 -0.33H39.68M-7.68 0.72H39.68M-7.68 1.77H39.68M-7.68 2.82H39.68M-7.68 3.87H39.68M-7.68 4.92H39.68M-7.68 5.97H39.68M-7.68 7.02H39.68M-7.68 8.07H39.68M-7.68 9.12H39.68M-7.68 10.17H39.68M-7.68 11.22H39.68M-7.68 12.27H39.68M-7.68 13.32H39.68M-7.68 14.37H39.68M-7.68 15.42H39.68M-7.68 16.47H39.68M-7.68 17.52H39.68M-7.68 18.57H39.68M-7.68 19.62H39.68M-7.68 20.67H39.68M-7.68 21.72H39.68M-7.68 22.77H39.68M-7.68 23.82H39.68M-7.68 24.87H39.68M-7.68 25.92H39.68M-7.68 26.97H39.68M-7.68 28.02H39.68M-7.68 29.07H39.68M-7.68 30.12H39.68M-7.68 31.17H39.68M-7.68 32.22H39.68M-7.68 33.27H39.68M-7.68 34.32H39.68M-7.68 35.37H39.68M-7.68 36.42H39.68M-7.68 37.47H39.68M-7.68 38.52H39.68M-7.68 39.57H39.68" transform="rotate(-45 16 16)" stroke="#17130F" stroke-width="0.18" fill="none"></path></g><path d="M10.6 21.6Q15.6 16.6 20.6 21.6Q15.6 26.6 10.6 21.6Z" fill="#E1D7C1" stroke="#17130F" stroke-width="0.44799999999999995"></path><path d="M12.2 30.2C12.2 28.6 11.4 27.4 10.4 26.2L5.2 19.4C4.2 18 4.6 16.2 6.2 16.4C7.2 16.6 8.2 17.6 9.4 19.4L9.4 8.2C9.4 6.4 12 6.4 12 8.2L12.2 15.4L12.6 5.2C12.6 3.2 15.4 3.2 15.4 5.2L15.6 15L16 6C16 4.2 18.8 4.2 18.8 6L18.8 15.6L19.4 9.8C19.4 8.2 21.8 8.2 21.8 9.8L21.8 19.6C21.8 23.4 21 25.8 20 27.4C19.6 28.2 19.6 29.2 19.6 30.2" fill="none" stroke="#17130F" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="15.6" cy="21.6" r="1.5" fill="#17130F"></circle><g fill="none" stroke="#17130F" stroke-width="0.32" stroke-linecap="round"><path d="M9.9 11.4Q10.7 11.9 11.5 11.4M13.1 9.4Q14 9.9 14.9 9.4M16.4 10Q17.4 10.5 18.3 10M19.8 12.8Q20.6 13.2 21.4 12.8"></path><path d="M9.9 13.2Q10.7 13.6 11.5 13.2M13.1 11.6Q14 12 14.9 11.6M16.4 12.2Q17.4 12.6 18.3 12.2M19.8 14.8Q20.6 15.1 21.4 14.8"></path><path d="M12.3 17.6C13.6 17 17.6 16.8 19.8 17.6M11.2 25.4C13.4 27 17.6 27.2 20 25.8"></path></g><path d="M15.1 20.9A0.6 0.6 0 0 1 16 20.7" stroke="#E1D7C1" stroke-width="0.35" fill="none"></path></svg><path d="M0 96V0H96" fill="none" stroke="#17130F" stroke-opacity="0.45" stroke-width="0.558"></path><path d="M96 0V96H0" fill="none" stroke="#F5EFE2" stroke-width="0.868"></path><rect x="1.364" y="1.364" width="93.272" height="93.272" fill="none" stroke="#17130F" stroke-opacity="0.16" stroke-width="0.496"></rect></svg></div>
+<div style="margin-top: 22px; width: 300px;"><p style="margin: 0; font-family: 'IM Fell French Canon', Georgia, serif; font-style: italic; font-size: 20px; line-height: 28px; color: #5E554A; text-align: center;">« Ce qu’elle voit, nul ne le croit. »</p></div>
+<div style="margin-top: 22px; width: 294px; border-top: 0.75px solid #7A7064; padding-top: 14px; text-align: left;"><p style="margin: 0 0 4px; font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 24px; color: #17130F;">Le Salvateur a veillé sur Gaspard.</p><p style="margin: 0 0 4px; font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 24px; color: #17130F;">La Voyante a sondé Bastien : <b style="color: #A23B24; font-weight: 600;">Loup-garou</b>.</p><p style="margin: 0 0 4px; font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 24px; color: #17130F;">La meute n’a désigné personne.</p></div></div></div><div style="position: absolute; left: 0; top: 738px; width: 390px; height: 106px; box-sizing: border-box; background: #F5EFE2; border-top: 1.5px solid #17130F;">
+<div style="height: 72px; box-sizing: border-box; padding: 12px 16px; display: flex; gap: 8px;"><button type="button" aria-label="Planche précédente : Pl. 2" style="flex: 1; height: 48px; box-sizing: border-box; border-radius: 0; border: 1.5px solid #17130F; background-color: transparent; background-image: none; color: #17130F; font-family: 'Source Serif 4', Georgia, serif; font-size: 17px; line-height: 20px; font-weight: 400; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px; cursor: pointer; "><svg width="24" height="24" viewBox="0 0 24 24" style="display: block;" aria-hidden="true"><g fill="none" stroke="#17130F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6L8.5 12L14.5 18"></path></g></svg><span>Pl. 2</span></button><div style="flex: none; align-self: center; font-family: 'Source Serif 4', Georgia, serif; font-size: 14px; color: #5E554A; font-variant-numeric: tabular-nums lining-nums;">3 sur 7</div><button type="button" aria-label="Planche suivante : Pl. 4" style="flex: 1; height: 48px; box-sizing: border-box; border-radius: 0; border: 1.5px solid #17130F; background-color: transparent; background-image: none; color: #17130F; font-family: 'Source Serif 4', Georgia, serif; font-size: 17px; line-height: 20px; font-weight: 400; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px; cursor: pointer; "><span>Pl. 4</span><svg width="24" height="24" viewBox="0 0 24 24" style="display: block;" aria-hidden="true"><g fill="none" stroke="#17130F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6L15.5 12L9.5 18"></path></g></svg><span></span></button></div>
+<div aria-hidden="true" style="position: absolute; left: 128px; bottom: 9px; width: 134px; height: 5px; background: #17130F;"></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
