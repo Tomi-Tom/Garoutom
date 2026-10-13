@@ -35,6 +35,7 @@ import {
   type Winner,
 } from '@garoutom/engine';
 
+import { giletsjaunes } from './giletsjaunes.js';
 import { shiganshina } from './shiganshina.js';
 import { thiercelieux } from './thiercelieux.js';
 
@@ -512,6 +513,7 @@ const skins = new Map<string, Skin>();
 // sélecteur du salon : le défaut se tient toujours le premier.
 enregistrerSkin(thiercelieux);
 enregistrerSkin(shiganshina);
+enregistrerSkin(giletsjaunes);
 
 /** Les skins enregistrés, dans l'ordre où le salon les propose. */
 export const SKINS: readonly Skin[] = [...skins.values()];
