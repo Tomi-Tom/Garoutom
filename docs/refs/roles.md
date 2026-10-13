@@ -365,15 +365,179 @@ sans une mort, puis la meute l'emporte (R99).
 | 15 | Victime du Loup Blanc | annoncée comme un mort de la nuit | cause `loups`, la Sorcière ne la connaît pas | R97, D16 |
 | 16 | Loup Blanc qui ne mord pas | non tranché | trois nuits de huis clos sans mort, la meute gagne | R99, D16 |
 
+## Les rôles de la v3 — première vague
+
+Ouverts le 13 octobre 2026 (D26, D29 à D31, règles R105 à R108). Trois
+cartons de l'extension Personnages, cochés par l'hôte seul : jamais dans la
+référence, jamais dans les suggestions, jamais au générateur — une table qui
+n'en coche aucun rejoue la v2 état pour état, graine pour graine.
+
+| Rôle | Camp | Quand il joue | En une phrase |
+|---|---|---|---|
+| `villageois2` | village | jamais | La carte certifie son porteur innocent aux yeux de tous — lui compris |
+| `renard` | village | la nuit, en parallèle | Flaire un trio de voisins : un loup dedans garde son pouvoir, un trio sain le lui retire à vie |
+| `ours` | village | jamais, son ourson grogne | À l'aube, la bête gronde si un loup vivant s'assied à côté de lui |
+
+### Le voisinage
+
+L'ordre des sièges est l'ordre du cercle (R105) : le client pose les rangs
+depuis le bas, en tournant dans le sens des aiguilles d'une montre — un
+joueur assis face au centre a son **siège +1 à sa gauche**, son siège −1 à
+sa droite, modulo n. C'est la convention de toute la v3 : le Chevalier à
+l'Épée Rouillée (Vague 3) cherchera « le premier loup à sa gauche » dans ce
+sens. Le voisinage se dérive — `voisinsDe`, fonction pure — de la seule
+liste des joueurs : c'est une géométrie publique, ni un état, ni un secret.
+
+### Le Villageois-Villageois
+
+Aucun pouvoir, aucun verbe, aucune consigne : la carte ne vit que par la
+**certitude publique** que son porteur est un villageois innocent — aucune
+vie bonus, fidèle au recto-verso officiel. Et le porteur lui-même n'en sait
+rien : toutes les vues — la sienne comprise — lisent `villageois` (D31).
+Seul le récapitulatif de fin, où plus rien n'est caché, dit `villageois2`.
+Quand l'Infect Père des Loups arrivera (Vague 5), la certification portera
+sur la carte, pas sur le camp effectif : la vue restera sincère — et la
+carte redoutable.
+
+### Le Renard
+
+Chaque nuit, pendant l'étape principale — en parallèle, comme le Corbeau —,
+il flaire un trio : un joueur central vivant de son choix et les deux
+voisins **vivants** de ce centre (un voisin mort n'est jamais remplacé, le
+trio peut être plus petit). L'usage est facultatif : ne rien sonder ne coûte
+rien. Le Renard peut se compter dans son trio, au centre ou à l'aile (D29).
+Un loup dedans — camp d'origine — : le signe lui revient en privé, son
+pouvoir demeure. Aucun loup : le pouvoir est perdu **à vie**, et les sièges
+du trio restent des innocents appris. Les trios s'accumulent dans son
+carnet privé (`renardSavoirs`), pour lui seul ; aucun évènement public ne
+dit un sondage, un signe ni une perte (R87). La rancune de l'Ancien éteint
+son flair (R92).
+
+### Le Montreur d'Ours
+
+Il ne joue jamais. Chaque matin où il vit, après l'annonce des morts, un
+évènement public tombe : l'ourson gronde si un loup — camp d'origine — est
+l'un des deux voisins **vivants** de son maître ; un voisin mort ne compte
+pas. L'aube paisible reçoit son évènement comme les autres : `grogne:
+false` est une information, pas un silence. Mort — la nuit qui vient de
+finir comprise —, il ne grogne pas : sa mort est publique, pas de grogne
+posthume, pas d'étape fantôme. La rancune de l'Ancien n'y change rien
+(D30) : la grogne est celle d'un animal, pas un pouvoir du village.
+
+### Les écarts de la V1 avec la boîte
+
+| # | Sujet | Règle officielle | Garoutom | Où |
+|---|---|---|---|---|
+| 17 | Renard dans son trio | non tranché | il peut s'y compter, au centre ou à l'aile | D29 |
+| 18 | Grogne et rancune | non tranché | la grogne survit : un animal, pas un pouvoir du village | D30 |
+| 19 | Porteur du Villageois-Villageois | non tranché | il lit « villageois » comme les autres ; la fin seule dit la vérité | D31 |
+
+## Les rôles de la v3 — deuxième vague
+
+Ouverts le 13 octobre 2026 (D25, D27, D28, D32, D33, D44 ; règles R109 à
+R114). Cinq cartons — le Voleur du jeu de base, et le Chien-Loup, l'Enfant
+Sauvage, les Deux Sœurs et les Trois Frères de l'extension Personnages —
+toujours cochés par l'hôte seul : jamais dans la référence, jamais dans les
+suggestions, jamais au générateur. Une table qui n'en coche aucun rejoue la
+v2 état pour état, graine pour graine. La vague pose en même temps les deux
+fondations de la suite : le **camp effectif** (R109) et le **canal
+fratrie** (R114).
+
+| Rôle | Camp | Quand il joue | En une phrase |
+|---|---|---|---|
+| `voleur` | selon la carte volée | avant la révélation | Regarde les deux cartes non distribuées et en prend une — obligé si ce sont deux loups |
+| `chienLoup` | il choisit | la première nuit seulement | Se range définitivement côté village — aveugle — ou côté loups — meute |
+| `enfantSauvage` | village, puis loup | la première nuit ; à la mort de son modèle | Désigne un modèle : mort, il devient un loup qui se réveille avec la meute la nuit suivante |
+| `soeurs` | village | jamais | Deux cartes : elles se connaissent, et disposent d'un canal permanent entre vivantes |
+| `freres` | village | jamais | Trois cartes, idem Sœurs ; les deux groupes peuvent coexister |
+
+### Le camp effectif
+
+Chaque siège porte un camp d'origine (R3) et un camp **effectif** : l'état
+ne porte le second que si un rôle l'a écrit — le Chien-Loup rangé,
+l'Enfant Sauvage transformé — et tout lecteur de camp le lit (R109) : la
+victoire, la meute, le huis clos, le trio du Renard, la grogne de l'Ours,
+les cibles interdites. La carte lue — la Voyante qui sonde, la mort qui
+retourne — dit le **rôle courant**, masqué comme toute carte (R106). Le
+Loup Blanc reste spécial : camp aux loups, faction à lui seul (R98).
+
+### Le Voleur
+
+Avant la révélation, une phase à lui (25 s) : le paquet compte la
+composition plus deux villageois simples ; son siège se tire au sort, les
+cartes restantes se mélangent, les deux non distribuées sont les siennes
+(D44). Il en prend une — elle devient sa carte, un rôle comme un autre,
+joué dès la première nuit — ou s'abstient, si aucune obligation ne s'y
+attache ; l'autre carte — ou les deux — sort du jeu, face cachée.
+**Obligation de prendre une carte si les deux sont des loups** ; au temps
+écoulé, la première carte si l'obligation l'exige, sinon il reste Voleur
+sans pouvoir (D44b). Les cartes de fratrie ne tombent jamais à son talon :
+elles sont distribuées par construction. Aucun évènement ne dit son
+choix ; la première nuit qui suit ne fait pas bouger le compteur de jours
+(R33).
+
+### Le Chien-Loup
+
+La première nuit, pendant l'étape principale, il se range définitivement.
+Côté loups, il est un loup : camp effectif aux loups, voix à la meute,
+canal et vues du pack — où il passe pour un loup ordinaire, comme le Loup
+Blanc —, indévorable par la meute et dévorable par le Loup Blanc (D27).
+Sa carte reste `chienLoup` : la Voyante qui le sonde la voit, sa mort la
+montre. Côté village — ou au temps écoulé —, il ne voit jamais rien : un
+villageois sans consigne (R81). Pour la borne de R13, il compte parmi les
+loups dès le salon, l'hôte ne sachant pas de quel côté il tombera (D32) ;
+rangé côté village, il resterait infectable par l'Infect Père des Loups
+(D32b). Aucun évènement ne dit son choix.
+
+### L'Enfant Sauvage
+
+La première nuit, pendant l'étape principale, il désigne un modèle : un
+vivant, lui compris, jamais informé. Le modèle meurt — toute cause,
+l'abandon compris — et l'Enfant devient un loup (D33) : camp effectif aux
+loups **immédiatement** — la victoire, l'Ours, le Renard le lisent tout de
+suite —, carte réécrite `loup` — la Voyante la voit, sa mort la montre —,
+mais la meute ne l'accueille qu'à la nuit suivante : vues du pack, canal
+des loups et consigne `devorer` attendent le `startNight` qui vient. La
+transformation ne produit aucun évènement : le secret est absolu, seul le
+récapitulatif de fin le raconte. Sans modèle au temps écoulé de la
+première nuit, il ne se transforme jamais ; un modèle infecté (Vague 5)
+survit : pas de transformation tant qu'il vit.
+
+### Les Deux Sœurs et les Trois Frères
+
+Ni verbe, ni consigne, ni pouvoir : ils se connaissent. L'hôte coche
+l'id une fois — la composition porte deux cartes pour les Sœurs, trois
+pour les Frères (R4, R113) ; les Sœurs se cochent dès dix joueurs, les
+Frères dès douze, et les deux groupes peuvent coexister, chacun avec le
+sien. Chaque membre connaît les siens dès la révélation — dans sa vue,
+jamais dans un évènement — et leur canal est permanent, de jour comme de
+nuit, entre vivants du groupe (D28) : un mort le quitte, `mortsVoientTout`
+le rend en lecture. Les cartes de fratrie sont distribuées, jamais au
+talon du Voleur. La rancune de l'Ancien n'y change rien : la connaissance
+n'est pas un pouvoir (R92).
+
+### Les écarts de la V2 avec la boîte
+
+| # | Sujet | Règle officielle | Garoutom | Où |
+|---|---|---|---|---|
+| 20 | Voyante et transformations | non tranché | elle lit le rôle courant ; l'Enfant devenu loup montre `loup`, le Chien-Loup garde sa carte | D27 |
+| 21 | Réveils des fratries | « de temps en temps », souvent un tour sur deux | canal permanent entre vivants, le précédent des amoureux | D28, R114 |
+| 22 | Chien-Loup et la borne de loups | non tranché | compté comme un loup dès le salon, conservateur | D32 |
+| 23 | Enfant : moment de la transformation | « devient un loup-garou », « se réveille avec la meute dès la nuit suivante » | camp immédiat, réveil différé au `startNight` suivant | D33 |
+| 24 | Talon du Voleur | deux cartes non distribuées | siège tiré au sort puis mélange ; les cartes fratrie hors talon par construction ; obligation si deux loups | D44 |
+| 25 | Voleur et la découverte des cartes | le Voleur échange sans regarder sa carte | la vue se tait pour tous pendant sa phase : aucun rôle, ni meute, ni fratrie avant la révélation | D46, R110 |
+| 26 | Deux fratries à la même table | chaque groupe se reconnaît séparément | un seul canal au protocole, tout y est par groupe : messages, numérotation, rabotnement — aucun trou ne dit l'autre | D45, R114 |
+
 ## Les rôles envisagés pour plus tard
 
 Ce qui reste de la boîte, du moins au plus coûteux à câbler.
 
 | Rôle | Ce qu'il apporterait | Coût |
 |---|---|---|
-| Voleur | Choisit sa carte parmi deux au début : le doute sur la distribution | Moyen — une phase avant la révélation, un choix caché |
-| Renard | Sonne un triplet de voisins d'un coup : la voyance devient pari | Moyen — une sonde à trois cibles et une contrainte de placement |
 | Joueur de flûte | Charme chaque nuit, gagne seul si tout le village est charmé | Élevé — une troisième condition de victoire et un état caché par joueur |
 
 Le Bouc émissaire, le Corbeau, l'Ancien, la Petite Fille et le Loup Blanc,
-envisagés ici au temps de la v1, sont passés dans la section précédente.
+envisagés ici au temps de la v1, sont passés dans la section v2 ; le Renard,
+envisagé au même moment, vient de passer dans la section v3 ; le Voleur,
+envisagé au même moment, vient de passer dans la section v3 — deuxième
+vague.

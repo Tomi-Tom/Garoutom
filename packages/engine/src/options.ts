@@ -13,6 +13,7 @@ import {
   type ChoosableRoleId,
   type GameOptions,
   type OptionalRoleId,
+  type OptionalRoleIdV3,
   type RoleId,
   type Rng,
   type SpecialRoleId,
@@ -119,26 +120,51 @@ const SEUILS: Record<SpecialRoleId, number> = {
 };
 
 /**
- * À combien de joueurs chaque rôle optionnel peut sortir du générateur
- * aléatoire (R100). La référence ne les tire jamais (R90) ; l'hôte, lui, les
- * coche à toute table, dans les seules bornes de R13.
+ * À combien de joueurs chaque rôle optionnel est cochable.
  *
- * Dix joueurs pour les rôles de village : en dessous, chaque carte spéciale
- * de plus retire un des derniers villageois simples. Douze pour le Loup
- * Blanc : il lui faut une meute à trahir — trois loups à la référence — et
- * assez de monde pour que sa solitude soit un vrai chemin.
+ * Pour ceux de la v2, c'est la borne du générateur aléatoire (R100) — la
+ * référence ne les tire jamais (R90) ; l'hôte, lui, les coche à toute table,
+ * dans les seules bornes de R13. Dix joueurs pour les rôles de village : en
+ * dessous, chaque carte spéciale de plus retire un des derniers villageois
+ * simples. Douze pour le Loup Blanc : il lui faut une meute à trahir — trois
+ * loups à la référence — et assez de monde pour que sa solitude soit un vrai
+ * chemin.
+ *
+ * Ceux de la v3 ne sortent jamais du générateur, même sur demande (D26) :
+ * leur seuil ne sert qu'au salon. Rien dans les trois premiers ne réclame
+ * une grande table — le Renard veut un trio autour de son centre et l'Ours
+ * deux voisins, qu'une table de six donne déjà ; le Villageois-Villageois
+ * n'est qu'une carte. Le plancher de la table leur suffit. La deuxième vague
+ * suit la même pente — le Voleur, le Chien-Loup et l'Enfant Sauvage jouent
+ * dès six (la borne de R13 fait le reste, Chien-Loup compté loup, D32) —
+ * sauf les fratries : Sœurs dès dix, Frères dès douze, comme les villageois
+ * outillés de la v2 (R113).
  */
-export const OPTIONAL_ROLE_MIN_PLAYERS: Readonly<Record<OptionalRoleId, number>> = {
+export const OPTIONAL_ROLE_MIN_PLAYERS: Readonly<Record<OptionalRoleId | OptionalRoleIdV3, number>> = {
   ancien: 10,
   corbeau: 10,
   bouc: 10,
   petiteFille: 10,
   loupBlanc: 12,
+  villageois2: MIN_PLAYERS,
+  renard: MIN_PLAYERS,
+  ours: MIN_PLAYERS,
+  voleur: MIN_PLAYERS,
+  chienLoup: MIN_PLAYERS,
+  enfantSauvage: MIN_PLAYERS,
+  // Les fratries veulent du monde autour : deux — puis trois — cartes liées,
+  // et un canal qui ne dit rien à qui ne le lit pas (R113).
+  soeurs: 10,
+  freres: 12,
 };
 
-/** Combien de loups porte une composition : la meute, Loup Blanc compris (R13, R96). */
+/**
+ * Combien de loups porte une composition : la meute, Loup Blanc compris
+ * (R13, R96) — et le Chien-Loup avec, dès le salon : l'hôte ne sait pas de
+ * quel côté il tombera, la borne se compte au pire (R111, D32).
+ */
 export function wolvesIn(loups: number, roles: readonly ChoosableRoleId[]): number {
-  return loups + (roles.includes('loupBlanc') ? 1 : 0);
+  return loups + (roles.includes('loupBlanc') ? 1 : 0) + (roles.includes('chienLoup') ? 1 : 0);
 }
 
 /**
@@ -243,6 +269,16 @@ export function suggestionsFor(players: number): { loups: number; roles: Special
   return suggestions.filter((s) => s.loups + s.roles.length <= players - 1);
 }
 
+/**
+ * Combien de cartes porte un id coché : les fratries seules portent leur
+ * multiplicité — l'hôte coche une fois, la composition en distribue deux ou
+ * trois (R4, R113). Tout le reste en vaut une.
+ */
+const MULTIPLICITE: Partial<Record<ChoosableRoleId, number>> = {
+  soeurs: 2,
+  freres: 3,
+};
+
 /** Les loups et rôles qui seront distribués, avant mélange. */
 export function compositionFor(players: number, options: GameOptions): RoleId[] {
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) {
@@ -255,25 +291,34 @@ export function compositionFor(players: number, options: GameOptions): RoleId[] 
   if (loups < 1) throw new IllegalActionError('Il faut au moins un loup', 'composition');
   // R4 : un rôle spécial n'existe qu'en un exemplaire. Le sanitizeur ne peut
   // pas produire de doublon, mais un options fabriqué à la main peut : le
-  // moteur refuse de distribuer deux Voyantes plutôt que de le cacher.
-  if (new Set(roles).size !== roles.length) {
+  // moteur refuse de distribuer deux Voyantes plutôt que de le cacher. Les
+  // fratries, seules, y échappent : leur multiplicité vient de la carte, pas
+  // du nombre de cochages — un doublon s'y fond en une seule cochée.
+  const autres = roles.filter((role) => !(role in MULTIPLICITE));
+  if (new Set(autres).size !== autres.length) {
     throw new IllegalActionError(
       "Un rôle spécial n'existe qu'en un exemplaire",
       'composition',
     );
   }
+  // La composition développe chaque id coché en ses cartes : deux Sœurs,
+  // trois Frères, une de tout le reste (R113).
+  const cartes: RoleId[] = [...new Set(roles)].flatMap((role) =>
+    Array.from({ length: MULTIPLICITE[role] ?? 1 }, () => role as RoleId),
+  );
   // Autant de loups que d'autres, et le premier vote est déjà joué d'avance.
-  // Le Loup Blanc chasse avec la meute : il compte parmi les loups (R96).
+  // Le Loup Blanc chasse avec la meute : il compte parmi les loups (R96) ; le
+  // Chien-Loup aussi, au pire (D32).
   if (wolvesIn(loups, roles) * 2 >= players) {
     throw new IllegalActionError('Trop de loups pour cette table', 'composition');
   }
-  if (loups + roles.length > players) {
+  if (loups + cartes.length > players) {
     throw new IllegalActionError('Plus de rôles que de joueurs', 'composition');
   }
-  const villageois = players - loups - roles.length;
+  const villageois = players - loups - cartes.length;
   return [
     ...Array.from({ length: loups }, () => 'loup' as const),
-    ...roles,
+    ...cartes,
     ...Array.from({ length: villageois }, () => 'villageois' as const),
   ];
 }

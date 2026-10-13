@@ -769,7 +769,9 @@ describe('le fil de discussion', () => {
       partie.agir(orateur, { type: 'dire', channel: 'village', text: `message ${i}` });
     }
     expect(MAX_CHAT_PER_CHANNEL).toBe(100);
-    expect(MAX_CHAT_MESSAGES).toBe(4 * MAX_CHAT_PER_CHANNEL);
+    // Cinq canaux depuis la fratrie (R114) — village, loups, amoureux,
+    // fratrie, morts — cent messages chacun.
+    expect(MAX_CHAT_MESSAGES).toBe(5 * MAX_CHAT_PER_CHANNEL);
     expect(partie.state.chat.length).toBe(MAX_CHAT_PER_CHANNEL);
     // Les plus anciens sont tombés ; les suivants se suivent sans trou.
     expect(partie.state.chat[0]!.id).toBe(6);

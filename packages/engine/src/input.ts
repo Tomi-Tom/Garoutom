@@ -26,8 +26,8 @@ export const MAX_NAME_LENGTH = 16;
  */
 export const MAX_RAW_TEXT_LENGTH = 2_000;
 
-/** Les canaux du fil, dans l'ordre de R75. */
-export const CHAT_CHANNELS = ['village', 'loups', 'amoureux', 'morts'] as const satisfies readonly ChatChannel[];
+/** Les canaux du fil, dans l'ordre de R75 — le canal fratrie n'existe qu'à une table qui en compte (R114). */
+export const CHAT_CHANNELS = ['village', 'loups', 'amoureux', 'fratrie', 'morts'] as const satisfies readonly ChatChannel[];
 
 const canauxCouverts: [Exclude<ChatChannel, (typeof CHAT_CHANNELS)[number]>] extends [never] ? true : never = true;
 void canauxCouverts;
@@ -145,6 +145,10 @@ export function parseAction(raw: unknown, seats: number = MAX_PLAYERS): Action {
     case 'marquer':
     case 'trahir':
       return { type, target: siegeOuPersonne(raw, 'target', borne) };
+    // Le centre du trio du Renard : un siège vivant quelconque — lui compris
+    // (D29) — ou `null` pour ne pas sonder (R107).
+    case 'flairer':
+      return { type, centre: siegeOuPersonne(raw, 'centre', borne) };
     case 'sorciere':
       return { type, save: booleen(raw.save), kill: siegeOuPersonne(raw, 'kill', borne) };
     case 'designerVotants': {
@@ -155,6 +159,23 @@ export function parseAction(raw: unknown, seats: number = MAX_PLAYERS): Action {
       for (const valeur of liste as unknown[]) vus.add(siege(valeur, borne));
       return { type, seats: [...vus] };
     }
+    // La carte du Voleur : la première, la seconde — ou `null` pour
+    // s'abstenir, un `null` explicite (R110).
+    case 'voler': {
+      if (!Object.hasOwn(raw, 'carte')) refus('Il manque « carte »');
+      const carte = raw.carte;
+      if (carte !== null && carte !== 0 && carte !== 1) refus('La carte du Voleur est 0, 1 ou null');
+      return { type, carte };
+    }
+    // Le camp du Chien-Loup : `village` ou `loups`, rien d'autre (R111).
+    case 'seRanger': {
+      const camp = raw.camp;
+      if (camp !== 'village' && camp !== 'loups') refus('Le camp du Chien-Loup est « village » ou « loups »');
+      return { type, camp };
+    }
+    // Le modèle de l'Enfant Sauvage : un siège, jamais `null` (R112).
+    case 'designerModele':
+      return { type, target: siege(raw.target, borne) };
     case 'dire': {
       const channel = raw.channel;
       if (typeof channel !== 'string' || !(CHAT_CHANNELS as readonly string[]).includes(channel)) {

@@ -27,10 +27,15 @@ import { compositionFor } from './options.js';
 import { createSeededRng, isRngState, rngDraw } from './rng.js';
 import {
   IllegalActionError,
+  campEffectif,
   campOf,
-  factionOf,
+  cartePublique,
+  factionEffectif,
+  fratrieDe,
+  groupeDe,
   type Action,
   type ChatChannel,
+  type ChatMessage,
   type Death,
   type DeathCause,
   type GameEvent,
@@ -53,8 +58,15 @@ import {
  * — et le premier numéro visible au village trahirait l'activité des loups.
  */
 export const MAX_CHAT_PER_CHANNEL = 100;
-/** Le plafond du fil entier : quatre canaux, cent messages chacun. */
-export const MAX_CHAT_MESSAGES = 4 * MAX_CHAT_PER_CHANNEL;
+/** Le plafond du fil entier : cinq canaux, cent messages chacun (R114). */
+export const MAX_CHAT_MESSAGES = 5 * MAX_CHAT_PER_CHANNEL;
+/**
+ * Le pas qui sépare les numérotations des groupes de fratrie (R114, D45) : le
+ * canal fratrie ne se numérote pas à deux — chaque groupe tient sa suite
+ * dense au-delà de son pas, si éloignée de l'autre qu'aucun trou n'y paraît.
+ * Deux groupes au plus à une table (R113) : le pas ne se rencontre jamais.
+ */
+export const DECALAGE_FRATRIE = 1_000_000;
 /** Un message : 280 points de code au plus, après nettoyage (R78, R103). */
 export const MAX_MESSAGE_LENGTH = 280;
 
@@ -62,6 +74,8 @@ export const MAX_MESSAGE_LENGTH = 280;
 export const REVEAL_MS = 25_000;
 export const TRIGGER_MS = 30_000;
 export const ELECTION_MS = 90_000;
+/** Le Voleur devant ses deux cartes, avant la révélation (R82, R110). */
+export const VOLEUR_MS = 25_000;
 
 /**
  * Une étape jouée par un rôle mort doit durer quand même.
@@ -94,7 +108,10 @@ function emptyNight(): NightChoices {
     witchSave: false,
     witchKill: null,
     raven: null,
+    renard: null,
     whiteKill: null,
+    chienLoup: null,
+    modele: null,
   };
 }
 
@@ -135,7 +152,39 @@ function rngStateOf(rng: Rng): number {
  */
 export function createGame(setup: { players: number; options: GameOptions }, seed: number | Rng): Step {
   const rng = typeof seed === 'number' ? createSeededRng(seed) : seed;
-  const roles = shuffle(compositionFor(setup.players, setup.options), rng);
+  const compose = compositionFor(setup.players, setup.options);
+  const n = setup.players;
+  let roles: RoleId[];
+  let voleur: { kind: 'voleur'; seat: number; cartes: [RoleId, RoleId] } | null = null;
+  if (compose.includes('voleur')) {
+    // Le talon du Voleur (D44) : la composition augmentée de deux villageois,
+    // moins la carte du Voleur — n+1 cartes. Un tirage désigne son siège, le
+    // reste se mélange ; les cartes de fratrie passent en tête, distribuées
+    // avant le talon quoi qu'il arrive — hors talon par construction, une
+    // fratrie ne se vole pas (R110, R113) ; les n−1 premières vont aux autres
+    // sièges, dans l'ordre, les deux dernières restent face cachée.
+    const seat = rng.nextInt(n);
+    const brassé = shuffle(
+      [...compose, 'villageois' as const, 'villageois' as const].filter((role) => role !== 'voleur'),
+      rng,
+    );
+    const fratrie = brassé.filter((role) => role === 'soeurs' || role === 'freres');
+    const autres = brassé.filter((role) => role !== 'soeurs' && role !== 'freres');
+    const ordonné = [...fratrie, ...autres];
+    roles = Array.from({ length: n }, () => 'villageois' as RoleId);
+    roles[seat] = 'voleur';
+    let prochaine = 0;
+    for (let autre = 0; autre < n; autre += 1) {
+      if (autre === seat) continue;
+      roles[autre] = ordonné[prochaine] as RoleId;
+      prochaine += 1;
+    }
+    voleur = { kind: 'voleur', seat, cartes: [ordonné[n - 1] as RoleId, ordonné[n] as RoleId] };
+  } else {
+    // Sans Voleur, la distribution d'avant, au tirage près : une table de la
+    // v2 rejoue graine pour graine.
+    roles = shuffle(compose, rng);
+  }
   const players: PlayerState[] = roles.map((role, seat) => ({
     seat,
     role,
@@ -143,11 +192,23 @@ export function createGame(setup: { players: number; options: GameOptions }, see
     canVote: true,
     revealed: false,
   }));
+  // Les groupes de fratrie, constitués à la distribution (R113) : les sièges
+  // des Deux Sœurs, puis ceux des Trois Frères — par carte, donc jamais
+  // confondus, même quand les deux fratries sont à la table.
+  const fratries = (['soeurs', 'freres'] as const)
+    .map((role) => ({
+      sieges: players
+        .filter((player) => player.role === role)
+        .map((player) => player.seat)
+        .sort((a, b) => a - b),
+      next: 1,
+    }))
+    .filter((groupe) => groupe.sieges.length > 0);
   const state: GameState = {
     options: setup.options,
     players,
     rng: rngStateOf(rng),
-    phase: { kind: 'revelation', ready: [] },
+    phase: voleur ?? { kind: 'revelation', ready: [] },
     phaseSeq: 1,
     day: 1,
     resume: 'nuit',
@@ -159,18 +220,26 @@ export function createGame(setup: { players: number; options: GameOptions }, see
     potions: { vie: true, mort: true },
     lastProtected: null,
     inspections: [],
+    renardPouvoir: true,
+    renardSavoirs: [],
+    modele: null,
+    enfantReveil: null,
+    fratries,
     ancienBlesse: false,
     pouvoirsPerdus: false,
     corbeau: null,
     votants: null,
     huisClos: 0,
     chat: [],
-    nextMessageId: { village: 1, loups: 1, amoureux: 1, morts: 1 },
+    nextMessageId: { village: 1, loups: 1, amoureux: 1, fratrie: 1, morts: 1 },
     log: [],
     winner: null,
     over: false,
   };
-  return { state, events: [{ type: 'debut' }, { type: 'phase', phase: 'revelation', day: 1 }] };
+  return {
+    state,
+    events: [{ type: 'debut' }, { type: 'phase', phase: state.phase.kind, day: 1 }],
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,9 +280,41 @@ function livingPowered(state: GameState, role: RoleId): number[] {
   return state.pouvoirsPerdus ? [] : livingWith(state, role);
 }
 
-/** La meute vivante : les loups, Loup Blanc compris (R96). */
+/**
+ * La meute vivante : les loups, Loup Blanc compris (R96) — et, au camp
+ * effectif, le Chien-Loup rangé chez les loups (R109, R111). L'Enfant
+ * Sauvage transformé, lui, n'y entre qu'à la nuit qui suit la mort de son
+ * modèle : son camp bascule aussitôt, mais la meute ne l'accueille qu'à son
+ * réveil — `enfantReveil` retient son siège en attendant (R112, D33).
+ */
 export function livingPack(state: GameState): number[] {
-  return state.players.filter((p) => p.alive && campOf(p.role) === 'loups').map((p) => p.seat);
+  return state.players
+    .filter((p) => p.alive && campEffectif(p) === 'loups' && state.enfantReveil !== p.seat)
+    .map((p) => p.seat);
+}
+
+/**
+ * Les deux voisins d'un siège au cercle (R105) : `[droite, gauche]`.
+ *
+ * L'ordre des sièges est l'ordre du cercle — le client pose les rangs depuis
+ * le bas, sens des aiguilles d'une montre, le joueur local au rang 0 — donc
+ * un joueur assis face au centre a son siège +1 **à sa gauche** et son siège
+ * −1 à sa droite, modulo n. Fonction pure : le voisinage est une géométrie
+ * publique, dérivée de la seule liste des joueurs — ni un état, ni un secret.
+ */
+export function voisinsDe(state: GameState, seat: number): [number, number] {
+  const n = state.players.length;
+  return [((seat - 1) % n + n) % n, (seat + 1) % n];
+}
+
+/**
+ * Le trio que le Renard flaire : le centre — vivant par construction — et ses
+ * deux voisins vivants. Un voisin mort n'est jamais remplacé : le trio peut
+ * être plus petit (R107). Le Renard lui-même peut s'y compter (D29).
+ */
+function trioFlairé(state: GameState, centre: number): number[] {
+  const [droite, gauche] = voisinsDe(state, centre);
+  return [centre, droite, gauche].filter((seat) => isAlive(state, seat)).sort((a, b) => a - b);
 }
 
 /**
@@ -231,18 +332,31 @@ function whiteWolfNight(state: GameState): boolean {
  */
 function inHuisClos(state: GameState): boolean {
   const alive = state.players.filter((p) => p.alive);
-  return (
-    alive.some((p) => p.role === 'loupBlanc') && alive.every((p) => campOf(p.role) === 'loups')
-  );
+  // Au camp effectif (R109) : un Chien-Loup rangé ou un Enfant transformé
+  // compte dans la meute — le réveil de l'Enfant n'attend personne, le huis
+  // clos se compte dès sa transformation.
+  return alive.some((p) => p.role === 'loupBlanc') && alive.every((p) => campEffectif(p) === 'loups');
 }
 
 /** Qui joue pendant l'étape principale de la nuit. */
 function principalActors(state: GameState): number[] {
   const seats = [
     ...(state.day === 1 ? livingPowered(state, 'cupidon') : []),
+    // La première nuit appelle aussi ses deux solitaires, en parallèle de
+    // tout le reste : le Chien-Loup choisit son camp, l'Enfant Sauvage son
+    // modèle (R111, R112). Ni l'un ni l'autre n'est un pouvoir du village —
+    // la rancune de l'Ancien n'y peut rien, et elle ne frappe de toute façon
+    // jamais avant la nuit suivante.
+    ...(state.day === 1 ? livingWith(state, 'chienLoup') : []),
+    ...(state.day === 1 ? livingWith(state, 'enfantSauvage') : []),
     ...livingPowered(state, 'salvateur'),
     ...livingPowered(state, 'voyante'),
     ...livingPowered(state, 'corbeau'),
+    // Le Renard flaire en parallèle, comme le Corbeau — tant qu'il a son
+    // pouvoir : un faux triple le lui retire à vie, la rancune aussi (R107,
+    // R92). `renardPouvoir` manque aux états d'avant la v3, qui ne connaissent
+    // pas de Renard : il s'y lit faux, et personne n'y est acteur pour ça.
+    ...(state.renardPouvoir ? livingPowered(state, 'renard') : []),
     ...livingPack(state),
   ];
   return seats.sort((a, b) => a - b);
@@ -271,6 +385,8 @@ function voters(state: GameState): number[] {
 export function pendingActors(state: GameState): number[] {
   const phase = state.phase;
   switch (phase.kind) {
+    case 'voleur':
+      return [phase.seat];
     case 'revelation':
       return livingSeats(state).filter((seat) => !phase.ready.includes(seat));
     case 'nuit':
@@ -320,6 +436,8 @@ function isGhostStep(state: GameState, step: NightStep): boolean {
 export function phaseBudgetMs(state: GameState, _rngIgnore?: Rng): number {
   const phase = state.phase;
   switch (phase.kind) {
+    case 'voleur':
+      return VOLEUR_MS;
     case 'revelation':
       return REVEAL_MS;
     case 'nuit': {
@@ -380,9 +498,20 @@ function enter(turn: Turn, phase: Phase): void {
 function startNight(turn: Turn): void {
   const { state } = turn;
   // La nuit N précède le jour N : on n'avance le compteur qu'à partir de la
-  // deuxième nuit. La première suit la révélation des cartes — ou l'élection
-  // pré-nocturne du capitaine, qui ne fait pas avancer le jour non plus.
-  if (state.phase.kind !== 'revelation' && state.phase.kind !== 'election') state.day += 1;
+  // deuxième nuit. La première suit la révélation des cartes, la phase du
+  // Voleur (R110) ou l'élection pré-nocturne du capitaine — aucune des trois
+  // ne fait avancer le jour (R33).
+  if (
+    state.phase.kind !== 'revelation' &&
+    state.phase.kind !== 'election' &&
+    state.phase.kind !== 'voleur'
+  ) {
+    state.day += 1;
+  }
+  // L'Enfant Sauvage transformé rejoint la meute : son réveil, attendu depuis
+  // la mort de son modèle, se consomme ici — vues du pack, canal des loups et
+  // consigne `devorer` s'ouvrent pour la nuit qui vient (R112, D33).
+  state.enfantReveil = null;
   state.night = emptyNight();
   // Le huis clos se compte en nuits ouvertes depuis la dernière mort (R99).
   if (inHuisClos(state)) state.huisClos += 1;
@@ -452,6 +581,41 @@ function closePrincipal(turn: Turn): void {
   }
   if (night.raven !== null) {
     state.log.push({ day: state.day, type: 'corbeau', target: night.raven });
+  }
+
+  // Le Chien-Loup s'est rangé : son camp effectif s'écrit — et rien ne se
+  // dit, aucun évènement (R111). La meute le reconnaîtra à ses vues, le
+  // village ne verra jamais rien. Rangé au village, il n'a pas besoin d'être
+  // écrit : c'est son camp d'origine.
+  if (night.chienLoup !== null) {
+    const chien = livingWith(state, 'chienLoup')[0];
+    if (chien !== undefined) {
+      if (night.chienLoup === 'loups') playerAt(state, chien).camp = 'loups';
+      state.log.push({ day: state.day, type: 'chienLoup', seat: chien, camp: night.chienLoup });
+    }
+  }
+  // L'Enfant Sauvage a désigné son modèle : l'état le retient, et rien ne se
+  // dit — le modèle n'est jamais informé (R112).
+  if (night.modele !== null) {
+    const enfant = livingWith(state, 'enfantSauvage')[0];
+    if (enfant !== undefined) {
+      state.modele = night.modele;
+      state.log.push({ day: state.day, type: 'modele', seat: enfant, target: night.modele });
+    }
+  }
+
+  // Le Renard flaire son trio : le résultat ne quitte jamais l'état (R87) —
+  // ni le signe, ni la perte du pouvoir, ni les innocents appris. Le `??`
+  // regarde les nuits d'avant la v3, qui n'ont pas de champ `renard`. Le
+  // camp se lit effectif (R109) : un Chien-Loup rangé chez les loups cette
+  // nuit-là s'y flaire comme un loup.
+  const centreFlairé = night.renard ?? null;
+  if (centreFlairé !== null) {
+    const trio = trioFlairé(state, centreFlairé);
+    const loups = trio.some((seat) => campEffectif(playerAt(state, seat)) === 'loups');
+    state.renardSavoirs.push({ day: state.day, seats: trio, loups });
+    if (!loups) state.renardPouvoir = false;
+    state.log.push({ day: state.day, type: 'renard', centre: centreFlairé, loups });
   }
 
   // Seules comptent les voix des loups encore en vie — Loup Blanc compris :
@@ -530,6 +694,23 @@ function resolveNight(turn: Turn): void {
     turn.events.push({ type: 'corbeau', target: night.raven });
   }
 
+  // La grogne du Montreur d'Ours suit l'annonce des morts (R108) : vivant
+  // seul, son ourson gronde si un loup est l'un de ses voisins vivants — un
+  // voisin mort ne compte pas, et l'Ours mort ne gronde pas : sa mort est
+  // publique, pas de grogne posthume. L'aube paisible reçoit son évènement
+  // comme les autres : `grogne: false` est une information, pas un silence.
+  // La rancune de l'Ancien n'y change rien : la grogne est celle d'un animal,
+  // pas un pouvoir du village (D30). Le camp se lit effectif (R109) : un
+  // voisin transformé dans la nuit gronde déjà l'ourson.
+  for (const ours of livingWith(state, 'ours')) {
+    const [droite, gauche] = voisinsDe(state, ours);
+    const grogne = [droite, gauche].some(
+      (voisin) => isAlive(state, voisin) && campEffectif(playerAt(state, voisin)) === 'loups',
+    );
+    state.log.push({ day: state.day, type: 'ours', seat: ours, grogne });
+    turn.events.push({ type: 'ours', seat: ours, grogne });
+  }
+
   state.resume = 'jour';
   proceed(turn);
 }
@@ -566,10 +747,35 @@ function kill(
   const player = state.players[seat];
   if (!player?.alive) return;
   player.alive = false;
-  out.push({ seat, cause, role: state.options.revelerRoles ? player.role : null });
+  // La carte d'un mort se lit comme toute carte : le Villageois-Villageois
+  // reste « villageois » jusqu'au récapitulatif de fin — l'annonce publique
+  // ne le désigne pas davantage que sa vue (R106, D31).
+  out.push({ seat, cause, role: state.options.revelerRoles ? cartePublique(player.role) : null });
   state.log.push({ day: state.day, type: 'mort', seat, cause });
   // Une mort rouvre le compte du huis clos (R99).
   state.huisClos = 0;
+
+  // La mort du modèle réveille l'Enfant Sauvage en loup — aussitôt, quelle
+  // que soit la cause de la mort, l'abandon compris (R112). Sa carte devient
+  // « loup » : la Voyante la lira ainsi, et sa mort l'annoncera ainsi (D27).
+  // Le camp effectif bascule sur-le-champ — la victoire, le Renard, l'Ours
+  // le comptent déjà ; la meute, elle, ne l'accueille qu'à la nuit suivante :
+  // `enfantReveil` retient son siège (D33). Aucun évènement : ce silence
+  // absolu est la règle, le récapitulatif de fin relira seul la
+  // transformation, ligne de journal et rien d'autre — le rôle d'origine
+  // s'y devine, une transformation ne touche qu'un Enfant Sauvage.
+  if (state.modele === seat) {
+    state.modele = null;
+    const enfant = state.players.find((p) => p.alive && p.role === 'enfantSauvage');
+    if (enfant) {
+      enfant.role = 'loup';
+      enfant.camp = 'loups';
+      state.enfantReveil = enfant.seat;
+      state.log.push({ day: state.day, type: 'transformation', seat: enfant.seat });
+    }
+  }
+  // L'Enfant mort n'attend plus de réveil.
+  if (state.enfantReveil === seat) state.enfantReveil = null;
 
   if (
     player.role === 'ancien' &&
@@ -580,6 +786,9 @@ function kill(
     // Le village a tué son Ancien : les pouvoirs s'en vont avec lui, et le
     // jeu l'annonce — sa carte se retourne, quelle que soit l'option (R92).
     state.pouvoirsPerdus = true;
+    // Le flair du Renard s'éteint avec les pouvoirs du village (R92, R107) ;
+    // la grogne de l'Ours, elle, survit : un instinct, pas un pouvoir (D30).
+    state.renardPouvoir = false;
     player.revealed = true;
     state.log.push({ day: state.day, type: 'rancune', seat });
     suites.push({ type: 'rancune', seat });
@@ -625,13 +834,21 @@ export function winnerOf(state: GameState): Winner | null {
   const lovers = state.lovers;
   if (lovers) {
     const [a, b] = lovers.map((seat) => playerAt(state, seat));
-    const mixed = a && b && factionOf(a.role) !== factionOf(b.role);
+    // Un couple se relit aux factions effectives (R109, D27) : l'un des deux
+    // peut avoir changé de camp depuis Cupidon — le Chien-Loup rangé, l'Enfant
+    // transformé ; le Loup Blanc garde la sienne (R98).
+    const mixed = a && b && factionEffectif(a) !== factionEffectif(b);
     if (mixed && alive.length === 2 && alive.every((p) => lovers.includes(p.seat))) {
       return 'amoureux';
     }
   }
 
-  const wolves = alive.filter((player) => player.role === 'loup').length;
+  // Au camp effectif (R109) : le Chien-Loup rangé chez les loups et l'Enfant
+  // Sauvage transformé y comptent comme des loups ; le Loup Blanc reste à
+  // part, sa faction est la sienne (R98).
+  const wolves = alive.filter(
+    (player) => player.role !== 'loupBlanc' && campEffectif(player) === 'loups',
+  ).length;
   const white = alive.filter((player) => player.role === 'loupBlanc').length;
   if (wolves === 0 && white === 0) return 'village';
   if (white > 0 && white === alive.length) return 'loupBlanc';
@@ -849,6 +1066,23 @@ function closePhase(turn: Turn): void {
   const { state } = turn;
   const phase = state.phase;
   switch (phase.kind) {
+    case 'voleur': {
+      // Le temps est écoulé sans choix (D44b) : deux cartes de loups au
+      // talon, il prend la première ; sinon il reste Voleur, sans pouvoir
+      // (R81). Un choix déjà fait a changé son rôle, une abstention assumée
+      // l'a laissé « voleur » sans obligation : la clôture ne rejoue rien,
+      // elle ne fait qu'inscrire au récit ce que le silence a laissé.
+      const joueur = playerAt(state, phase.seat);
+      if (joueur.role === 'voleur') {
+        const obligatoire = phase.cartes.every((carte) => campOf(carte) === 'loups');
+        const carte: RoleId = obligatoire ? phase.cartes[0] : 'voleur';
+        joueur.role = carte;
+        state.log.push({ day: state.day, type: 'voleur', carte });
+      }
+      // La révélation suit, et le compteur de jours n'a pas bougé (R33, R110).
+      enter(turn, { kind: 'revelation', ready: [] });
+      return;
+    }
     case 'revelation':
       // La révélation close, la suite dépend des options : l'élection
       // pré-nocturne, ou directement la nuit.
@@ -924,10 +1158,14 @@ function requirePowers(state: GameState): void {
   }
 }
 
-/** Un loup vivant de la meute, Loup Blanc compris (R96). */
+/**
+ * Un loup vivant de la meute, Loup Blanc compris (R96) : au camp effectif
+ * (R109), le Chien-Loup rangé chez les loups y entre — l'Enfant Sauvage
+ * transformé, lui, y attend son réveil (R112, D33).
+ */
 function requirePack(state: GameState, seat: number): void {
   const player = playerAt(state, seat);
-  if (!player.alive || campOf(player.role) !== 'loups') {
+  if (!player.alive || campEffectif(player) !== 'loups' || state.enfantReveil === seat) {
     throw new IllegalActionError('Ce n’est pas à vous de jouer', 'not-your-turn');
   }
 }
@@ -950,9 +1188,20 @@ export function speakableChannels(state: GameState, seat: number): ChatChannel[]
   const daytime =
     kind === 'jour' || kind === 'election' || kind === 'chasseur' || kind === 'succession' || kind === 'bouc';
   if (state.options.chat && daytime) channels.push('village');
-  if (campOf(player.role) === 'loups' && kind === 'nuit') channels.push('loups');
+  // La meute se parle la nuit, au camp effectif (R109) : le Chien-Loup rangé
+  // chez les loups y lit et écrit — l'Enfant transformé, lui, attend son
+  // réveil (D33).
+  if (campEffectif(player) === 'loups' && state.enfantReveil !== seat && kind === 'nuit') {
+    channels.push('loups');
+  }
   const lovers = state.lovers;
   if (lovers?.includes(seat) && lovers.every((s) => isAlive(state, s))) channels.push('amoureux');
+  // Le canal de sa fratrie, du premier au dernier jour, la nuit comme le
+  // jour : seule la mort le referme (R114) — les morts qui voient tout le
+  // relisent, sans jamais y écrire. Pas avant la révélation, pourtant : la
+  // fratrie se découvre avec les cartes (R113), et la phase du Voleur vient
+  // avant (R110, D46).
+  if (kind !== 'voleur' && fratrieDe(state, seat)) channels.push('fratrie');
   return channels;
 }
 
@@ -965,16 +1214,35 @@ function say(turn: Turn, seat: number, channel: ChatChannel, raw: string): void 
     throw new IllegalActionError('Vous ne pouvez pas parler ici', 'channel');
   }
   // Numérotation par canal : une numérotation globale raconterait à chacun,
-  // par ses trous, l'activité des canaux qu'il ne lit pas.
-  const id = state.nextMessageId[channel] ?? 1;
-  state.nextMessageId[channel] = id + 1;
-  state.chat.push({ id, channel, seat, text, day: state.day });
+  // par ses trous, l'activité des canaux qu'il ne lit pas. Le canal fratrie,
+  // lui, se numérote **par groupe** (R114, D45) : chaque groupe tient sa
+  // suite dense au-delà de son pas — les Sœurs ne lisent jamais les trous
+  // des Frères. Le compteur du canal ne s'y touche pas.
+  let id: number;
+  let groupe: number | undefined;
+  if (channel === 'fratrie') {
+    groupe = groupeDe(state, seat) ?? -1;
+    const fratrie = groupe >= 0 ? state.fratries[groupe] : undefined;
+    const local = fratrie?.next ?? 1;
+    if (fratrie) fratrie.next = local + 1;
+    id = (groupe + 1) * DECALAGE_FRATRIE + local;
+  } else {
+    id = state.nextMessageId[channel] ?? 1;
+    state.nextMessageId[channel] = id + 1;
+  }
+  const message: ChatMessage = { id, channel, seat, text, day: state.day };
+  if (groupe !== undefined) message.groupe = groupe;
+  state.chat.push(message);
   // Le plus ancien message **de ce canal** tombe, et lui seul : la borne de
-  // chaque canal ne dépend que de lui (R78).
-  let surplus = state.chat.filter((message) => message.channel === channel).length - MAX_CHAT_PER_CHANNEL;
+  // chaque canal ne dépend que de lui (R78). Dans le canal fratrie, la borne
+  // est celle du groupe : le bavardage des Frères ne pousse jamais hors du
+  // fil les messages des Sœurs (R114, D45).
+  const duCanal = (message: ChatMessage) =>
+    message.channel === channel && (channel !== 'fratrie' || message.groupe === groupe);
+  let surplus = state.chat.filter(duCanal).length - MAX_CHAT_PER_CHANNEL;
   while (surplus > 0) {
     state.chat.splice(
-      state.chat.findIndex((message) => message.channel === channel),
+      state.chat.findIndex(duCanal),
       1,
     );
     surplus -= 1;
@@ -1044,6 +1312,29 @@ export function applyAction(state: GameState, raw: Action, rngOrSeat: Rng | numb
       break;
     }
 
+    case 'voler': {
+      if (next.phase.kind !== 'voleur' || next.phase.seat !== seat) {
+        throw new IllegalActionError('Ce n’est pas à vous de jouer', 'not-your-turn');
+      }
+      // Deux cartes de camp loups dans le talon : il faut en prendre une
+      // (R110). Sinon, il peut s'abstenir — il reste Voleur, sans pouvoir.
+      const obligatoire = next.phase.cartes.every((carte) => campOf(carte) === 'loups');
+      if (action.carte === null) {
+        if (obligatoire) throw new IllegalActionError('Il faut prendre une carte', 'illegal');
+      } else {
+        const carte = next.phase.cartes[action.carte];
+        playerAt(next, seat).role = carte;
+        // La carte prise est un rôle comme un autre : il le joue dès la nuit
+        // qui vient. Le récapitulatif de fin seul relira le vol (R110).
+        next.log.push({ day: next.day, type: 'voleur', carte });
+      }
+      // La carte non choisie sort du jeu : le talon ne reparaît plus. La
+      // clôture enchaîne la révélation, et le jour n'a pas avancé (R33,
+      // R110). Aucun évènement ne dit le choix — la phase seule s'annonce.
+      closePhase(turn);
+      return { state: next, events: turn.events };
+    }
+
     case 'cupidon': {
       requireStep(next, 'principale');
       requireRole(next, seat, 'cupidon');
@@ -1086,9 +1377,10 @@ export function applyAction(state: GameState, raw: Action, rngOrSeat: Rng | numb
       requirePack(next, seat);
       if (action.target !== null) {
         requireLiving(next, action.target, 'La proie');
-        // Le Loup Blanc est de la meute : on ne le vise pas plus qu'un autre
-        // loup — ce serait le désigner (R96).
-        if (campOf(playerAt(next, action.target).role) === 'loups') {
+        // La meute ne se mange pas : le Loup Blanc en est (R96), et le camp
+        // effectif y range le Chien-Loup rangé et l'Enfant transformé — les
+        // viser, ce serait dire leur camp (R109).
+        if (campEffectif(playerAt(next, action.target)) === 'loups') {
           throw new IllegalActionError('Les loups ne se mangent pas entre eux', 'target');
         }
       }
@@ -1150,12 +1442,54 @@ export function applyAction(state: GameState, raw: Action, rngOrSeat: Rng | numb
       break;
     }
 
+    case 'flairer': {
+      requireStep(next, 'principale');
+      requireRole(next, seat, 'renard');
+      requirePowers(next);
+      // Un flair perdu ne se rejoue pas : un trio sans loup l'a éteint, pour
+      // la vie (R107).
+      if (!next.renardPouvoir) throw new IllegalActionError('Le Renard ne flaire plus', 'powers');
+      // N'importe quel vivant pour centre — lui compris : le livret ne
+      // l'exclut pas de son propre trio (D29).
+      if (action.centre !== null) requireLiving(next, action.centre, 'Le centre du trio');
+      next.night.renard = action.centre;
+      markActed(next, seat);
+      break;
+    }
+
+    case 'seRanger': {
+      requireStep(next, 'principale');
+      requireRole(next, seat, 'chienLoup');
+      // Il ne se range que la première nuit, une fois pour toutes (R111).
+      if (next.day !== 1) throw new IllegalActionError('Ce n’est pas le moment', 'wrong-phase');
+      next.night.chienLoup = action.camp;
+      markActed(next, seat);
+      break;
+    }
+
+    case 'designerModele': {
+      requireStep(next, 'principale');
+      requireRole(next, seat, 'enfantSauvage');
+      // Un modèle, la première nuit, une fois pour toutes (R112).
+      if (next.day !== 1) throw new IllegalActionError('Ce n’est pas le moment', 'wrong-phase');
+      // N'importe quel vivant, lui compris — le modèle ne sait jamais qu'il
+      // l'est (R112).
+      requireLiving(next, action.target, 'Le modèle');
+      next.night.modele = action.target;
+      markActed(next, seat);
+      break;
+    }
+
     case 'trahir': {
       requireStep(next, 'loupBlanc');
       requireRole(next, seat, 'loupBlanc');
       if (action.target !== null) {
         requireLiving(next, action.target, 'La proie');
-        if (action.target === seat || playerAt(next, action.target).role !== 'loup') {
+        // Il ne dévore qu'un loup au camp effectif — jamais lui-même, jamais
+        // un Loup Blanc : le Chien-Loup rangé chez les loups et l'Enfant
+        // transformé sont des proies comme les autres (R97, R109, D27).
+        const proie = playerAt(next, action.target);
+        if (action.target === seat || proie.role === 'loupBlanc' || campEffectif(proie) !== 'loups') {
           throw new IllegalActionError('Le Loup Blanc ne dévore qu’un autre loup', 'target');
         }
       }

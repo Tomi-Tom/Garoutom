@@ -363,6 +363,282 @@ journaux JSON d'une ligne, jamais de jeton.
 reconnexion ; encore faut-il que le nouveau Worker parle aux anciens
 clients.
 
+## Le chantier v3 (D25 à D44)
+
+**13 octobre 2026.** La boîte entière s'ouvre en cinq vagues, chacune
+livrable et jouable. La première ouvre trois cartons de l'extension
+Personnages — le Villageois-Villageois, le Renard, le Montreur d'Ours —
+avec la convention de voisinage qui portera toute la suite (R105 à R108).
+La deuxième ouvre le Voleur, le Chien-Loup, l'Enfant Sauvage, les Deux
+Sœurs et les Trois Frères (R109 à R114), et pose avec eux les deux
+fondations de la suite : le camp effectif et le canal des fratries.
+
+### D26 — La v3 vit dans sa liste, livrée vague par vague
+
+**13 octobre 2026.** Les dix-huit cartes officielles qui restent entreront
+dans `OPTIONAL_ROLES_V3`, une troisième liste à côté de `SPECIAL_ROLES` et
+`OPTIONAL_ROLES` — qui ne bougent pas d'une ligne : référence (R20),
+suggestions (R23) et générateur (R22/R100) restent ce qu'ils sont, graine
+pour graine. Et la liste ne grandit que vague par vague : n'entre dans
+`ROLES` que ce qui est livré — `villageois2`, `renard`, `ours` pour la V1,
+pas les dix-huit d'un coup. Le contrat du client est exhaustif —
+`Record<RoleId, TexteRole>`, un switch par `prompt.kind`, par verbe, par
+évènement — : les dix-huit ids d'un coup exigeraient les dix-huit rôles
+livrés immédiatement, art compris. Enfin, aucun rôle v3 ne sort jamais du
+générateur, même sur demande : seuls ceux de la v2 s'y tirent (R100) ; un
+rôle v3 se coche, par l'hôte seul. Une table qui n'en coche aucun rejoue la
+v2 état pour état.
+
+**Pourquoi.** La compatibilité est la première contrainte du chantier :
+l'équilibrage de la v2 a été vérifié sur des milliers de parties rejouées,
+et une table qui ne coche rien ne doit jamais s'apercevoir que la boîte a
+grandi. La livraison vague par vague est la même prudence appliquée au
+client : chaque vague est jouable de bout en bout — moteur, art, écrans,
+robots — avant d'ouvrir la suivante.
+
+### D29 — Le Renard peut se compter dans son trio
+
+**13 octobre 2026.** Oui. Le livret dit « le joueur désigné et ses deux
+voisins » sans exclure le Renard lui-même : il peut être le centre du trio
+comme l'un de ses voisins. Le moteur suit le livret — `centre` accepte
+n'importe quel vivant, Renard compris.
+
+**Pourquoi.** L'exclure serait une règle maison que nul livret n'écrit. Le
+Renard qui se sonde joue sa carte double : un loup voisin lui épargne son
+pouvoir, un trio sain le lui coûte — mais il apprend trois innocents, lui
+le premier.
+
+### D30 — La grogne de l'Ours survit à la rancune
+
+**13 octobre 2026.** Quand la rancune de l'Ancien emporte les pouvoirs du
+village (R92), le Montreur d'Ours ne perd rien : son ourson grogne toujours.
+La grogne est celle d'un animal, pas un pouvoir du village — la rancune
+éteint des consignes et des pouvoirs, pas un instinct.
+
+**Pourquoi.** La rancune punit le village de la mort de son Ancien ; rien,
+dans la boîte ni dans l'histoire, ne dit qu'elle musellerait la bête. Et le
+silence de l'ourson après une rancune lirait comme un pouvoir éteint — un
+mensonge de plus dans une partie qui n'en a pas besoin.
+
+### D31 — Le porteur du Villageois-Villageois voit « villageois »
+
+**13 octobre 2026.** La carte est recto-verso, et le côté que lit son
+porteur dit « Simple Villageois ». La vue de tout siège — le porteur
+compris — montre `villageois` comme rôle du porteur ; la certification est
+publique, mais indiscernable d'un villageois ordinaire aux yeux de la
+table. Seul le récapitulatif de fin — une fois la partie finie, quand plus
+rien n'est caché (R77) — dit `villageois2`.
+
+**Pourquoi.** Fidèle au recto-verso officiel : le porteur ne sait pas qu'il
+porte la carte double, et c'est tout le sel du rôle — nul ne sait, pas
+même lui. Quand l'Infect Père des Loups arrivera (Vague 5), la certification
+portera sur la carte, pas sur le camp effectif : la vue restera sincère, et
+redoutable.
+
+### D25 — Un prompt composite : une seule consigne, deux décisions
+
+**13 octobre 2026.** Les rôles à double décision — le Juge Bègue, qui vote
+et peut convoquer un second vote ; l'Infectée, qui vote avec la meute et
+garde son pouvoir d'origine ; le Comédien, qui joue une carte puis le
+pouvoir de la carte — ne multiplieront pas les étapes. **Un seul `Prompt` et
+un seul `markActed` par siège et par étape** : le prompt principal porte un
+champ `secondaire?: Prompt`, et l'action qui le porte acquitte les deux
+charges d'un coup. Premier usage en Vague 3 (le Juge), réutilisé en Vague 5
+(l'Infectée, le Comédien).
+
+**Pourquoi.** L'alternative — des sous-étapes chaînées — multiplierait les
+phases, les budgets et les pas fantômes : chaque clôture intermédiaire est
+une fenêtre de fuite (qui a agi, qui n'a pas agi), et une minuterie de plus
+par nuit. Le patron composite tient la double décision dans le pas unique
+que le serveur sait déjà armer ; la Vague 2 ne fait que le graver ici —
+aucun code ne l'utilise encore.
+
+### D27 — La carte lue dit le rôle courant ; le camp se lit effectif
+
+**13 octobre 2026.** Avec les transformations de la Vague 2, deux lectures
+divergent : celle de la carte (la Voyante, l'annonce d'une mort) et celle du
+camp (la victoire, la meute, l'Ours, le Renard). Tranché :
+
+- **la carte dit le rôle courant** du siège, masqué comme toute carte
+  (R106) — la Voyante qui sonde et la mort qui retourne lisent la même
+  chose ;
+- le **Chien-Loup rangé côté loups garde sa carte** `chienLoup` : la Voyante
+  la voit, sa mort la montre — c'est sa carte, la meute n'en sait rien ;
+  mais dans les vues du pack il passe pour un loup ordinaire, masqué comme
+  le Loup Blanc ;
+- l'**Enfant Sauvage transformé devient un loup à part entière** : sa carte
+  est réécrite `loup`, la Voyante la voit, sa mort la montre — fidèle au
+  « devient un loup-garou » du livret. Son rôle d'origine survit au
+  récapitulatif de fin : une ligne `transformation` au journal la raconte,
+  et elle seule ;
+- **tout lecteur de camp lit le camp effectif** (R109) : `winnerOf` — qui
+  lisait des littéraux `role === 'loup'` —, `livingPack`, `requirePack`,
+  `speakableChannels`, `readableChannels`, les vues `pack`, `inHuisClos`,
+  les cibles interdites de `devorer` et de `trahir`, le trio du Renard, la
+  grogne de l'Ours ;
+- **`trahir` au camp effectif** : le Loup Blanc dévore tout siège de camp
+  loups hors lui-même et le Loup Blanc — le Chien-Loup rangé et l'Enfant
+  devenu loup sont des loups-garous comme les autres pour lui ;
+- **un couple dont l'un change de camp se relit** : la victoire des
+  amoureux compare les factions effectives — un amoureux changé de camp
+  peut rendre le couple mixte, et lui rendre la victoire à deux.
+
+**Pourquoi.** La boîte dit « devient un loup-garou », sans dire ce qu'en
+lit la Voyante : lire le rôle courant est la seule lecture qui ne mente
+jamais à personne — la Voyante sonde la carte qui est sur la table, et la
+table retourne la même. Pour le Chien-Loup, le livret est explicite : il
+**choisit un camp**, sa carte reste la sienne ; le masquer dans la meute
+suit le précédent du Loup Blanc (R96). Le camp effectif est la fondation
+que la Vague 4 (le charme par siège) et la Vague 5 (l'Infectée, la
+Servante) consomment : l'écrire une fois, ici, avant qu'elles n'arrivent.
+
+### D28 — Le canal des fratries est permanent, entre vivants
+
+**13 octobre 2026.** Les Deux Sœurs et les Trois Frères se concertent « de
+temps en temps » autour de la table — souvent un tour sur deux. En ligne,
+chaque réveil est une phase de plus, un budget de plus, une fenêtre de
+fuite de plus. Tranché : le canal `fratrie` est **permanent, de jour comme
+de nuit**, entre les **vivants** d'un même groupe — le précédent des
+amoureux (R76), assumé comme l'écart 9 de la v1. Un mort le quitte : il
+n'y écrit plus, il n'y lit plus ; `mortsVoientTout` le lui rend en lecture
+(R77, R114).
+
+**D28b.** Une Sœur ou un Frère infecté (Vague 5) garderait son groupe et
+son canal : l'infection change le camp, jamais la fratrie.
+
+**Pourquoi.** Simuler les réveils intermittents coûterait une mécanique de
+phasing par fratrie — quelles nuits, quel budget, quel silence quand l'un
+est mort — pour un gain de fidélité que personne ne peut constater en
+ligne. Le canal permanent, lui, est muet quand ils n'écrivent pas : rien
+ne le distingue d'une absence de fratrie pour qui ne le lit pas (R78), et
+la numérotation par canal garde le silence des autres.
+
+### D32 — Le Chien-Loup compte parmi les loups, dès le salon
+
+**13 octobre 2026.** La borne de R13 compte les loups avant de savoir de
+quel côté le Chien-Loup tombera. Tranché : il compte **comme un loup**
+(`wolvesIn` l'ajoute), conservateur — une table qui le coche avec deux
+loups à six joueurs se refuse, plutôt que de risquer trois loups pour
+trois villageois. Une table sans Chien-Loup ne change pas d'un chiffre :
+l'addition est incrémentale.
+
+**D32b.** Le Chien-Loup rangé côté village reste infectable par l'Infect
+Père des Loups (Vague 5) : sa carte est un villageois, le pouvoir de
+l'Infect ne regarde pas son choix à venir.
+
+**Pourquoi.** Le livret ne dit rien de la composition ; laisser l'hôte
+composer une meute potentielle majoritaire serait lui tendre un piège.
+Le conservatisme est la règle de la v3 depuis D26 : ce qui n'est pas
+encore joué se compte au pire.
+
+### D33 — L'Enfant Sauvage : camp immédiat, réveil différé
+
+**13 octobre 2026.** Le modèle meurt : le livret dit que l'Enfant « devient
+un loup-garou » et « se réveille avec la meute dès la nuit suivante ». Deux
+temps, donc, tranchés ainsi :
+
+- le **camp effectif passe aux loups à la mort du modèle**, dans le pas qui
+  tue — la victoire, l'Ours, le Renard le lisent tout de suite ; la carte
+  est réécrite `loup` (D27) ;
+- l'**accès à la meute s'ouvre au `startNight` suivant** — vues du pack,
+  canal des loups, consigne `devorer` : un champ `enfantReveil` le retient
+  jusqu'au lever de la nuit suivante, qui le consomme.
+
+La transformation ne produit **aucun évènement** : le secret est absolu,
+seul le récapitulatif de fin le raconte. **L'abandon du modèle transforme
+aussi** — une mort est une mort, l'absence publique du modèle est un
+décès comme un autre. **Sans modèle au temps écoulé de la première nuit**
+(R81), l'Enfant n'a jamais de modèle : il ne se transforme jamais, fût-ce
+à la mort tardive d'un siège qu'il aurait voulu désigner. Un modèle
+**infecté** (Vague 5) survit : pas de transformation tant qu'il vit.
+
+**Pourquoi.** Séparer le camp du réveil est la seule lecture qui honore les
+deux phrases du livret à la fois : si le camp attendait la nuit, l'Ours
+garderait le silence devant un loup assis et la victoire du village
+pourrait tomber alors qu'un loup vit ; si le réveil ne patientait pas,
+la meute verrait un complice au milieu du jour. Entre les deux, l'état
+porte les deux moitiés : la carte et le camp tout de suite, la meute au
+lendemain.
+
+### D44 — Le talon du Voleur : un tirage de siège, un mélange, jamais de fratrie
+
+**13 octobre 2026.** Le paquet du Voleur compte la composition plus deux
+villageois simples — n+2 cartes pour n sièges. Tranché, dans l'ordre des
+tirages (R104) :
+
+1. le **siège du Voleur** se tire au sort — un seul `draw()`, parmi les n
+   sièges ;
+2. les **n+1 cartes restantes** se mélangent — la carte Voleur est déjà
+   retirée du paquet ;
+3. les **cartes de fratrie** (R113) passent en tête de la liste mélangée,
+   puis les n−1 sièges restants reçoivent les n−1 premières cartes dans
+   l'ordre des sièges ;
+4. les **deux dernières** — jamais une carte de fratrie, par construction :
+   cinq cartes de fratrie au plus, et la plus petite table qui les porte
+   toutes compte six sièges à distribuer — sont le talon du Voleur.
+
+**Obligation** : si les deux cartes du talon sont des loups (camp loups,
+Loup Blanc compris), le Voleur en prend une ; sinon il reste Voleur sans
+pouvoir, et les deux cartes sortent du jeu, face cachée.
+
+**D44b.** Au temps écoulé sans action (R81) : la **première carte** si
+l'obligation l'exige — un tirage de moins qu'un choix au sort —, sinon il
+reste Voleur.
+
+**Pourquoi.** L'ordre des tirages garantit sans biais que la carte Voleur
+est distribuée — la tirer au sort d'abord, c'est la sortir du paquet avant
+le mélange, jamais la laisser au talon. Et les cartes de fratrie ne peuvent
+pas rester au talon : une Sœur unique serait un rôle cassé, privé de la
+moitié de sa raison d'être ; les poser en tête de la distribution, après le
+mélange, ne change aucun tirage — seul l'ordre de service des cartes s'en
+trouve réécrit. Une table sans Voleur ne subit aucun de ces tirages : la
+distribution d'avant tient à l'identique, graine pour graine.
+
+### D45 — Le canal fratrie, un par groupe : le pas d'un million
+
+Attrapé au fil D de la Vague 2, après coup : le canal fratrie était **un
+seul fil partagé** — quand Sœurs et Frères coexistent (R113 le permet dès
+douze joueurs), chacun y lisait les messages de l'autre, et même masqués,
+les trous de la numérotation (R78) puis le rabotnement des cent auraient
+compté ses messages. R114 l'interdit mot pour mot : « rien dans la vue d'un
+siège ne trahit l'activité d'une fratrie qui n'est pas la sienne ».
+
+**Décision.** Le canal reste unique dans le protocole — le droit est porté
+par l'état, comme prévu — mais chaque message y porte son `groupe`
+(l'index dans `fratries`), et tout se compte par groupe : la numérotation,
+dense depuis un, est posée au-delà d'un pas d'un million par groupe
+(`DECALAGE_FRATRIE`, deux groupes au plus à une table, les suites ne se
+rencontrent jamais) ; la borne des cent (R78) rabote par groupe ; la vue
+n'y garde que les messages du groupe du lecteur — l'omniscient les relit
+tous (R77). Chaque groupe voit sa suite dense : aucun trou ne dit l'autre.
+
+**Pourquoi.** Un canal par groupe aurait cassé la liste close
+`CHAT_CHANNELS` du protocole et la numérotation `nextMessageId` par canal ;
+renuméroter dans la vue aurait déplacé les ids sous les pas du fil (le
+compteur de non-lus du client lit `id > dernierVu`). Le pas d'un million
+tient les trois : dense pour qui lit, unique pour tous, stable dans l'état
+(R104).
+
+### D46 — Avant la révélation, la vue ne dit aucune carte
+
+Découvert au fil D de la Vague 2, en livrant les écrans du Voleur : pendant
+la phase du Voleur (R110), la vue disait déjà le rôle de chacun, la meute
+aux loups, la fratrie aux Sœurs — une seule phase avant la révélation, mais
+`viewFor` est le seul filtre (R87, R88) : ce que la vue dit, la table
+l'apprend.
+
+**Décision.** Pendant `phase.kind === 'voleur'`, la vue se tient muette
+pour tous les sièges : `you.role` est `null` (le champ devient nullable),
+`pack` est `null`, `fratrie` est vide et le canal fratrie n'est ni lisible
+ni parlable. Le livret y pousse : le Voleur échange **sans regarder sa
+carte** — personne, lui compris, n'a rien découvert avant la révélation
+(R31).
+
+**Pourquoi.** Le client masquait déjà la présentation pendant la phase ;
+c'est l'état de la vue qui compte, pas son maquillage. Après la clôture de
+la phase, tout se découvre à la révélation, à la seconde près — rien ne
+change pour une table sans Voleur, qui n'entre jamais dans cette phase.
+
 ## Questions ouvertes
 
 La question « Robots et rôles cachés » — que faire d'un joueur qui ne
@@ -372,5 +648,5 @@ revient pas, quand son rôle est secret ? — est tranchée par D18.
 |---|---|
 | Le fil sur mobile | Tiroir qui pousse la place, ou colonne permanente compacte sous la place ? À décider devant le client réel. |
 | Les minuteries | Barre toujours visible, ou mention discrète qui ne s'agite que dans les trente dernières secondes ? À décider devant le client réel. |
-| Rôles suivants | Cinq sont ouverts en v2 (D12–D16). Restent le Voleur, le Renard, le Joueur de flûte (`refs/roles.md`) : lesquels, et quand ? |
+| Rôles suivants | Tranché : la v3 ouvre les dix-huit cartes officielles restantes, vague par vague (D26). La Vague 1 livre le Villageois-Villageois, le Renard et le Montreur d'Ours (R105–R108) ; la Vague 2 livre le Voleur, le Chien-Loup, l'Enfant Sauvage, les Deux Sœurs et les Trois Frères (R109–R114) ; les trois vagues suivantes sont planifiées. |
 | La Petite Fille surprise | Faut-il un jour un risque pour la Petite Fille (D15) — et sous quelle forme, en ligne ? |

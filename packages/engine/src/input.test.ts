@@ -65,8 +65,12 @@ describe('R102 — une action se lit selon son verbe', () => {
       successeur: { type: 'successeur', target: 6 },
       voter: { type: 'voter', target: 7 },
       marquer: { type: 'marquer', target: null },
+      flairer: { type: 'flairer', centre: 2 },
       trahir: { type: 'trahir', target: 1 },
       designerVotants: { type: 'designerVotants', seats: [2, 0] },
+      voler: { type: 'voler', carte: 1 },
+      seRanger: { type: 'seRanger', camp: 'loups' },
+      designerModele: { type: 'designerModele', target: 4 },
       dire: { type: 'dire', channel: 'village', text: 'Bonsoir.' },
     };
     for (const type of ACTION_TYPES) expect(parseAction(exemples[type])).toEqual(exemples[type]);
@@ -128,7 +132,7 @@ describe('R102 — une action se lit selon son verbe', () => {
   });
 
   it('R102 — un message : un canal connu, un texte d’au plus deux mille unités', () => {
-    for (const canal of ['village', 'loups', 'amoureux', 'morts']) {
+    for (const canal of ['village', 'loups', 'amoureux', 'fratrie', 'morts']) {
       expect(parseAction({ type: 'dire', channel: canal, text: 'x' })).toMatchObject({ channel: canal });
     }
     for (const hostile of ['Village', 'meute', '', 1, null, undefined, ['village']]) {
@@ -260,10 +264,12 @@ describe('D23 — un fil hostile n’enfle pas la vue', () => {
     }
   });
 
-  it('D23 — même au pire — quatre canaux pleins de 280 astraux —, la vue tient sous la borne du cadre', () => {
+  it('D23 — même au pire — cinq canaux pleins de 280 astraux —, la vue tient sous la borne du cadre', () => {
     const state = finDePartie();
     const lourd = '🐺'.repeat(MAX_MESSAGE_LENGTH);
-    for (const channel of ['village', 'loups', 'amoureux', 'morts'] as const) {
+    // Cinq canaux depuis la fratrie (R114) : le pire cas d'un fil enflé en
+    // compte un de plus.
+    for (const channel of ['village', 'loups', 'amoureux', 'fratrie', 'morts'] as const) {
       for (let i = 0; i < MAX_CHAT_PER_CHANNEL; i++) {
         state.chat.push({ id: i + 1, channel, seat: i % 18, text: lourd, day: 1 });
       }

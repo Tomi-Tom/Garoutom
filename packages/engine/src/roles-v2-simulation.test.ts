@@ -138,6 +138,18 @@ function coupAuHasard(vue: GameView, rng: Rng): Action | null {
       const seats = choisis.length > 0 ? choisis : [vivants[0]!];
       return { type: 'designerVotants', seats };
     }
+    case 'flairer':
+      // Rôle de la v3 (R107) : une table de la v2 n'en compte jamais, ce banc
+      // n'en verra donc jamais la consigne. Le cas n'existe que pour le
+      // compilateur, qui exige l'énumération complète.
+      return null;
+    case 'voler':
+    case 'seRanger':
+    case 'designerModele':
+      // Rôles de la v3 (R110, R111, R112) : une table de la v2 n'en compte
+      // jamais, ce banc n'en verra donc jamais les consignes. Les cas
+      // n'existent que pour le compilateur, qui exige l'énumération complète.
+      return null;
   }
 }
 
