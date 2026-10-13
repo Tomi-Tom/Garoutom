@@ -125,6 +125,8 @@ export interface ConfigTables {
   ipParRobot: boolean;
   /** Les bornes d'une absence « mobile », en ms. */
   mobileMs: [number, number];
+  /** Composition imposée à toutes les tables (`--roles`) : vide = tirage au sort. */
+  roles: RoleId[];
 }
 
 export interface Contexte {
@@ -143,6 +145,16 @@ const PRENOMS = [
 const REFUS_DEFINITIFS: ReadonlySet<string> = new Set(['gone', 'started', 'full']);
 /** Les attentes entre deux reprises ratées, comme le client. */
 const DELAIS_REPRISE_MS: readonly number[] = [1_000, 2_000, 4_000];
+
+/**
+ * Les cartes que la partie réécrit elle-même : le Voleur prend un rôle au
+ * talon (R110), l'Enfant Sauvage devient loup à la mort de son modèle (R112,
+ * D27). Ce ne sont pas des changements de siège ni des fuites — le banc les
+ * tient pour légitimes, lui qui lit la carte chez chaque robot.
+ */
+function roleChangeLegitime(avant: RoleId, apres: RoleId): boolean {
+  return (avant === 'voleur' && apres !== 'voleur') || (avant === 'enfantSauvage' && apres === 'loup');
+}
 /** La phase la plus longue (élection) : la marge d'une mort d'abandon. */
 const PHASE_MAX_MS = 90_000;
 
@@ -676,12 +688,32 @@ export class Robot {
     const game = p.game;
     if (!perime && game?.you && this.siege !== null && p.room.status !== 'lobby') {
       const partie = this.table.partieNumero;
-      if (this.rolePartie === partie && this.role !== null && this.role !== game.you.role) {
-        this.violation('role-change', 'critique', `rôle ${this.role} → ${game.you.role} dans la même partie`);
+      if (game.you.role === null) {
+        // D46 : pendant la phase du Voleur, la carte du siège est voilée
+        // dans sa propre vue — pas encore vue. Le banc oublie celle de la
+        // partie d'avant : il ne la compare à rien (aucun changement de
+        // rôle ne se crie sur une carte inconnue), et la vérité de la
+        // table n'en retient pas une carte qu'aucun sync n'a dite.
+        this.role = null;
+      } else {
+        // La fin de partie démasque le Villageois-Villageois pour son porteur
+        // (R77, D31) : « villageois » → « villageois2 » à la révélation finale
+        // n'est pas un changement de rôle, mais le compte exact du récit. Le
+        // Voleur qui prend sa carte et l'Enfant qui se transforme, eux, changent
+        // vraiment de rôle — en pleine partie, et sans qu'y rien aille de travers.
+        if (
+          !game.over &&
+          this.rolePartie === partie &&
+          this.role !== null &&
+          this.role !== game.you.role &&
+          !roleChangeLegitime(this.role, game.you.role)
+        ) {
+          this.violation('role-change', 'critique', `rôle ${this.role} → ${game.you.role} dans la même partie`);
+        }
+        this.role = game.you.role;
+        this.rolePartie = partie;
+        this.table.verites.set(game.you.seat, game.you.role);
       }
-      this.role = game.you.role;
-      this.rolePartie = partie;
-      this.table.verites.set(game.you.seat, game.you.role);
       for (const f of fuitesDeVue(game, p.room, this.table.verites, this.siege)) {
         this.violation('fuite-information', 'critique', `${f.type} : ${f.detail}`, `fuite:${String(this.table.index)}:${String(partie)}:${f.detail}`);
       }
@@ -744,7 +776,14 @@ export class Robot {
         if (!game?.you) {
           this.violation('sync-incomplet', 'majeure', `${r.type} : reprise sans vue de partie`);
         } else {
-          if (r.role !== null && game.you.role !== r.role) {
+          // D46 : pendant la phase du Voleur, la carte est voilée des deux
+          // côtés — rien à comparer, aucun changement ne se crie.
+          if (
+            r.role !== null &&
+            game.you.role !== null &&
+            game.you.role !== r.role &&
+            !roleChangeLegitime(r.role, game.you.role)
+          ) {
             this.violation('role-change', 'critique', `${r.type} : rôle ${r.role} → ${game.you.role} après reprise`);
           }
           // D18 : au-delà de cinq minutes d'absence (et d'une phase pour la clôture), le siège est mort.
@@ -1069,8 +1108,12 @@ export class Robot {
       { type: 'successeur', target: cible },
       { type: 'voter', target: cible },
       { type: 'marquer', target: cible },
+      { type: 'flairer', centre: cible },
       { type: 'trahir', target: cible },
       { type: 'designerVotants', seats: [cible] },
+      { type: 'voler', carte: 0 },
+      { type: 'seRanger', camp: 'village' },
+      { type: 'designerModele', target: cible },
     ];
     const permises = new Set<string>();
     if (game.prompt && !game.acted) permises.add(game.prompt.kind);
@@ -1105,6 +1148,11 @@ export class Robot {
       { nom: 'cible décimale', event: 'game:action', payload: { action: { type: 'voter', target: 1.5 } } },
       { nom: 'cible texte', event: 'game:action', payload: { action: { type: 'voter', target: '0' } } },
       { nom: 'cible absente', event: 'game:action', payload: { action: { type: 'sonder' } } },
+      { nom: 'flairer centre texte', event: 'game:action', payload: { action: { type: 'flairer', centre: 'voisins' } } },
+      { nom: 'voler carte 2', event: 'game:action', payload: { action: { type: 'voler', carte: 2 } } },
+      { nom: 'voler carte texte', event: 'game:action', payload: { action: { type: 'voler', carte: 'la deuxieme' } } },
+      { nom: 'seRanger camp inconnu', event: 'game:action', payload: { action: { type: 'seRanger', camp: 'meute' } } },
+      { nom: 'modele absent', event: 'game:action', payload: { action: { type: 'designerModele' } } },
       { nom: 'cupidon a=b', event: 'game:action', payload: { action: { type: 'cupidon', a: moi, b: moi } } },
       { nom: 'votants vides', event: 'game:action', payload: { action: { type: 'designerVotants', seats: [] } } },
       { nom: 'votants non-tableau', event: 'game:action', payload: { action: { type: 'designerVotants', seats: 'tous' } } },
@@ -1434,8 +1482,17 @@ export class Table {
   /** Options de création : minuteries courtes, et une composition qui varie selon la table. */
   optionsInitiales(): Record<string, unknown> {
     const base = { tempsNuit: this.ctx.config.tempsNuit, tempsJour: this.ctx.config.tempsJour };
+    // Composition imposée par le banc (`--roles`) : toutes les tables la
+    // jouent — c'est le banc des rôles nouveaux, un par un ou en tas.
+    if (this.ctx.config.roles.length > 0) {
+      const loups = Math.max(1, Math.floor(this.taille / 4));
+      return { ...base, auto: false, loups, roles: [...this.ctx.config.roles] };
+    }
     if (this.index % 2 === 0) return { ...base, auto: true };
-    // Une table sur deux joue avec des rôles optionnels (Ancien, Corbeau, Bouc, Petite Fille, Loup Blanc…).
+    // Une table sur deux joue avec des rôles optionnels (Ancien, Corbeau, Bouc,
+    // Petite Fille, Loup Blanc… et les rôles de la v3 — Renard, Ours, Voleur,
+    // Chien-Loup, Enfant Sauvage, Sœurs, Frères : `CHOOSABLE_ROLES` les
+    // compte, les grandes tables les tirent toutes seules).
     const loups = Math.max(1, Math.floor(this.taille / 4));
     const place = Math.max(0, this.taille - loups - 1);
     const roles = CHOOSABLE_ROLES.filter(() => this.rng.nextInt(100) < 55).slice(0, place);

@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 
-import { CHANNEL_PATH, MAX_PLAYERS, MIN_PLAYERS, createSeededRng } from '@garoutom/engine';
+import { CHANNEL_PATH, CHOOSABLE_ROLES, MAX_PLAYERS, MIN_PLAYERS, createSeededRng, type RoleId } from '@garoutom/engine';
 
 import { Journal, centile } from './chaos/journal.js';
 import { Relais } from './chaos/proxy.js';
@@ -65,7 +65,12 @@ interface Options {
   bavard: boolean;
   margePhaseS: number;
   repriseMaxMs: number;
+  /** Composition imposée à toutes les tables (v3 : un rôle par un, puis en tas). */
+  roles: RoleId[];
 }
+
+/** Les rôles que l'hôte peut cocher — le banc n'impose rien d'autre. */
+const CHOISABLES = CHOOSABLE_ROLES.join(',');
 
 const USAGE = `Usage : npm run chaos -w @garoutom/server -- [options]
   --url ws://hote:port/ws     se brancher sur un serveur existant (sinon : serveur enfant sur un port libre)
@@ -89,6 +94,9 @@ const USAGE = `Usage : npm run chaos -w @garoutom/server -- [options]
   --marge-phase S             marge au-delà du budget d'une phase avant « phase figée » (10)
   --reprise-max-ms N          au-delà, une reprise est jugée lente (3000)
   --sortie DOSSIER            rapport JSON + journal JSONL (défaut : dossier temporaire)
+  --roles a,b,c               composition imposée à toutes les tables (parmi ${CHOISABLES})
+                              — ex. --roles voleur,chienLoup,enfantSauvage,soeurs,freres
+                              pour la deuxième vague de la v3 en tas
   --bavard                    journal de table en direct sur la console`;
 
 function lire(argv: string[]): Options | string {
@@ -116,6 +124,7 @@ function lire(argv: string[]): Options | string {
     bavard: false,
     margePhaseS: 10,
     repriseMaxMs: 3_000,
+    roles: [],
   };
   const nombre = (v: string | undefined, nom: string): number => {
     const n = Number(v);
@@ -207,6 +216,17 @@ function lire(argv: string[]): Options | string {
         case '--sortie':
           o.sortie = v() ?? o.sortie;
           break;
+        case '--roles': {
+          const liste = (v() ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+          for (const r of liste) {
+            if (!(CHOOSABLE_ROLES as readonly string[]).includes(r)) {
+              throw new Error(`rôle inconnu ou non cochable : ${r}`);
+            }
+          }
+          if (new Set(liste).size !== liste.length) throw new Error('--roles : un rôle n’existe qu’en un exemplaire');
+          o.roles = liste as RoleId[];
+          break;
+        }
         case '--bavard':
           o.bavard = true;
           break;
@@ -314,6 +334,7 @@ async function main(): Promise<number> {
     finSansHoteMs: 30_000,
     ipParRobot: o.ipParRobot,
     mobileMs: [o.mobileS[0] * 1_000, o.mobileS[1] * 1_000],
+    roles: o.roles,
   };
   const ctx = { config, journal, relais };
 

@@ -41,6 +41,14 @@ const CORBEAU_SANS_MARQUE = 0.2;
 const LOUP_BLANC_CLEMENT = 0.3;
 /** Probabilité, pour chaque vivant, d'être désigné votant par le Bouc. */
 const BOUC_DESIGNE = 0.6;
+/**
+ * Probabilité que le Chien-Loup tente la meute : il ne voit ni les loups ni
+ * les cartes avant de se ranger (R111), sa vue ne lui apprend rien — il
+ * resterait villageois tout seul si le hasard n'y mettait du sien.
+ */
+const CHIEN_LOUP_AVEC_LA_MEUTE = 0.3;
+/** Probabilité que le Voleur laisse le talon quand le moteur le permet (R110). */
+const VOLEUR_SABSTIENT = 0.25;
 
 function vivants(view: GameView): number[] {
   return view.players.filter((p) => p.alive).map((p) => p.seat);
@@ -137,6 +145,27 @@ export function decider(view: GameView, rng: Rng, reglages: ReglagesCerveau = {}
       return { type: 'marquer', target: pioche(vivants(view), rng) };
     }
 
+    case 'flairer': {
+      // Le Renard ne flaire pas au hasard : un trio sans loup lui retire son
+      // pouvoir à vie (R107). Il ne sonde qu'un trio qui peut lui apprendre
+      // un siège nouveau — lui-même est su innocent, et les trios déjà en
+      // carnet ne se relisent pas — puis s'abstient quand il a vu tout le
+      // village vivant : à ce point, un flair de plus ne peut que le perdre.
+      const appris = new Set<number>([moi]);
+      for (const savoir of view.renardSavoirs) for (const seat of savoir.seats) appris.add(seat);
+      const vivant = new Map(view.players.map((p) => [p.seat, p.alive]));
+      const n = view.players.length;
+      // Le trio réel du moteur : le centre et ses deux voisins vivants, lui
+      // compris (R105, D29). Un voisin mort ne compte pas — l'ignorer ferait
+      // sonder un trio entièrement su, qui ne peut plus rien apprendre.
+      const urne = vivants(view).filter((centre) =>
+        [centre, (centre - 1 + n) % n, (centre + 1) % n].some(
+          (seat) => vivant.get(seat) === true && !appris.has(seat),
+        ),
+      );
+      return { type: 'flairer', centre: pioche(urne, rng) };
+    }
+
     case 'trahir': {
       // Le Loup Blanc ne voit ses complices qu'en loups ordinaires : il vise
       // la meute qu'il connaît, lui excepté.
@@ -159,6 +188,37 @@ export function decider(view: GameView, rng: Rng, reglages: ReglagesCerveau = {}
         seats.push(seul);
       }
       return { type: 'designerVotants', seats };
+    }
+
+    case 'voler': {
+      // Le Voleur ne voit que son prompt : ses deux cartes, à lui seul
+      // (R110). Stratégie simple et honnête — une pièce pile ou face entre
+      // les deux, sans lire le camp : les deux cartes doivent se prendre au
+      // banc. Deux loups au talon l'obligent à choisir ; sinon, il peut
+      // laisser le talon et rester Voleur sans pouvoir.
+      if (prompt.obligatoire) return { type: 'voler', carte: rng.nextInt(2) === 0 ? 0 : 1 };
+      if (rng.nextInt(100) < VOLEUR_SABSTIENT * 100) return { type: 'voler', carte: null };
+      return { type: 'voler', carte: rng.nextInt(2) === 0 ? 0 : 1 };
+    }
+
+    case 'seRanger': {
+      // Le Chien-Loup, avant de se ranger, a la vue d'un villageois : ni
+      // meute, ni cartes, rien à calculer (R111). Il reste au village par
+      // défaut — le choix est définitif, et le camp des loups ne pardonne
+      // pas — puis tente la meute une fois sur trois, de quoi voir les deux
+      // camps au banc.
+      return {
+        type: 'seRanger',
+        camp: rng.nextInt(100) < CHIEN_LOUP_AVEC_LA_MEUTE * 100 ? 'loups' : 'village',
+      };
+    }
+
+    case 'designerModele': {
+      // L'Enfant Sauvage désigne son modèle au hasard parmi les vivants, lui
+      // compris — le moteur l'autorise, et le modèle n'en saura jamais rien
+      // (R112). Le prompt ne montre que la liste des joueurs : c'est assez.
+      const target = pioche(vivants(view), rng);
+      return target === null ? null : { type: 'designerModele', target };
     }
 
     case 'voter': {
@@ -201,6 +261,7 @@ const PHRASES_LOUPS = [
 
 const PHRASES_AMOUREUX = ['Je ne te lâche pas.', 'Fais attention à toi.'];
 const PHRASES_MORTS = ['Bon, on regarde le spectacle.', 'Ils se trompent encore…'];
+const PHRASES_FRATRIE = ['On reste soudés.', 'Je te couvre.', 'Personne ne sait qu’on se parle.'];
 
 /** Une phrase courte et le canal où la dire, ou `null` si le robot doit se taire. */
 export function parler(view: GameView, rng: Rng): { channel: ChatChannel; text: string } | null {
@@ -212,9 +273,11 @@ export function parler(view: GameView, rng: Rng): { channel: ChatChannel; text: 
       ? PHRASES_LOUPS
       : channel === 'amoureux'
         ? PHRASES_AMOUREUX
-        : channel === 'morts'
-          ? PHRASES_MORTS
-          : PHRASES_VILLAGE;
+        : channel === 'fratrie'
+          ? PHRASES_FRATRIE
+          : channel === 'morts'
+            ? PHRASES_MORTS
+            : PHRASES_VILLAGE;
   return { channel, text: phrases[rng.nextInt(phrases.length)] ?? '…' };
 }
 

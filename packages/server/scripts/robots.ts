@@ -317,10 +317,26 @@ class Robot {
         return action.target === null ? 's’abstient' : `vote contre ${this.nomDuSiege(action.target)}`;
       case 'marquer':
         return action.target === null ? 'ne marque personne' : `marque ${this.nomDuSiege(action.target)}`;
+      // Le Renard ne dit de sa nuit que le geste — jamais le trio, jamais ce
+      // qu'il a appris : un loup dedans ou pas, le flair reste son secret (R87).
+      case 'flairer':
+        return action.centre === null ? 'ne flaire personne' : 'flaire un trio';
       case 'trahir':
         return action.target === null ? 'épargne la meute' : `trahit ${this.nomDuSiege(action.target)}`;
       case 'designerVotants':
         return `désigne ${action.seats.map((seat) => this.nomDuSiege(seat)).join(', ')} pour voter demain`;
+      // Le Voleur ne dit ni quelle carte il prend ni ce qu'elle était : le
+      // talon est à lui seul, le geste suffit (R110).
+      case 'voler':
+        return action.carte === null ? 'laisse le talon' : 'prend une carte';
+      // Le Chien-Loup ne dit jamais son camp — ni avant, ni après : le
+      // village ne doit rien voir (R111).
+      case 'seRanger':
+        return 'se range de côté';
+      // L'Enfant Sauvage ne dit jamais son modèle — le modèle n'existe pas
+      // pour la table (R112).
+      case 'designerModele':
+        return 'désigne un modèle';
       case 'dire':
         return `dit (${action.channel}) « ${action.text} »`;
     }
