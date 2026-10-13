@@ -185,7 +185,7 @@ const S = { reserve: '#0a0b01', meute: '#0a0b02', serment: '#0a0b03', masse: '#0
 const JETONS = Object.fromEntries(Object.entries(S).map(([k, v]) => [v, `$${k}`]));
 
 /* ------------------------------------------------------------------ */
-/* 1. Les treize symboles (lot C) — 128 / 32 / 16, et Shiganshina       */
+/* 1. Les vingt-et-un symboles (lot C) — 128 / 32 / 16, et Shiganshina  */
 /* ------------------------------------------------------------------ */
 
 const NIVEAUX = ['128', '32', '16'];
@@ -229,7 +229,7 @@ const symbolesFace = {
   loupBlanc: extraire(symbole('loupBlanc', 32, optsSymbole('128')), { table: JETONS, retouche: sansMasse }).trace,
 };
 
-// Shiganshina : 13 symboles, deux niveaux (grand ≥ 96 px, petit). Les identifiants du
+// Shiganshina : 21 symboles, deux niveaux (grand ≥ 96 px, petit). Les identifiants du
 // lot C (habitant, titan…) se rangent sous les rôles du moteur par leur numéro de planche.
 const PAR_NUMERO = Object.fromEntries(ROLES.map((r) => [r.n, r.id]));
 const MAIN_TITAN = 'M7.4 18C7 12 8.6 6';
@@ -365,7 +365,7 @@ function ecrire(nom, contenu) {
 // change ce que le joueur télécharge avant son premier écran : mesurer avec
 // `npm run build -w @garoutom/client`.
 
-ecrire('symboles.ts', `${ENTETE('Les treize symboles de rôle, grille 32 : niveaux 128 (carte), 32 (trait 2) et 16 (simplifié). Shiganshina : shiganshina.ts (chargé à la demande).', 'gen-C/roles.mjs')}
+ecrire('symboles.ts', `${ENTETE('Les vingt-et-un symboles de rôle, grille 32 : niveaux 128 (carte), 32 (trait 2) et 16 (simplifié). Shiganshina : shiganshina.ts (chargé à la demande).', 'gen-C/roles.mjs')}
 export type NiveauSymbole = '128' | '32' | '16';
 /** Le numéro de planche de chaque rôle (SPEC § 6.1), imprimé sur la carte. */
 export const NUMEROS: Record<string, number> = ${js(Object.fromEntries(ROLES.map((r) => [r.id, r.n])))};
@@ -389,7 +389,7 @@ ecrire('chefs.ts', `${ENTETE('Les dix-huit couvre-chefs (buste 48 × 48), gravé
 export const COUVRE_CHEFS: readonly { nom: string; grave: Noeud; fantome: Noeud }[] = ${js(chefs)};
 `);
 
-ecrire('shiganshina.ts', `${ENTETE('Ce qui est propre au skin Shiganshina, chargé à la demande : les treize symboles (deux niveaux), le dos (la Porte du district), les six coiffes.', 'gen-C/shig.mjs (dont la planche C-V)')}
+ecrire('shiganshina.ts', `${ENTETE('Ce qui est propre au skin Shiganshina, chargé à la demande : les vingt-et-un symboles (deux niveaux), le dos (la Porte du district), les six coiffes.', 'gen-C/shig.mjs (dont la planche C-V)')}
 /** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
 export const SYMBOLES_SHIGANSHINA: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesShig)};
 /** Le dos (300 × 420) : la Porte du district. */

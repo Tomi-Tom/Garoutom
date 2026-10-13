@@ -87,20 +87,24 @@ export function formats() {
   let b = entete('Pl. C-III', 'Garoutom · Caprices · lot C — les cartes', 'Les formats, du grand au glyphe',
     '« Il fallait bien quelqu’un. » — et chacun a son format.',
     'Petite 96 × 134 (symbole 48, nom IM Fell 16, cartouche 20) · vignette 48 × 67 (symbole 32 seul) · symboles 32 et 24 (trait 2, hachure pas 3) · 16 simplifié (trait 1,5, sans hachure) · ombre chinoise à 24 : deux symboles ne partagent jamais leur silhouette.');
-  // A — la matrice des treize
-  const colW = 115.7;
+  // A — la matrice des rôles. La colonne suit le nombre de planches : la
+  // rangée tient toute la largeur de la page, vague après vague — à seize
+  // planches, la petite carte (96 px) touche sa voisine d'un poil, et le
+  // nom s'étale sur deux lignes plutôt que de sortir du cadre.
+  const colW = 1504 / ROLES.length;
   let grid = '';
   ROLES.forEach((r, i) => {
     const x = 48 + i * colW;
+    const c = (w) => x + (colW - w) / 2;
     const sOpts = { ink: K.b9, bg: K.tei, accent: K.san, mass: K.b9 };
     const sOpts32 = { ink: K.b9, bg: K.ver, accent: K.san, mass: K.b9 };
-    grid += abs(x, 150, `<div style="width: 108px;"><div style="font-family: ${F.sc}; font-size: 13px; letter-spacing: .06em; color: ${K.del}; height: 32px;">${r.n} · ${r.nom}</div></div>`);
-    grid += abs(x + 6, 188, cartePetite(r.id));
-    grid += abs(x + 30, 336, carteVignette(r.id));
-    grid += abs(x + 38, 418, symbole(r.id, 32, sOpts32));
-    grid += abs(x + 42, 462, symbole(r.id, 24, sOpts32));
-    grid += abs(x + 46, 498, symbole(r.id, 16, sOpts32));
-    grid += abs(x + 42, 530, symbole(r.id, 24, { ink: K.b9, bg: K.ver, sil: true }));
+    grid += abs(x, 150, `<div style="width: ${colW - 2}px;"><div style="font-family: ${F.sc}; font-size: 13px; letter-spacing: .06em; color: ${K.del}; min-height: 32px;">${r.n} · ${r.nom}</div></div>`);
+    grid += abs(c(96), 188, cartePetite(r.id));
+    grid += abs(c(48), 336, carteVignette(r.id));
+    grid += abs(c(32), 418, symbole(r.id, 32, sOpts32));
+    grid += abs(c(24), 462, symbole(r.id, 24, sOpts32));
+    grid += abs(c(16), 498, symbole(r.id, 16, sOpts32));
+    grid += abs(c(24), 530, symbole(r.id, 24, { ink: K.b9, bg: K.ver, sil: true }));
   });
   b += grid;
   const lab = (y, t) => abs(1556, y, `<span style="font-family: ${F.sc}; font-size: 13px; letter-spacing: .06em; color: ${K.del}; writing-mode: vertical-rl;">${t}</span>`);

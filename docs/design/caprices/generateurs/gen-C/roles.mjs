@@ -1,4 +1,4 @@
-// Les treize rôles : données (SPEC § 6.1, thiercelieux.ts) et symboles gravés.
+// Les vingt-et-un rôles : données (SPEC § 6.1, thiercelieux.ts) et symboles gravés.
 // Tous les symboles sont dessinés sur une grille 32 (zone vive 28).
 // Trois niveaux : '128' (carte : trait fin, hachures et détails de gravure),
 // '32' (trait 2, hachure pas 3), '16' (simplifié : trait 3 dans la grille = 1,5 px, sans hachure).
@@ -44,6 +44,30 @@ export const ROLES = [
   { id: 'loupBlanc', n: 13, nom: 'le Loup Blanc', camp: 'seul', leg: ['« Les loups ne se mangent pas', 'entre eux, dit-on. »'],
     desc: 'Vous chassez avec la meute, qui vous prend pour l’un des siens. Une nuit sur deux, vous pouvez dévorer un loup. Vous ne gagnez que seul.',
     motif: 'Un loup clair dîne parmi les siens, tous de dos ; c’est lui qui mange.' },
+  { id: 'renard', n: 14, nom: 'le Renard', camp: 'village', leg: ['« Son nez répond, ', 'sa gueule se tait. »'],
+    desc: 'Chaque nuit, flairez un joueur et ses deux voisins : un loup dans le trio, votre flair vous reste ; aucun, il s’éteint pour toujours.',
+    motif: 'Une tête de renard au museau fin, narines au vent : elle flaire le voisinage sans rien dire.' },
+  { id: 'ours', n: 15, nom: 'le Montreur d’Ours', camp: 'village', leg: ['« À l’aube il grogne : ', 'aux voisins de deviner. »'],
+    desc: 'Chaque matin, l’ours grogne si un loup est l’un de vos deux voisins vivants — et son silence aussi est un renseignement.',
+    motif: 'La tête de l’ours, museau lourd, gueule entrouverte : le grognement de l’aube réveille le voisinage.' },
+  { id: 'villageois2', n: 16, nom: 'Villageois-Villageois', camp: 'village', leg: ['« On le retourne, ', 'c’est toujours lui. »'],
+    desc: 'La carte est recto verso : le village a la certitude absolue que son porteur est un villageois innocent.',
+    motif: 'Deux visages jumeaux, profil contre profil, pli du recto au milieu : le même homme, vérifié deux fois.' },
+  { id: 'voleur', n: 17, nom: 'le Voleur', camp: 'village', leg: ['« Il ne dérobe pas :', 'il choisit. »'],
+    desc: 'Avant la première nuit, regardez les deux cartes restées au talon et prenez-en une — ou restez les mains vides.',
+    motif: 'Une main gantée soulève une carte au-dessus d’un talon de deux : il ne vole pas à la dérobée, il choisit sa carte.' },
+  { id: 'chienLoup', n: 18, nom: 'le Chien-Loup', camp: 'village', leg: ['« La bête choisit', 'son maître. »'],
+    desc: 'La première nuit seulement, choisissez votre camp pour toujours : rester au village, ou courir avec la meute.',
+    motif: 'Une tête mi-chien mi-loup : l’oreille tombante d’un côté, la moitié sauvage mordue d’aquatinte de l’autre.' },
+  { id: 'enfantSauvage', n: 19, nom: 'l’Enfant Sauvage', camp: 'village', leg: ['« Il montre du doigt ;', 'l’ombre regarde. »'],
+    desc: 'La première nuit, désignez votre modèle ; s’il meurt, vous rejoindrez la meute dès la nuit suivante.',
+    motif: 'Un enfant aux cheveux sauvages désigne du doigt ; derrière lui, une ombre de loup rampe déjà.' },
+  { id: 'soeurs', n: 20, nom: 'les Deux Sœurs', camp: 'village', leg: ['« Elles se sont reconnues', 'à voix basse. »'],
+    desc: 'Vous êtes deux : vous vous êtes reconnues la première nuit, et vous vous concertez en secret.',
+    motif: 'Deux profils qui se font face sous un même voile, se chuchotant un secret au milieu.' },
+  { id: 'freres', n: 21, nom: 'les Trois Frères', camp: 'village', leg: ['« Trois fois le même menton,', 'trois fois la même parole. »'],
+    desc: 'Vous êtes trois : vous vous êtes reconnus la première nuit, et vous vous concertez en secret.',
+    motif: 'Trois profils en rang serré, mêmes crânes et mêmes mentons, sur le même socle.' },
 ];
 export const R = Object.fromEntries(ROLES.map((r) => [r.id, r]));
 export const campCart = (r) => (r.camp === 'meute' ? ['mordu', 'Meute'] : r.camp === 'seul' ? ['mordu2', 'Seul'] : ['ecu', 'Village']);
@@ -329,6 +353,229 @@ export const DESSINS = {
     s += `<path d="${BLANC}" fill="${o.bg}" stroke="${o.accent}" stroke-width="${o.L === '128' ? 0.55 : o.L === '16' ? 2.4 : 2}" stroke-linejoin="miter"/>`;
     s += `<path d="${LOUP_OEIL}" fill="${o.accent}"${o.L === '16' ? ' transform="translate(12.5 12.4) scale(1.4) translate(-12.5 -12.4)"' : ''}/>`;
     if (o.L === '128') s += `<circle cx="29.6" cy="7.8" r="0.4" fill="${o.accent}"/>`;
+    return s;
+  },
+  renard(o) {
+    const sw = o.sw, fin = o.fin;
+    const TETE = 'M9 3.4L6.6 11L3 14.6L8.4 15.4L7.6 17.6C10.2 18 12.4 19.2 13.8 21.4L13 28.6L21.6 27.8L26.4 21.2L23.4 10.2L20.4 2.8L15 9.4L13 9L9 3.4Z';
+    const OEIL_F = 'M12.4 13.2Q14.4 12.2 16.2 13.4Q14.2 14.4 12.4 13.2Z';
+    if (o.sil) return `<path d="${TETE}" fill="${o.ink}"/><path d="${OEIL_F}" fill="${o.bg}"/>`;
+    let s = '';
+    if (o.L === '128') s += hach(TETE, BOX, { pas: 0.95, sw: 0.2, color: o.ink, angle: 45 });
+    else if (o.L === '32') s += hach(TETE, BOX, { pas: 2.8, sw: 0.75, color: o.ink, angle: 45 });
+    s += `<path d="${TETE}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.5 : sw}" stroke-linejoin="round"/>`;
+    // l’œil fendu, la truffe
+    if (o.L === '16') s += `<path d="${OEIL_F}" fill="${o.ink}"/>`;
+    else s += `<path d="${OEIL_F}" fill="${o.bg}" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.5}"/>`;
+    s += `<circle cx="${o.L === '16' ? 4.4 : 4}" cy="14.8" r="${o.L === '16' ? 1.1 : 0.85}" fill="${o.ink}"/>`;
+    if (o.L === '128') {
+      s += `<path d="M9.9 4.9L8.9 8.9M19.7 4.3L21.5 8.6" fill="none" stroke="${o.ink}" stroke-width="${fin * 0.9}" stroke-linecap="round"/>`;
+      s += `<path d="M4.4 15.4L2.2 16.1M4.7 16.5L2.7 17.6M5.4 17.3L3.8 18.6" fill="none" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+      s += `<path d="M25.4 16.2L26.6 16.7M24.7 19.2L26 19.7" fill="none" stroke="${o.bg}" stroke-width="0.35" stroke-linecap="round"/>`;
+    }
+    s += `<path d="M6.4 30.4H22.6" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M8.6 30.4L8.1 29.4M20.6 30.4L21.1 29.5" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  ours(o) {
+    const sw = o.sw, fin = o.fin;
+    const TETE = 'M4.2 12.4L11 9.4L14.6 5.8C15.2 4.2 16.6 3.4 17.9 3.6C19.2 3.8 20 4.8 20.3 6.2L26 12.6C27.3 15.8 27.3 19.6 25.9 22.8L24.2 27.4L9.4 27.6L9.8 23.4L7 18.8L5.5 16L4.5 14Z';
+    const MUSEAU = 'M4.4 12.5L10.8 9.6L11 11.9C9.3 13.1 7.2 13.5 5.2 13.1Z';
+    if (o.sil) return `<path d="${TETE}" fill="${o.ink}"/><circle cx="13.4" cy="12.6" r="1.2" fill="${o.bg}"/>`;
+    let s = '';
+    if (o.L === '128') s += hach(TETE, BOX, { pas: 0.95, sw: 0.2, color: o.ink, angle: 45 });
+    else if (o.L === '32') s += hach(TETE, BOX, { pas: 2.8, sw: 0.75, color: o.ink, angle: 45 });
+    s += `<path d="${TETE}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.5 : sw}" stroke-linejoin="round"/>`;
+    // le museau clair en réserve
+    if (o.L !== '16') s += `<path d="${MUSEAU}" fill="${o.bg}"/>`;
+    // l’œil rond sous l’arcade, la truffe
+    s += `<circle cx="13.4" cy="12.6" r="${o.L === '16' ? 1.2 : 0.9}" fill="${o.ink}"/>`;
+    s += `<circle cx="${o.L === '16' ? 5.1 : 4.9}" cy="13.5" r="${o.L === '16' ? 1.2 : 0.9}" fill="${o.ink}"/>`;
+    if (o.L !== '16') s += `<path d="M11.6 10.8L14.9 11.5M5 15.3L8.4 16.3" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.55}" stroke-linecap="round"/>`;
+    if (o.L === '128') {
+      s += `<path d="M15.6 5.6C16.4 4.8 17.4 4.6 18.2 5" fill="none" stroke="${o.ink}" stroke-width="${fin * 0.8}" stroke-linecap="round"/>`;
+      s += `<path d="M3.4 15.4L2 16.1M3.7 16.9L2.5 17.9" fill="none" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    }
+    s += `<path d="M7 30H24" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M9.4 30L8.9 29M21.6 30L22.2 29.1" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  villageois2(o) {
+    const sw = o.sw, fin = o.fin;
+    const P = (m, x) => (m ? x : 32 - x);
+    const tete = (m) => `M${P(m, 6.2)} 26.4C${P(m, 5.6)} 20.8 ${P(m, 6)} 13.8 ${P(m, 8.6)} 9.2C${P(m, 9.8)} 7.2 ${P(m, 11.6)} 6.6 ${P(m, 13)} 7.6C${P(m, 14)} 8.3 ${P(m, 14.4)} 9.6 ${P(m, 14.1)} 10.9L${P(m, 14.6)} 12.9L${P(m, 13.3)} 13.4L${P(m, 13.8)} 14.7L${P(m, 12.6)} 15.1L${P(m, 13.2)} 16.8L${P(m, 11.7)} 17.7L${P(m, 11.3)} 20.9L${P(m, 10)} 26.4Z`;
+    const G = tete(1), D = tete(0);
+    if (o.sil) return `<path d="${G}${D}" fill="${o.ink}"/><circle cx="11.9" cy="11.5" r="1" fill="${o.bg}"/><circle cx="20.1" cy="11.5" r="1" fill="${o.bg}"/>`;
+    let s = '';
+    if (o.L === '128') {
+      s += hach(G, BOX, { pas: 0.95, sw: 0.2, color: o.ink, angle: 45 });
+      s += hach(D, BOX, { pas: 0.95, sw: 0.2, color: o.ink, angle: -45 });
+    } else if (o.L === '32') {
+      s += hach(G, BOX, { pas: 2.6, sw: 0.8, color: o.ink });
+      s += hach(D, BOX, { pas: 2.6, sw: 0.8, color: o.ink });
+    }
+    s += `<path d="${G}${D}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.5 : sw}" stroke-linejoin="round"/>`;
+    // deux fois le même regard
+    const R = o.L === '16' ? 1.2 : 0.95;
+    s += `<circle cx="11.9" cy="11.5" r="${R}" fill="${o.ink}"/><circle cx="20.1" cy="11.5" r="${R}" fill="${o.ink}"/>`;
+    if (o.L === '128') {
+      s += `<path d="M7.4 12.4C6.8 13.4 6.8 14.6 7.4 15.6M24.6 12.4C25.2 13.4 25.2 14.6 24.6 15.6M9.3 9C10.4 8.1 11.6 7.8 12.8 8.1M22.7 9C21.6 8.1 20.4 7.8 19.2 8.1" fill="none" stroke="${o.ink}" stroke-width="${fin * 0.8}" stroke-linecap="round"/>`;
+      s += `<path d="M16 8.2V24.2" stroke="${o.ink}" stroke-width="${fin}" stroke-dasharray="1 1.4"/>`;
+    } else if (o.L === '32') {
+      s += `<path d="M16 8.4V24" stroke="${o.ink}" stroke-width="${sw * 0.5}"/>`;
+    }
+    // le socle : on le connaît par cœur
+    s += `<path d="M6.2 27.6H25.8" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M8.6 28.9H23.4" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  voleur(o) {
+    const sw = o.sw, fin = o.fin;
+    // le talon : deux cartes face cachée, l’une sur l’autre
+    const T1 = 'M4.6 27L15 20.8L15 24L4.6 30.2Z';
+    const T2 = 'M6.2 24.6L16.6 18.4L16.6 21.6L6.2 27.8Z';
+    // la carte choisie, levée du talon, toujours face cachée
+    const CARTE = 'M19.2 5.4L26.6 7.3L24.8 19.9L17.4 18Z';
+    const CADRE = 'M20.6 7.5L25.3 8.7L23.9 17.8L19.2 16.6Z';
+    if (o.sil) return `<path d="${T1}${T2}" fill="${o.ink}"/><path d="${CARTE}" fill="${o.ink}"/><path d="${MAIN_FERMEE}" fill="${o.ink}" transform="translate(19.2 17.6) scale(0.44)"/>`;
+    let s = '';
+    const hh = o.L === '128' ? { pas: 0.95, sw: 0.2 } : { pas: 2.8, sw: 0.75 };
+    const W = o.L === '128' ? fin * 1.5 : sw;
+    s += `<path d="${T1}" fill="${o.bg}"/>` + hach(T1, BOX, { ...hh, color: o.ink, angle: 45 }) + `<path d="${T1}" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    s += `<path d="${T2}" fill="${o.bg}"/>` + hach(T2, BOX, { ...hh, color: o.ink, angle: 45 }) + `<path d="${T2}" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    s += `<path d="${CARTE}" fill="${o.bg}"/>`;
+    if (o.L !== '16') s += hach(CARTE, BOX, { ...hh, color: o.ink, angle: 45 });
+    s += `<path d="${CARTE}" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    if (o.L === '128') s += `<path d="${CADRE}" fill="none" stroke="${o.ink}" stroke-width="${fin * 0.7}"/>`;
+    // la main gantée qui la tient par le coin
+    s += `<path d="${MAIN}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw}" stroke-linecap="round" stroke-linejoin="round" transform="translate(19.2 17.6) scale(0.44)"/>`;
+    if (o.L === '128') {
+      s += `<path d="M24.4 28.2H28.4M24.7 29.4H28.1" stroke="${o.ink}" stroke-width="${fin * 1.1}" stroke-linecap="round"/>`;
+      s += hach('M22.1 24.4C24.4 24.6 26.6 25.2 27.9 26.4L27.7 28.2C26.3 29 24.4 29.2 22.8 28.7Z', BOX, { pas: 0.8, sw: 0.18, color: o.ink, angle: 45 });
+    }
+    s += `<path d="M3.4 30.6H17.8" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M5.8 30.6L5.3 29.6M15.8 30.6L16.4 29.6" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  chienLoup(o) {
+    const sw = o.sw, fin = o.fin;
+    const CRANE = 'M16 5.2C11.5 5.2 8.3 8.1 7.9 12.3C7.5 16.1 9.3 19.6 12.4 21.6C13.4 22.3 14.6 22.8 16 22.8C17.4 22.8 18.6 22.3 19.6 21.6C22.7 19.6 24.5 16.1 24.1 12.3C23.7 8.1 20.5 5.2 16 5.2Z';
+    const DEMI = 'M16 5.2C20.5 5.2 23.7 8.1 24.1 12.3C24.5 16.1 22.7 19.6 19.6 21.6C18.6 22.3 17.4 22.8 16 22.8Z';
+    const FLOP = 'M9.6 7.4C7.8 8.9 6.9 11.8 7.2 15C7.4 16.6 8.3 17.5 9.3 17.2C10.1 16.9 10.4 15.6 10.2 14.2';
+    const DROITE = 'M21.9 7.6L24.4 2.9C24.9 2.4 25.6 2.7 25.6 3.5L24.9 9.1';
+    const MUSEAU = 'M13.1 16.4C13.1 15.2 14.4 14.4 16 14.4C17.6 14.4 18.9 15.2 18.9 16.4C18.9 18.3 17.5 19.4 16 19.4C14.5 19.4 13.1 18.3 13.1 16.4Z';
+    if (o.sil) return `<path d="${CRANE}" fill="${o.ink}"/><path d="${FLOP}${DROITE}" stroke="${o.ink}" stroke-width="2.2" fill="${o.ink}"/>`;
+    let s = '';
+    const W = o.L === '128' ? fin * 1.5 : sw;
+    // la moitié sauvage : hachure serrée, puis aquatinte — la gueule menace
+    if (o.L === '16') s += `<path d="${DEMI}" fill="${o.ink}"/>`;
+    else {
+      s += hach(DEMI, BOX, o.L === '128' ? { pas: 1.15, sw: 0.2, color: o.ink, angle: 45 } : { pas: 2.6, sw: 0.8, color: o.ink, angle: 45 });
+      if (o.L === '128') s += grain(DEMI, BOX, { f: 'aqua-IV', op: 0.26, sc: 0.25 });
+    }
+    s += `<path d="${CRANE}" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    s += `<path d="M16 5.6V22.4" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.1 : sw * 0.55}"/>`;
+    // l’oreille tombante du chien, l’oreille droite du loup
+    s += `<path d="${FLOP}" fill="${o.bg}" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${DROITE}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // le museau en réserve, la truffe
+    s += `<path d="${MUSEAU}" fill="${o.bg}"/>`;
+    s += `<circle cx="16" cy="15.6" r="${o.L === '16' ? 1.1 : 0.85}" fill="${o.ink}"/>`;
+    // l’œil rond du chien, l’œil fendu du loup
+    s += `<circle cx="12.6" cy="12.4" r="${o.L === '16' ? 1.2 : 0.9}" fill="${o.ink}"/>`;
+    if (o.L !== '16') s += `<path d="M18.7 12Q20 11.4 21 12.3Q19.8 12.9 18.7 12Z" fill="${o.ink}"/>`;
+    // la gueule : close d’un côté, dentée de l’autre
+    s += `<path d="M13.2 21.3Q14.5 21.9 15.9 21.7M16 21.7L17.1 22.4L18 21.6L18.9 22.2L19.6 21.5" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.6}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // le cou sur le socle
+    s += `<path d="M11.2 22.2C10.6 24.8 10.4 27.4 10.6 30M20.8 22.2C21.4 24.8 21.6 27.4 21.4 30" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.2 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M12.2 11.2Q13 10.7 13.8 11.2M18.4 10.9Q19.4 10.5 20.2 11" fill="none" stroke="${o.bg}" stroke-width="0.35" stroke-linecap="round"/>`;
+    s += `<path d="M6.6 30.4H25.4" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M9 30.4L8.5 29.4M23 30.4L23.6 29.4" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  enfantSauvage(o) {
+    const sw = o.sw, fin = o.fin;
+    const TETE = 'M11.5 9.4A3.1 3.1 0 1 0 17.7 9.4A3.1 3.1 0 1 0 11.5 9.4Z';
+    const CHEVELURE = 'M12.3 6.8L11.2 4L13.3 5.9L13.7 2.9L15.4 5.4L16.5 2.5L17.6 5.7L19.2 4.2L18.3 7';
+    // l’ombre qui rampe derrière lui, ombre chinoise pleine
+    const OMBRE = 'M2.6 28.6C3.4 27 4.8 26.1 6.4 26.4L9 24.6C9.5 24.2 10.1 24.5 10 25.1L9.6 27C11.4 27.5 12.9 28.7 13.4 30C10.6 30.6 6.9 30.6 4.6 29.8C3.4 29.4 2.7 29.1 2.6 28.6Z';
+    if (o.sil) return `<path d="${OMBRE}" fill="${o.ink}"/><circle cx="14.6" cy="9.4" r="3.1" fill="${o.ink}"/><path d="M15.9 13.6C18.2 13 20 13.7 21.6 14.7C23.4 15.3 25.2 14.2 26.4 12.8L28.4 11.9M13.6 13.8C12.7 16.2 12.5 19.2 12.9 22M14.9 12.7C14.6 16.6 14.8 20.6 15.5 24.6M14 24.6L13.3 30.2M17 24.6L18 30.2" stroke="${o.ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    let s = '';
+    const W = o.L === '128' ? fin * 1.4 : sw;
+    s += `<path d="${OMBRE}" fill="${o.ink}"/>`;
+    // la tête hérissée
+    s += `<path d="${CHEVELURE}" fill="${o.L === '16' ? o.ink : o.bg}" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.2 : sw * 0.8}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${TETE}" fill="${o.bg}" stroke="${o.ink}" stroke-width="${W}"/>`;
+    s += `<circle cx="15.7" cy="8.9" r="${o.L === '16' ? 1.2 : 0.9}" fill="${o.ink}"/>`;
+    if (o.L !== '16') s += `<path d="M16 11.5Q16.8 11.9 17.6 11.4" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.6}" stroke-linecap="round"/>`;
+    // le bras qui désigne
+    s += `<path d="M15.9 13.8C18.2 13.2 20 13.9 21.8 14.9C23.6 15.5 25.4 14.4 26.6 13" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linecap="round"/>`;
+    s += `<path d="M26.2 13.6C27 14 27.9 13.5 28.4 12.7L30.2 12.1" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.8}" stroke-linecap="round"/>`;
+    // l’autre bras, le corps, les jambes
+    s += `<path d="M13.6 13.8C12.7 16.2 12.5 19.2 12.9 22M14.9 12.7C14.6 16.6 14.8 20.6 15.5 24.6M14 24.6C13.7 26.5 13.8 28.4 14.4 30.2M17 24.6C17.1 26.5 17.3 28.4 17.9 30.2" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.2 : sw * 0.85}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M12.6 23.6H17.8" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    s += `<path d="M7.6 30.4H27.4" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M10 30.4L9.5 29.4M25 30.4L25.6 29.4" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  soeurs(o) {
+    const sw = o.sw, fin = o.fin;
+    // le même profil, écrit une fois : la sœur de droite le regarde, celle de gauche en est le miroir
+    const X = (m, x) => (m ? 22.1 - x : x + 9.9);
+    const tete = (m) => `M${X(m, 9.4)} 26.4C${X(m, 9)} 23 ${X(m, 9.2)} 19.8 ${X(m, 10)} 17.2C${X(m, 9)} 17 ${X(m, 8.4)} 16.2 ${X(m, 8.7)} 15.4L${X(m, 9.5)} 15.1L${X(m, 8.8)} 14.4L${X(m, 9.7)} 14L${X(m, 9.1)} 13.3L${X(m, 10)} 12.9L${X(m, 9.6)} 12.1C${X(m, 9.3)} 11.4 ${X(m, 9.6)} 10.6 ${X(m, 10.2)} 10.2L${X(m, 10.9)} 7.8C${X(m, 11.6)} 6 ${X(m, 13.6)} 5.1 ${X(m, 15.3)} 6C${X(m, 17)} 6.9 ${X(m, 17.6)} 9 ${X(m, 17.5)} 11.2C${X(m, 17.4)} 13.6 ${X(m, 16.8)} 16 ${X(m, 16)} 18.4C${X(m, 15.4)} 20.6 ${X(m, 15.1)} 23.4 ${X(m, 15.1)} 26.4Z`;
+    const G = tete(1), D = tete(0);
+    // le voile commun : une arche au-dessus des deux têtes, liée sous les oreilles
+    const VOILE = 'M4.8 12.6C6 3.4 26 3.4 27.2 12.6';
+    const VOILE2 = 'M6.6 12.8C7.8 5 24.2 5 25.4 12.8';
+    if (o.sil) return `<path d="${VOILE}" stroke="${o.ink}" stroke-width="2.2" fill="none"/><path d="${G}${D}" fill="${o.ink}" fill-rule="evenodd"/><circle cx="16" cy="14.6" r="0.8" fill="${o.bg}"/>`;
+    let s = '';
+    const W = o.L === '128' ? fin * 1.5 : sw;
+    if (o.L !== '16') {
+      s += hach(VOILE + 'Z' + VOILE2 + 'Z', BOX, o.L === '128' ? { pas: 0.95, sw: 0.2, color: o.ink, rule: 'evenodd' } : { pas: 2.6, sw: 0.8, color: o.ink, rule: 'evenodd' });
+    }
+    s += `<path d="${VOILE}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.9}" stroke-linecap="round"/>`;
+    if (o.L !== '16') s += `<path d="${VOILE2}" fill="none" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.1 : sw * 0.6}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<circle cx="4.8" cy="13.6" r="0.7" fill="${o.bg}" stroke="${o.ink}" stroke-width="${fin}"/><circle cx="27.2" cy="13.6" r="0.7" fill="${o.bg}" stroke="${o.ink}" stroke-width="${fin}"/>`;
+    // les deux têtes, le même chignon au dos de chacune
+    if (o.L === '128') {
+      s += hach(G, BOX, { pas: 1.05, sw: 0.2, color: o.ink, angle: 45 });
+      s += hach(D, BOX, { pas: 1.05, sw: 0.2, color: o.ink, angle: -45 });
+    } else if (o.L === '32') {
+      s += hach(G, BOX, { pas: 2.6, sw: 0.8, color: o.ink });
+      s += hach(D, BOX, { pas: 2.6, sw: 0.8, color: o.ink });
+    }
+    s += `<path d="${G}${D}" fill="${o.L === '16' ? o.bg : 'none'}" fill-rule="evenodd" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+    s += `<circle cx="4.9" cy="9.6" r="1.1" fill="${o.bg}" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.7}"/><circle cx="26.1" cy="9.6" r="1.1" fill="${o.bg}" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.3 : sw * 0.7}"/>`;
+    // le regard qui se reconnaît
+    const R = o.L === '16' ? 1.2 : 0.95;
+    s += `<circle cx="11.1" cy="11.4" r="${R}" fill="${o.ink}"/><circle cx="20.9" cy="11.4" r="${R}" fill="${o.ink}"/>`;
+    // le chuchotement, entre les deux visages
+    s += `<circle cx="16" cy="14.6" r="${o.L === '16' ? 0.8 : 0.55}" fill="${o.ink}"/>`;
+    if (o.L !== '16') s += `<circle cx="16" cy="16.4" r="0.55" fill="${o.ink}"/>`;
+    if (o.L === '128') s += `<path d="M10.2 10.4C10.8 10 11.5 9.9 12.1 10.1M21.8 10.4C21.2 10 20.5 9.9 19.9 10.1" fill="none" stroke="${o.ink}" stroke-width="${fin * 0.8}" stroke-linecap="round"/>`;
+    s += `<path d="M4.6 27.8H27.4" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M7 28.9H25" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
+    return s;
+  },
+  freres(o) {
+    const sw = o.sw, fin = o.fin;
+    // le même profil trois fois : le rang se lit à la répétition des crânes
+    const tete = (cx) => { const X = (x) => 2 * cx - x; return `M${X(9.4)} 26.4C${X(9)} 23 ${X(9.2)} 19.8 ${X(10)} 17.2C${X(9)} 17 ${X(8.4)} 16.2 ${X(8.7)} 15.4L${X(9.5)} 15.1L${X(8.8)} 14.4L${X(9.7)} 14L${X(9.1)} 13.3L${X(10)} 12.9L${X(9.6)} 12.1C${X(9.3)} 11.4 ${X(9.6)} 10.6 ${X(10.2)} 10.2L${X(10.9)} 7.8C${X(11.6)} 6 ${X(13.6)} 5.1 ${X(15.3)} 6C${X(17)} 6.9 ${X(17.6)} 9 ${X(17.5)} 11.2C${X(17.4)} 13.6 ${X(16.8)} 16 ${X(16)} 18.4C${X(15.4)} 20.6 ${X(15.1)} 23.4 ${X(15.1)} 26.4Z`; };
+    if (o.sil) return `<path d="${tete(10.75)}${tete(14.75)}${tete(18.75)}" fill="${o.ink}" fill-rule="evenodd"/>`;
+    let s = '';
+    const W = o.L === '128' ? fin * 1.5 : sw;
+    const hh = o.L === '128' ? { pas: 1.25, sw: 0.2 } : { pas: 2.6, sw: 0.8 };
+    // du fond du rang vers l’avant : chacun couvre la nuque du suivant
+    for (const cx of [10.75, 14.75, 18.75]) {
+      const T = tete(cx);
+      s += `<path d="${T}" fill="${o.bg}"/>`;
+      if (o.L !== '16') s += hach(T, BOX, { ...hh, color: o.ink, angle: 45 });
+      s += `<path d="${T}" fill="none" stroke="${o.ink}" stroke-width="${W}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${(2 * cx - 11).toFixed(2)}" cy="11.4" r="${o.L === '16' ? 1.2 : 0.95}" fill="${o.ink}"/>`;
+      if (o.L === '128') s += `<path d="M${(2 * cx - 10.1).toFixed(2)} 10.9L${(2 * cx - 11.4).toFixed(2)} 10.7" stroke="${o.ink}" stroke-width="${fin * 0.8}" stroke-linecap="round"/>`;
+    }
+    s += `<path d="M3.6 27.8H28.6" stroke="${o.ink}" stroke-width="${o.L === '128' ? fin * 1.4 : sw * 0.7}" stroke-linecap="round"/>`;
+    if (o.L === '128') s += `<path d="M6 28.9H26.2" stroke="${o.ink}" stroke-width="${fin}" stroke-linecap="round"/>`;
     return s;
   },
 };
