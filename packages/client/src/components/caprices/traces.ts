@@ -74,11 +74,13 @@ export function contourCartouche(forme: FormeTrace, l: number, h: number): strin
  * - `fenetre` : aplat `--frise-fenetre` ;
  * - `hachure-2` / `hachure-3` : hachure du jour (masquée la nuit) ;
  * - `mur`, `joint`, `colosse`, `yeux` : le Mur de Shiganshina ;
- * - `gyrophares` : les gyrophares du rond-point (la nuit venue seulement).
+ * - `gyrophares` : les gyrophares du rond-point (la nuit venue seulement) ;
+ * - `lune` : la lune du Far West (la nuit venue seulement) ;
+ * - `veilleuse` : la veilleuse du comptoir, seul or plein de la frise.
  */
 export interface TraitFrise {
   d: string;
-  role: 'toit' | 'trait' | 'fenetre' | 'hachure-2' | 'hachure-3' | 'mur' | 'mur-hachure' | 'joint' | 'colosse' | 'yeux' | 'gyrophares';
+  role: 'toit' | 'trait' | 'fenetre' | 'hachure-2' | 'hachure-3' | 'mur' | 'mur-hachure' | 'joint' | 'colosse' | 'yeux' | 'gyrophares' | 'lune' | 'veilleuse';
   epaisseur?: number;
 }
 
@@ -210,5 +212,45 @@ export function rondpoint(l: number, yb: number): TraitFrise[] {
   traits.push({ role: 'fenetre', d: `M${n(ix - 30)} ${n(yb - 4)} C${n(ix - 32)} ${n(yb - 9)} ${n(ix - 28)} ${n(yb - 13)} ${n(ix - 30)} ${n(yb - 4)} Z` });
   traits.push({ role: 'trait', d: `M${n(ix - 34)} ${n(yb - 2)} L${n(ix - 26)} ${n(yb + 2)} M${n(ix - 26)} ${n(yb - 2)} L${n(ix - 34)} ${n(yb + 2)}`, epaisseur: 1 });
   traits.push({ role: 'trait', d: `M0 ${n(yb)} H${n(l)}`, epaisseur: 1 });
+  return traits;
+}
+
+/**
+ * La rue principale du bourg du Far West : le saloon à l'auvent à festons et
+ * ses portes à battants au milieu, les cactus de la prairie, la potence au
+ * bout de la rue ; la nuit, la lune veille sur le désert, et la veilleuse du
+ * comptoir — le seul or plein de la frise — brille jour et nuit.
+ */
+export function rue(l: number, yb: number): TraitFrise[] {
+  const traits: TraitFrise[] = [];
+  const ix = Math.round(l * 0.46);
+  // les cactus de la prairie
+  const cactus = (x: number, h: number): string =>
+    `M${n(x)} ${n(yb)}V${n(yb - h - 6)}M${n(x - 4)} ${n(yb - h + 5)}C${n(x - 6)} ${n(yb - h + 2)} ${n(x - 6)} ${n(yb - h - 1)} ${n(x - 4)} ${n(yb - h - 2)}M${n(x + 4)} ${n(yb - h + 8)}C${n(x + 6)} ${n(yb - h + 5)} ${n(x + 6)} ${n(yb - h + 2)} ${n(x + 4)} ${n(yb - h - 1)}`;
+  traits.push({
+    role: 'trait',
+    d: [cactus(l * 0.12, 14), cactus(l * 0.83, 17), cactus(l * 0.94, 12)].join(' '),
+    epaisseur: 1.2,
+  });
+  // la nuit, la lune veille au-dessus du désert — et deux étoiles en craie
+  traits.push({
+    role: 'lune',
+    d: `M${n(l * 0.86 - 6)} ${n(yb - 38)}A6 6 0 1 0 ${n(l * 0.86 + 6)} ${n(yb - 38)}A6 6 0 1 0 ${n(l * 0.86 - 6)} ${n(yb - 38)}Z`
+      + `M${n(l * 0.07)} ${n(yb - 30)}C${n(l * 0.05)} ${n(yb - 32)} ${n(l * 0.09)} ${n(yb - 32)} ${n(l * 0.07)} ${n(yb - 30)}Z`
+      + `M${n(l * 0.11)} ${n(yb - 34)}C${n(l * 0.09)} ${n(yb - 36)} ${n(l * 0.13)} ${n(yb - 36)} ${n(l * 0.11)} ${n(yb - 34)}Z`,
+  });
+  // le saloon et son auvent à festons, les portes à battants
+  traits.push({ role: 'toit', d: `M${n(ix - 36)} ${n(yb)}V${n(yb - 22)}H${n(ix + 36)}V${n(yb)}`, epaisseur: 1.1 });
+  traits.push({ role: 'trait', d: `M${n(ix - 40)} ${n(yb - 22)}H${n(ix + 40)}`, epaisseur: 1.1 });
+  traits.push({ role: 'trait', d: `M${n(ix - 24)} ${n(yb)}V${n(yb - 10)}M${n(ix + 24)} ${n(yb)}V${n(yb - 10)}`, epaisseur: 0.9 });
+  traits.push({
+    role: 'trait',
+    d: `M${n(ix - 8)} ${n(yb)}V${n(yb - 8)}C${n(ix - 8)} ${n(yb - 11)} ${n(ix - 5)} ${n(yb - 11)} ${n(ix - 5)} ${n(yb - 8)}V${n(yb)}`
+      + `M${n(ix + 8)} ${n(yb)}V${n(yb - 8)}C${n(ix + 8)} ${n(yb - 11)} ${n(ix + 5)} ${n(yb - 11)} ${n(ix + 5)} ${n(yb - 8)}V${n(yb)}`,
+    epaisseur: 0.9,
+  });
+  // la veilleuse du comptoir, seul or plein de la frise
+  traits.push({ role: 'veilleuse', d: `M${n(ix + 16)} ${n(yb - 5)}A2 2 0 1 0 ${n(ix + 20)} ${n(yb - 5)}A2 2 0 1 0 ${n(ix + 16)} ${n(yb - 5)}Z` });
+  traits.push({ role: 'trait', d: `M0 ${n(yb)}H${n(l)}`, epaisseur: 1 });
   return traits;
 }

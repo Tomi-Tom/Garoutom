@@ -352,6 +352,16 @@ describe('la planche d’aube', () => {
     expect(planche).not.toHaveTextContent('La meute');
   });
 
+  it('Far West : les légendes et les phrases du bourg, jamais celles de Thiercelieux', () => {
+    const { banc } = monterLaNuit({ skin: 'farwest' });
+    const victime = banc.siege('villageois');
+    arrive(banc, () => banc.devorer(victime).jusquAuJour());
+    const planche = screen.getByTestId('aube');
+    expect(within(planche).getByTestId('aube-titre')).toHaveTextContent('Aube I');
+    expect(within(planche).getByTestId('aube-legende')).toHaveTextContent('« La rue ne dira rien. »');
+    expect(planche).not.toHaveTextContent('La meute');
+  });
+
   it('se referme seule, et un toucher la passe', () => {
     const { banc } = monterLaNuit();
     arrive(banc, () => banc.jusquAuJour());

@@ -70,6 +70,10 @@ function habit(trait: TraitFrise): { fill: string; stroke?: string; className?: 
       return { fill: 'var(--cp-palier-3)', className: 'frise-nuit-seule' };
     case 'gyrophares':
       return { fill: 'var(--camp-meute)', className: 'frise-nuit-seule' };
+    case 'lune':
+      return { fill: 'none', stroke: 'var(--camp-meute)', className: 'frise-nuit-seule' };
+    case 'veilleuse':
+      return { fill: 'var(--cp-hachure-skin)' };
   }
 }
 

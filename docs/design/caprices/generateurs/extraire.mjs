@@ -37,6 +37,7 @@ const { carteDos, frontispice } = await importer('gen-C/cartes.mjs');
 const { VIGNETTES, vignette } = await importer('gen-C/vignettes.mjs');
 const { SROLES, ssym, sdos, shiganshina, COIFFES } = await importer('gen-C/shig.mjs');
 const { SROLES: SROLES_GJ, gsym, gdos, giletsjaunes: plancheGJ, GCOIFFES } = await importer('gen-C/giletsjaunes.mjs');
+const { SROLES: SROLES_FW, gsym: gsymFW, gdos: gdosFW, farwest: plancheFW, GCOIFFES: GCOIFFES_FW } = await importer('gen-C/farwest.mjs');
 const { PAPIER, CUIVRE, hach, hachRect, grain, cartPath } = await importer('gen-C/lib.mjs');
 const { ICONES, GLYPHES } = await importer('lotF/traces.mjs');
 const { CHEFS, buste } = await importer('lotF/chefs.mjs');
@@ -266,6 +267,21 @@ for (const r of SROLES_GJ) {
   };
 }
 
+// Far West : 21 symboles, deux niveaux, et une encre de plus encore — l'or de
+// l'étoile, une sentinelle propre qui devient le jeton `$fluor` (des hachures,
+// jamais un aplat ; seule la veilleuse du comptoir, dans le dos, reste or plein).
+const TABLE_FW = { ...JETONS, '#1a1400': '$fluor', '#e3b341': '$fluor' };
+const symbolesFW = {};
+for (const r of SROLES_FW) {
+  const role = PAR_NUMERO[r.n];
+  if (!role) throw new Error(`Far West : le numéro ${r.n} ne correspond à aucun rôle`);
+  const o = { ink: 'currentColor', bg: S.reserve, accent: S.meute, mass: S.masse, fluo: '#1a1400' };
+  symbolesFW[role] = {
+    grand: extraire(gsymFW(r.id, 128, o), { table: TABLE_FW }).trace,
+    petit: extraire(gsymFW(r.id, 32, o), { table: TABLE_FW }).trace,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* 2. Les cartes : fonds d'image, cartouches, dos                       */
 /* ------------------------------------------------------------------ */
@@ -305,6 +321,7 @@ const dos = {
   cuivre: extraire(carteDos({ t: CUIVRE })),
   shiganshina: extraire(sdos()),
   giletsjaunes: extraire(gdos()),
+  farwest: extraire(gdosFW()),
 };
 
 /* ------------------------------------------------------------------ */
@@ -331,6 +348,13 @@ const coiffesGJSvg = [...planche.matchAll(/<svg width="62" height="62" viewBox="
 if (coiffesGJSvg.length !== GCOIFFES.length) throw new Error(`coiffes GJ : ${coiffesGJSvg.length} trouvées, ${GCOIFFES.length} attendues`);
 const TABLE_COIFFES_GJ = { '#101318': 'currentColor', '#f1ebdb': '$surface', '#e8c81a': '$fluo' };
 const coiffesGJ = GCOIFFES.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesGJSvg[i], { table: TABLE_COIFFES_GJ }).trace }));
+
+// Les dix-huit coiffes du bourg vivent dans la planche C-VII, lues pareil.
+const plancheBourg = plancheFW();
+const coiffesFWSvg = [...plancheBourg.matchAll(/<svg width="62" height="62" viewBox="0 0 48 48"[^>]*>[\s\S]*?<\/svg>/g)].map((m) => m[0]);
+if (coiffesFWSvg.length !== GCOIFFES_FW.length) throw new Error(`coiffes FW : ${coiffesFWSvg.length} trouvées, ${GCOIFFES_FW.length} attendues`);
+const TABLE_COIFFES_FW = { '#131a2e': 'currentColor', '#f2e8cd': '$surface', '#e3b341': '$fluor' };
+const coiffesFW = GCOIFFES_FW.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesFWSvg[i], { table: TABLE_COIFFES_FW }).trace }));
 
 /* ------------------------------------------------------------------ */
 /* 4. Icônes (33) et glyphes d'état (11) — lot F                        */
@@ -429,6 +453,15 @@ export const SYMBOLES_GILETSJAUNES: Record<string, { grand: Noeud; petit: Noeud 
 export const DOS_GILETSJAUNES: { viewBox: string; trace: Noeud } = ${js(dos.giletsjaunes)};
 /** Les coiffes du rond-point (buste 48 × 48), un par siège. */
 export const COIFFES_GILETSJAUNES: readonly { nom: string; grave: Noeud }[] = ${js(coiffesGJ)};
+`);
+
+ecrire('farwest.ts', `${ENTETE('Ce qui est propre au skin Far West, chargé à la demande : les vingt-et-un symboles (deux niveaux), le dos (la rue principale du bourg, la nuit), les dix-huit coiffes.', 'gen-C/farwest.mjs (dont la planche C-VII)')}
+/** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
+export const SYMBOLES_FARWEST: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesFW)};
+/** Le dos (300 × 420) : la rue principale du bourg, la nuit. */
+export const DOS_FARWEST: { viewBox: string; trace: Noeud } = ${js(dos.farwest)};
+/** Les coiffes du bourg (buste 48 × 48), un par siège. */
+export const COIFFES_FARWEST: readonly { nom: string; grave: Noeud }[] = ${js(coiffesFW)};
 `);
 
 ecrire('icones.ts', `${ENTETE('Les 33 icônes d’interface (grille 24, trait 1,5) et les 11 glyphes d’état (grille 16, trait 1,25).', 'lotF/traces.mjs')}

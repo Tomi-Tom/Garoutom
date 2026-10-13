@@ -48,6 +48,16 @@ export const TRACES_GILETSJAUNES: ModuleParesseux<TracesDuSkin> = paresseux(asyn
   };
 });
 
+/** Les gravures du bourg du Far West, rangées dans la forme commune. */
+export const TRACES_FARWEST: ModuleParesseux<TracesDuSkin> = paresseux(async () => {
+  const bourg = await import('./traces/farwest.js');
+  return {
+    symboles: bourg.SYMBOLES_FARWEST,
+    dos: bourg.DOS_FARWEST,
+    coiffes: bourg.COIFFES_FARWEST,
+  };
+});
+
 /** La fin de partie (vignettes et frontispice du recueil) : à précharger dès que la partie se joue. */
 export function prechargerFinDePartie(): Promise<unknown> {
   return Promise.all([TRACES_VIGNETTES.precharger(), TRACE_RECUEIL.precharger()]);

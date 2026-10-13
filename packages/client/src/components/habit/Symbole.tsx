@@ -95,6 +95,7 @@ export function SymboleRole({
     serment: serment ?? 'var(--camp-serment, #8A3A5C)',
     masse: masse ?? 'currentColor',
     fluo: 'var(--cp-hachure-skin, #E8C81A)',
+    fluor: 'var(--cp-hachure-skin, #E3B341)',
   };
   const trace = role === null ? undefined : traceSymbole(role, skinId, niveauSymbole(taille));
   const gravure = useTrace(trace, palette);

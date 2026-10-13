@@ -369,6 +369,12 @@ describe('<Frise />', () => {
     expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'rondpoint');
     expect(container.querySelectorAll('.frise-nuit-seule').length).toBeGreaterThan(0);
   });
+
+  it('Far West : la rue du bourg, la lune pour la nuit seulement — et la veilleuse toujours', () => {
+    const { container } = render(<Frise titre="Jour III" skin="farwest" />);
+    expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'rue');
+    expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(1);
+  });
 });
 
 describe('<Matieres />', () => {

@@ -148,7 +148,7 @@ describe('<BoutonRegles />', () => {
   });
 
   it('affiche les cinq rôles optionnels dans les trois skins, sous leur propre titre', async () => {
-    for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes']) {
+    for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes', 'farwest']) {
       useStore.setState({ room: salle({ ...DEFAULT_OPTIONS, skin }) });
       const utilisateur = userEvent.setup();
       const { unmount } = render(<BoutonRegles />);

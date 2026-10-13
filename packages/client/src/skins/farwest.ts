@@ -414,7 +414,7 @@ export const farwest: Skin = {
       revelation: 'Nul n’est inscrit au registre du territoire.',
       nuitDormeur: 'Dormez : le chien veille.',
       mort: 'Tout voir, enfin, et depuis le cimetière.',
-      aubeMorts: 'Les balcons n’ont rien vu.',
+      aubeMorts: 'La rue ne dira rien.',
       aubePaisible: 'Le piano reprend, pas la confiance.',
       election: 'Qui crie le plus fort prend l’étoile.',
       vote: 'Tous d’accord, donc tous innocents.',

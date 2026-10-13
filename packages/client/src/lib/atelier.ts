@@ -232,12 +232,43 @@ function sireneDeuxTons(scene: Scene): void {
 }
 
 /**
+ * Le galop du Far West : des sabots sourds qui s'approchent — de plus en plus
+ * proches, de plus en plus lourds — puis s'arrêtent sous la potence. Chaque
+ * sabot est un souffle de bruit filtré qui tombe vers le grave ; la foulée de
+ * galop (trois temps, une suspension) se répète en serrant le pas.
+ */
+function sabotsAuGalop(scene: Scene): void {
+  const { ctx, sortie, t0 } = scene;
+  const sabot = (retard: number, gain: number): void => {
+    const source = bruit(ctx, 0.09);
+    const passeBas = ctx.createBiquadFilter();
+    passeBas.type = 'lowpass';
+    passeBas.frequency.setValueAtTime(900, t0 + retard);
+    passeBas.frequency.exponentialRampToValueAtTime(120, t0 + retard + 0.09);
+    const env = enveloppe(ctx, t0 + retard, gain, 0.004, 0.09);
+    source.connect(passeBas).connect(env).connect(sortie);
+    liberer([source], [passeBas, env]);
+    lancer(source, t0 + retard, 0.09);
+  };
+  let t = 0;
+  let gain = 0.16;
+  while (t < 2.3) {
+    for (const d of [0, 0.055, 0.11, 0.2]) sabot(t + d, gain);
+    t += 0.42;
+    gain = Math.min(0.5, gain * 1.18);
+  }
+  sabot(t + 0.1, 0.5);
+  sabot(t + 0.55, 0.42);
+}
+
+/**
  * Les cris de la nuit tombée, par skin : le hurlement du loup pour quiconque
  * n'a pas le sien (Thiercelieux et tout skin sans entrée ici).
  */
 const CRIS_DE_NUIT: Record<string, (scene: Scene) => void> = {
   shiganshina: criTitan,
   giletsjaunes: sireneDeuxTons,
+  farwest: sabotsAuGalop,
 };
 
 export const atelier = {

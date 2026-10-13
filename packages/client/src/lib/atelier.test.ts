@@ -24,6 +24,7 @@ describe('atelier', () => {
       atelier.hurlement();
       atelier.hurlement('shiganshina');
       atelier.hurlement('giletsjaunes');
+      atelier.hurlement('farwest');
       for (const nom of voix) atelier[nom]();
     }).not.toThrow();
     expect(ContexteAudioFactice.noeudsCrees).toBe(0);
@@ -36,6 +37,7 @@ describe('atelier', () => {
       () => atelier.hurlement(),
       () => atelier.hurlement('shiganshina'),
       () => atelier.hurlement('giletsjaunes'),
+      () => atelier.hurlement('farwest'),
       ...voix.map((nom) => () => atelier[nom]()),
     ];
     for (const appel of appels) {

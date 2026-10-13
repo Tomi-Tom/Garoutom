@@ -12,10 +12,10 @@
  * Le cri de la nuit tombée reste à l'atelier (`lib/atelier.ts`) : la voix
  * choisit seule, elle n'a pas besoin de cette table.
  */
-import { mur, rondpoint, toits, type TraitFrise } from '../caprices/traces.js';
+import { mur, rondpoint, rue, toits, type TraitFrise } from '../caprices/traces.js';
 import { paresseux, type ModuleParesseux } from '../../lib/paresseux.js';
 
-import { TRACES_GILETSJAUNES, TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
+import { TRACES_FARWEST, TRACES_GILETSJAUNES, TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
 
 /** Le décor de frise d'un skin : son nom (pour `data-decor`) et son tracé. */
 export interface DecorFrise {
@@ -79,6 +79,18 @@ const GRAVURES: Readonly<Record<string, GravuresDuSkin>> = {
       silhouette: 'M2 32V27.6L4.8 27.4V20L8.4 17L12 20V27.2C20 24.8 27 25.2 30.2 26.6V32Z',
       hachure: 'url(#hach-fluo)',
       detail: { sorte: 'rectangle', x: 7.1, y: 24.2, largeur: 2.6, hauteur: 4.9 },
+    },
+    facesPropres: true,
+  },
+  farwest: {
+    traces: TRACES_FARWEST,
+    frise: { nom: 'rue', dessiner: rue },
+    miniature: {
+      // le chapeau de cow-boy : bords relevés, calotte creuse, le bandeau seul en plein
+      silhouette:
+        'M2 24C4 21.5 9 20.8 16 20.8C23 20.8 28 21.5 30 24C30 28 24 30.5 16 30.5C8 30.5 2 28 2 24Z M11 24.5V13.5C11 11 13 9.5 16 9.5C19 9.5 21 11 21 13.5V24.5Z',
+      hachure: 'url(#hach-or)',
+      detail: { sorte: 'rectangle', x: 11, y: 19, largeur: 10, hauteur: 2.5 },
     },
     facesPropres: true,
   },
