@@ -147,8 +147,8 @@ describe('<BoutonRegles />', () => {
     expect(screen.getByText(/La table attend ses absents/)).toBeInTheDocument();
   });
 
-  it('affiche les cinq rôles optionnels dans les deux skins, sous leur propre titre', async () => {
-    for (const skin of ['thiercelieux', 'shiganshina']) {
+  it('affiche les cinq rôles optionnels dans les trois skins, sous leur propre titre', async () => {
+    for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes']) {
       useStore.setState({ room: salle({ ...DEFAULT_OPTIONS, skin }) });
       const utilisateur = userEvent.setup();
       const { unmount } = render(<BoutonRegles />);

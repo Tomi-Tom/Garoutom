@@ -149,11 +149,9 @@ const GILETS_JAUNES: Encres = {
   garanceCraie: '#EBA3B2',
   rousseur: '#7E5A33',
   creuxNuit: '#0A0C10',
-  // Le fluo du gilet — hachure seule, jamais en aplat ni en texte.
-  // TODO(angle mort) : `--cp-hachure-skin` n'a aujourd'hui aucun consommateur
-  // CSS ; le vert de Shiganshina passe par le pattern `hach-vert` en dur dans
-  // `textures.svg`. Le pattern du fluo (`hach-fluo` ?) se posera au moment de
-  // l'art, avec la généralisation de ces patterns par skin.
+  // Le fluo du gilet — hachure seule, jamais en aplat ni en texte : le pattern
+  // `hach-fluo` de `textures.svg` en tire les bandeaux, et les composants de
+  // gravure encrent le jeton `$fluo` au moyen de `--cp-hachure-skin`.
   hachureSkin: '#E8C81A',
 };
 

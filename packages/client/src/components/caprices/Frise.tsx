@@ -68,6 +68,8 @@ function habit(trait: TraitFrise): { fill: string; stroke?: string; className?: 
       return { fill: 'var(--cp-bistre-800)', className: 'frise-nuit-seule' };
     case 'yeux':
       return { fill: 'var(--cp-palier-3)', className: 'frise-nuit-seule' };
+    case 'gyrophares':
+      return { fill: 'var(--camp-meute)', className: 'frise-nuit-seule' };
   }
 }
 

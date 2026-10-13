@@ -36,6 +36,7 @@ const { ROLES, symbole } = await importer('gen-C/roles.mjs');
 const { carteDos, frontispice } = await importer('gen-C/cartes.mjs');
 const { VIGNETTES, vignette } = await importer('gen-C/vignettes.mjs');
 const { SROLES, ssym, sdos, shiganshina, COIFFES } = await importer('gen-C/shig.mjs');
+const { SROLES: SROLES_GJ, gsym, gdos, giletsjaunes: plancheGJ, GCOIFFES } = await importer('gen-C/giletsjaunes.mjs');
 const { PAPIER, CUIVRE, hach, hachRect, grain, cartPath } = await importer('gen-C/lib.mjs');
 const { ICONES, GLYPHES } = await importer('lotF/traces.mjs');
 const { CHEFS, buste } = await importer('lotF/chefs.mjs');
@@ -250,6 +251,21 @@ for (const r of SROLES) {
   };
 }
 
+// Gilets Jaunes : 21 symboles, deux niveaux, et une encre de plus — le fluo du
+// gilet, une sentinelle propre qui devient le jeton `$fluo` (des hachures,
+// jamais un aplat ; le feu de camp seul est fluo plein).
+const TABLE_GJ = { ...JETONS, '#0a0b08': '$fluo' };
+const symbolesGJ = {};
+for (const r of SROLES_GJ) {
+  const role = PAR_NUMERO[r.n];
+  if (!role) throw new Error(`Gilets Jaunes : le numéro ${r.n} ne correspond à aucun rôle`);
+  const o = { ink: 'currentColor', bg: S.reserve, accent: S.meute, mass: S.masse, fluo: '#0a0b08' };
+  symbolesGJ[role] = {
+    grand: extraire(gsym(r.id, 128, o), { table: TABLE_GJ }).trace,
+    petit: extraire(gsym(r.id, 32, o), { table: TABLE_GJ }).trace,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* 2. Les cartes : fonds d'image, cartouches, dos                       */
 /* ------------------------------------------------------------------ */
@@ -288,6 +304,7 @@ const dos = {
   papier: extraire(carteDos({ t: PAPIER })),
   cuivre: extraire(carteDos({ t: CUIVRE })),
   shiganshina: extraire(sdos()),
+  giletsjaunes: extraire(gdos()),
 };
 
 /* ------------------------------------------------------------------ */
@@ -307,6 +324,13 @@ const coiffesSvg = [...planchShig.matchAll(/<svg width="62" height="62" viewBox=
 if (coiffesSvg.length !== COIFFES.length) throw new Error(`coiffes : ${coiffesSvg.length} trouvées, ${COIFFES.length} attendues`);
 const TABLE_SHIG = { '#141614': 'currentColor', '#f1efe8': '$surface', '#45523f': '$vert' };
 const coiffes = COIFFES.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesSvg[i], { table: TABLE_SHIG }).trace }));
+
+// Les dix-huit coiffes du rond-point vivent dans la planche C-VI, lues pareil.
+const planche = plancheGJ();
+const coiffesGJSvg = [...planche.matchAll(/<svg width="62" height="62" viewBox="0 0 48 48"[^>]*>[\s\S]*?<\/svg>/g)].map((m) => m[0]);
+if (coiffesGJSvg.length !== GCOIFFES.length) throw new Error(`coiffes GJ : ${coiffesGJSvg.length} trouvées, ${GCOIFFES.length} attendues`);
+const TABLE_COIFFES_GJ = { '#101318': 'currentColor', '#f1ebdb': '$surface', '#e8c81a': '$fluo' };
+const coiffesGJ = GCOIFFES.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesGJSvg[i], { table: TABLE_COIFFES_GJ }).trace }));
 
 /* ------------------------------------------------------------------ */
 /* 4. Icônes (33) et glyphes d'état (11) — lot F                        */
@@ -396,6 +420,15 @@ export const SYMBOLES_SHIGANSHINA: Record<string, { grand: Noeud; petit: Noeud }
 export const DOS_SHIGANSHINA: { viewBox: string; trace: Noeud } = ${js(dos.shiganshina)};
 /** Les coiffes du district (buste 48 × 48), sièges 1 à 6. */
 export const COIFFES_SHIGANSHINA: readonly { nom: string; grave: Noeud }[] = ${js(coiffes)};
+`);
+
+ecrire('giletsjaunes.ts', `${ENTETE('Ce qui est propre au skin Gilets Jaunes, chargé à la demande : les vingt-et-un symboles (deux niveaux), le dos (la cabane sur le rond-point, la nuit), les dix-huit coiffes.', 'gen-C/giletsjaunes.mjs (dont la planche C-VI)')}
+/** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
+export const SYMBOLES_GILETSJAUNES: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesGJ)};
+/** Le dos (300 × 420) : la cabane sur le rond-point, la nuit. */
+export const DOS_GILETSJAUNES: { viewBox: string; trace: Noeud } = ${js(dos.giletsjaunes)};
+/** Les coiffes du rond-point (buste 48 × 48), un par siège. */
+export const COIFFES_GILETSJAUNES: readonly { nom: string; grave: Noeud }[] = ${js(coiffesGJ)};
 `);
 
 ecrire('icones.ts', `${ENTETE('Les 33 icônes d’interface (grille 24, trait 1,5) et les 11 glyphes d’état (grille 16, trait 1,25).', 'lotF/traces.mjs')}

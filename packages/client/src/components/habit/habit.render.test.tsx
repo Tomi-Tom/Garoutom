@@ -21,7 +21,7 @@ import { NOMS_VIGNETTES, Vignette } from './Vignette.js';
 // skins/contraste.test.ts (Caprices, lot V1-A) : l'habit d'avant n'existe plus.
 // La luminance des faces (arbitrage n° 3) : luminance.test.tsx.
 
-const SKINS = ['thiercelieux', 'shiganshina'] as const;
+const SKINS = ['thiercelieux', 'shiganshina', 'giletsjaunes'] as const;
 /** Les identifiants du moteur qui ne sont pas des mots : ils ne doivent jamais s'afficher. La v3 comprise (R105–R114). */
 const IDENTIFIANTS_BRUTS =
   /\b(petiteFille|loupBlanc|sorciere|villageois|villageois2|salvateur|chasseur|cupidon|renard|ours|flairer|voleur|chienLoup|enfantSauvage|soeurs|freres)\b/;
@@ -169,13 +169,16 @@ describe('carte de rôle', () => {
     expect(screen.queryByText(voixDuSkin('thiercelieux').legendeRole('voyante'))).toBeNull();
   });
 
-  it('le cartouche dit le camp du skin : Village, Meute, Seul — District, Titans', () => {
+  it('le cartouche dit le camp du skin : Village, Meute, Seul — District, Titans — Rond-point, Forces de l’ordre', () => {
     const cas: [string, RoleId, string][] = [
       ['thiercelieux', 'idiot', 'Village'],
       ['thiercelieux', 'loup', 'Meute'],
       ['thiercelieux', 'loupBlanc', 'Seul'],
       ['shiganshina', 'idiot', 'District'],
       ['shiganshina', 'loup', 'Titans'],
+      ['giletsjaunes', 'idiot', 'Rond-point'],
+      ['giletsjaunes', 'loup', 'Forces de l’ordre'],
+      ['giletsjaunes', 'loupBlanc', 'Seul'],
     ];
     for (const [skin, role, mot] of cas) {
       const { unmount } = render(<CarteRole role={role} retournee skin={skin} avecDescription={false} />);

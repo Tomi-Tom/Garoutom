@@ -38,6 +38,8 @@
   <pattern id="hach-vert" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#45523F" stroke-width="1.3"/></pattern>
   <!-- Hors vote : rayure horizontale serrée dans le médaillon -->
   <pattern id="hach-barre-e" width="4" height="3" patternUnits="userSpaceOnUse"><line x1="0" y1="1.5" x2="4" y2="1.5" stroke="#17130F" stroke-width="0.9"/></pattern>
+  <!-- Fluor du gilet (skin Gilets Jaunes seulement) : jamais en aplat ni en texte -->
+  <pattern id="hach-fluo" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#E8C81A" stroke-width="1.3"/></pattern>
 
   <!-- ============ PAPIER VERGÉ ============ -->
   <!-- vergeures : 1 trait / 3 px ; pontuseaux : 1 trait / 40 px -->

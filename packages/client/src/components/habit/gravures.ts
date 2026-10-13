@@ -12,10 +12,10 @@
  * Le cri de la nuit tombée reste à l'atelier (`lib/atelier.ts`) : la voix
  * choisit seule, elle n'a pas besoin de cette table.
  */
-import { mur, toits, type TraitFrise } from '../caprices/traces.js';
+import { mur, rondpoint, toits, type TraitFrise } from '../caprices/traces.js';
 import { paresseux, type ModuleParesseux } from '../../lib/paresseux.js';
 
-import { TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
+import { TRACES_GILETSJAUNES, TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
 
 /** Le décor de frise d'un skin : son nom (pour `data-decor`) et son tracé. */
 export interface DecorFrise {
@@ -69,6 +69,16 @@ const GRAVURES: Readonly<Record<string, GravuresDuSkin>> = {
       silhouette: 'M0 32 V14 H4 V11 H8 V14 H12 V11 H16 V14 H20 V11 H24 V14 H28 V11 H32 V32 Z',
       hachure: 'url(#hach-x-e)',
       detail: { sorte: 'chemin', d: 'M12 32 V24 A4 4 0 0 1 20 24 V32' },
+    },
+    facesPropres: true,
+  },
+  giletsjaunes: {
+    traces: TRACES_GILETSJAUNES,
+    frise: { nom: 'rondpoint', dessiner: rondpoint },
+    miniature: {
+      silhouette: 'M2 32V27.6L4.8 27.4V20L8.4 17L12 20V27.2C20 24.8 27 25.2 30.2 26.6V32Z',
+      hachure: 'url(#hach-fluo)',
+      detail: { sorte: 'rectangle', x: 7.1, y: 24.2, largeur: 2.6, hauteur: 4.9 },
     },
     facesPropres: true,
   },

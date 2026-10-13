@@ -47,7 +47,8 @@ export function CouvreChef({ numero, taille = 40, skin, tirage = 'papier', mort 
     {
       surface: cuivre ? 'var(--surface, #2A241E)' : 'var(--surface, #F5EFE2)',
       fantome: 'var(--cp-palier-1, #A89D8C)',
-      vert: cuivre ? '#8FA07E' : 'var(--cp-vert-bataillon, #45523F)',
+      vert: cuivre ? '#8FA07E' : 'var(--cp-hachure-skin, #45523F)',
+      fluo: 'var(--cp-hachure-skin, #E8C81A)',
     },
     cuivre ? 'v' : 'e',
   );

@@ -363,6 +363,12 @@ describe('<Frise />', () => {
     expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'mur');
     expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(2);
   });
+
+  it('Gilets Jaunes : le rond-point, et les gyrophares pour la nuit seulement', () => {
+    const { container } = render(<Frise titre="Jour III" skin="giletsjaunes" />);
+    expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'rondpoint');
+    expect(container.querySelectorAll('.frise-nuit-seule').length).toBeGreaterThan(0);
+  });
 });
 
 describe('<Matieres />', () => {

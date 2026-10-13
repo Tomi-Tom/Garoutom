@@ -41,7 +41,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { ROLES, type RoleId } from '@garoutom/engine';
 
 import { FaceGravee } from './CarteRole.js';
-import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
+import { TRACES_GILETSJAUNES, TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import type { FormatCarte } from './traces/cartes.js';
 
 const require = createRequire(import.meta.url);
@@ -79,10 +79,10 @@ function luminanceMoyenne(role: RoleId, format: FormatCarte, skin: string, tirag
 
 describe('arbitrage n° 3 — la luminance des faces', { timeout: 30_000 }, () => {
   beforeAll(async () => {
-    await TRACES_SHIGANSHINA.precharger();
+    await Promise.all([TRACES_SHIGANSHINA.precharger(), TRACES_GILETSJAUNES.precharger()]);
   });
 
-  for (const skin of ['thiercelieux', 'shiganshina']) {
+  for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes']) {
     for (const format of ['grande', 'moyenne'] as const) {
       it(`${skin}, ${format} : les vingt-et-unes faces papier à ± 3 % de leur moyenne`, () => {
         const mesures = ROLES.map((role) => [role, luminanceMoyenne(role, format, skin)] as const);

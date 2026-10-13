@@ -38,6 +38,16 @@ export const TRACES_SHIGANSHINA: ModuleParesseux<TracesDuSkin> = paresseux(async
   };
 });
 
+/** Les gravures du rond-point des Gilets Jaunes, rangées dans la forme commune. */
+export const TRACES_GILETSJAUNES: ModuleParesseux<TracesDuSkin> = paresseux(async () => {
+  const rondpoint = await import('./traces/giletsjaunes.js');
+  return {
+    symboles: rondpoint.SYMBOLES_GILETSJAUNES,
+    dos: rondpoint.DOS_GILETSJAUNES,
+    coiffes: rondpoint.COIFFES_GILETSJAUNES,
+  };
+});
+
 /** La fin de partie (vignettes et frontispice du recueil) : à précharger dès que la partie se joue. */
 export function prechargerFinDePartie(): Promise<unknown> {
   return Promise.all([TRACES_VIGNETTES.precharger(), TRACE_RECUEIL.precharger()]);

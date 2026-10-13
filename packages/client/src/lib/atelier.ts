@@ -222,12 +222,22 @@ const PARTIELS_AUBE: PartielsDeCloche = [
   [4.1, 0.04, 0.5],
 ];
 
+/** La sirène deux tons : le fourgon qui monte sur la départementale, « pin — pon ». */
+function sireneDeuxTons(scene: Scene): void {
+  for (let i = 0; i < 4; i++) {
+    const freq = i % 2 === 0 ? 523 : 392;
+    partiel(scene, { freq, duree: 0.4, gain: 0.34, attaque: 0.05, type: 'triangle', retard: i * 0.42 });
+    partiel(scene, { freq: freq * 2, duree: 0.4, gain: 0.08, attaque: 0.05, retard: i * 0.42 });
+  }
+}
+
 /**
  * Les cris de la nuit tombée, par skin : le hurlement du loup pour quiconque
  * n'a pas le sien (Thiercelieux et tout skin sans entrée ici).
  */
 const CRIS_DE_NUIT: Record<string, (scene: Scene) => void> = {
   shiganshina: criTitan,
+  giletsjaunes: sireneDeuxTons,
 };
 
 export const atelier = {

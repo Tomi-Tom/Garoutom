@@ -73,11 +73,12 @@ export function contourCartouche(forme: FormeTrace, l: number, h: number): strin
  * - `trait` : trait seul ;
  * - `fenetre` : aplat `--frise-fenetre` ;
  * - `hachure-2` / `hachure-3` : hachure du jour (masquée la nuit) ;
- * - `mur`, `joint`, `colosse`, `yeux` : le Mur de Shiganshina.
+ * - `mur`, `joint`, `colosse`, `yeux` : le Mur de Shiganshina ;
+ * - `gyrophares` : les gyrophares du rond-point (la nuit venue seulement).
  */
 export interface TraitFrise {
   d: string;
-  role: 'toit' | 'trait' | 'fenetre' | 'hachure-2' | 'hachure-3' | 'mur' | 'mur-hachure' | 'joint' | 'colosse' | 'yeux';
+  role: 'toit' | 'trait' | 'fenetre' | 'hachure-2' | 'hachure-3' | 'mur' | 'mur-hachure' | 'joint' | 'colosse' | 'yeux' | 'gyrophares';
   epaisseur?: number;
 }
 
@@ -179,4 +180,35 @@ export function mur(l: number, yb: number): TraitFrise[] {
     { role: 'mur-hachure', d },
     { role: 'joint', d: joints, epaisseur: 0.6 },
   ];
+}
+
+/**
+ * Le rond-point des Gilets Jaunes : l'îlot rond — un cercle, jamais un carré —,
+ * la cabane en palette au milieu, le feu de camp, les pins de la
+ * départementale ; la nuit, les gyrophares attendent au bord du champ.
+ */
+export function rondpoint(l: number, yb: number): TraitFrise[] {
+  const traits: TraitFrise[] = [];
+  const ix = Math.round(l * 0.46);
+  // les pins, plantés au bord de la départementale
+  const pin = (x: number, h: number): string =>
+    `M${n(x)} ${n(yb)} V${n(yb - h - 8)} M${n(x - 5)} ${n(yb - h + 6)} L${n(x)} ${n(yb - h - 2)} L${n(x + 5)} ${n(yb - h + 6)} M${n(x - 3)} ${n(yb - h + 11)} L${n(x)} ${n(yb - h + 5)} L${n(x + 3)} ${n(yb - h + 11)}`;
+  traits.push({ role: 'trait', d: [pin(l * 0.15, 16), pin(l * 0.28, 13), pin(l * 0.78, 15), pin(l * 0.9, 17)].join(' '), epaisseur: 1.2 });
+  // les gyrophares, au loin à l'entrée du secteur — la nuit venue seulement
+  const gx = l * 0.09;
+  traits.push({
+    role: 'gyrophares',
+    d: `M${n(gx - 6)} ${n(yb)} A6 4.5 0 0 1 ${n(gx + 6)} ${n(yb)} Z M${n(gx)} ${n(yb - 6)} V${n(yb - 11)} M${n(gx - 5)} ${n(yb - 8)} L${n(gx - 9)} ${n(yb - 12)} M${n(gx + 5)} ${n(yb - 8)} L${n(gx + 9)} ${n(yb - 12)}`,
+  });
+  // l'îlot du rond-point
+  traits.push({ role: 'toit', d: `M${n(ix - 40)} ${n(yb)} C${n(ix - 40)} ${n(yb - 15)} ${n(ix + 40)} ${n(yb - 15)} ${n(ix + 40)} ${n(yb)} Z`, epaisseur: 1 });
+  // la cabane en palette
+  traits.push({ role: 'toit', d: `M${n(ix - 15)} ${n(yb - 12)} L${n(ix)} ${n(yb - 24)} L${n(ix + 15)} ${n(yb - 12)} Z`, epaisseur: 1.1 });
+  traits.push({ role: 'toit', d: `M${n(ix - 9)} ${n(yb - 12)} V${n(yb - 1)} H${n(ix + 9)} V${n(yb - 12)}`, epaisseur: 1.1 });
+  traits.push({ role: 'fenetre', d: rect(ix - 3, yb - 7, 6, 6) });
+  // le feu de camp, seule fenêtre chaude du rond-point
+  traits.push({ role: 'fenetre', d: `M${n(ix - 30)} ${n(yb - 4)} C${n(ix - 32)} ${n(yb - 9)} ${n(ix - 28)} ${n(yb - 13)} ${n(ix - 30)} ${n(yb - 4)} Z` });
+  traits.push({ role: 'trait', d: `M${n(ix - 34)} ${n(yb - 2)} L${n(ix - 26)} ${n(yb + 2)} M${n(ix - 26)} ${n(yb - 2)} L${n(ix - 34)} ${n(yb + 2)}`, epaisseur: 1 });
+  traits.push({ role: 'trait', d: `M0 ${n(yb)} H${n(l)}`, epaisseur: 1 });
+  return traits;
 }

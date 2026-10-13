@@ -342,6 +342,16 @@ describe('la planche d’aube', () => {
     expect(planche).not.toHaveTextContent('La meute');
   });
 
+  it('Gilets Jaunes : les légendes et les phrases du rond-point, jamais celles de Thiercelieux', () => {
+    const { banc } = monterLaNuit({ skin: 'giletsjaunes' });
+    const victime = banc.siege('villageois');
+    arrive(banc, () => banc.devorer(victime).jusquAuJour());
+    const planche = screen.getByTestId('aube');
+    expect(within(planche).getByTestId('aube-titre')).toHaveTextContent('Aube I');
+    expect(within(planche).getByTestId('aube-legende')).toHaveTextContent('« Les balcons n’ont rien vu. »');
+    expect(planche).not.toHaveTextContent('La meute');
+  });
+
   it('se referme seule, et un toucher la passe', () => {
     const { banc } = monterLaNuit();
     arrive(banc, () => banc.jusquAuJour());
