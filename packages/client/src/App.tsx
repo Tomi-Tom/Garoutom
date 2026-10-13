@@ -28,7 +28,8 @@ import type { NoticePayload, SyncPayload } from '@garoutom/engine';
 import { DUREE_AVIS_MS, IMPRESSION } from './anim/tokens.js';
 import { Bouton, Cartouche, Cuvette, Matieres, useTirage } from './components/caprices/index.js';
 import { Glyphe } from './components/habit/glyphes.js';
-import { prechargerFinDePartie, prechargerShiganshina } from './components/habit/traces-paresseuses.js';
+import { prechargerGravures } from './components/habit/gravures.js';
+import { prechargerFinDePartie } from './components/habit/traces-paresseuses.js';
 import {
   annulerReprise,
   codeDeLUrl,
@@ -190,7 +191,7 @@ export function App() {
     if (statut !== null && statut !== 'lobby') prechargerFinDePartie().catch(() => undefined);
   }, [statut]);
   useEffect(() => {
-    if (skinTable === 'shiganshina') prechargerShiganshina().catch(() => undefined);
+    if (skinTable !== null) prechargerGravures(skinTable).catch(() => undefined);
   }, [skinTable]);
 
   // Tant qu'un écran de table n'est pas arrivé (presque jamais : il est

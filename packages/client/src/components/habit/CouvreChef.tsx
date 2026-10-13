@@ -13,8 +13,8 @@
  *
  * Décoratif : le jeton qui le porte dit le nom et l'état du joueur.
  */
+import { useGravuresDuSkin } from './gravures.js';
 import { COUVRE_CHEFS } from './traces/chefs.js';
-import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import { useTrace } from './Trace.js';
 
 export interface CouvreChefProps {
@@ -37,8 +37,8 @@ export function rangDuSiege(numero: number): number {
 
 export function CouvreChef({ numero, taille = 40, skin, tirage = 'papier', mort = false, className }: CouvreChefProps) {
   const rang = rangDuSiege(numero);
-  const district = TRACES_SHIGANSHINA.useModule(skin === 'shiganshina');
-  const coiffe = district?.COIFFES_SHIGANSHINA[rang];
+  const gravures = useGravuresDuSkin(skin);
+  const coiffe = gravures?.coiffes[rang];
   const chef = COUVRE_CHEFS[rang];
   const noeud = coiffe !== undefined ? coiffe.grave : mort ? chef?.fantome : chef?.grave;
   const cuivre = tirage === 'cuivre';

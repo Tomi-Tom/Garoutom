@@ -18,8 +18,8 @@ import type { RoleId } from '@garoutom/engine';
 
 import { useSkinId, useVoix } from '../../lib/partie.js';
 import { voixDuSkin } from '../../skins/registre.js';
+import { gravuresDuSkin, useGravuresDuSkin } from './gravures.js';
 import { ICONES } from './traces/icones.js';
-import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
 import { SYMBOLES, type NiveauSymbole } from './traces/symboles.js';
 import { useTrace, type Noeud, type Palette } from './Trace.js';
 
@@ -57,22 +57,15 @@ export function niveauSymbole(taille: number): NiveauSymbole {
 
 /**
  * Le tracé d'un rôle pour un skin et un niveau (Thiercelieux pour tout skin
- * sans gravure propre). Les gravures de Shiganshina sont chargées à la demande
- * (`TRACES_SHIGANSHINA`) : tant qu'elles ne sont pas là, Thiercelieux tient la
+ * sans gravure propre). Celles du skin sont chargées à la demande
+ * (`gravuresDuSkin`) : tant qu'elles ne sont pas là, Thiercelieux tient la
  * place. Le composant qui l'appelle s'abonne à leur arrivée avec
  * `useGravuresDuSkin(skin)`.
  */
 export function traceSymbole(role: RoleId, skin: string, niveau: NiveauSymbole): Noeud | undefined {
-  if (skin === 'shiganshina') {
-    const s = TRACES_SHIGANSHINA.courant()?.SYMBOLES_SHIGANSHINA[role];
-    if (s !== undefined) return niveau === '128' ? s.grand : s.petit;
-  }
+  const s = gravuresDuSkin(skin)?.traces.courant()?.symboles[role];
+  if (s !== undefined) return niveau === '128' ? s.grand : s.petit;
   return SYMBOLES[role]?.[niveau];
-}
-
-/** Charge les gravures propres au skin s'il en a, et re-rend à leur arrivée (voir `traceSymbole`). */
-export function useGravuresDuSkin(skin: string): void {
-  TRACES_SHIGANSHINA.useModule(skin === 'shiganshina');
 }
 
 /** La réserve hors d'une carte : ce que le conteneur déclare, sinon le fond de l'écran. */

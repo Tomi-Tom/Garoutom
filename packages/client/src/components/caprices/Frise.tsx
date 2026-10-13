@@ -19,8 +19,9 @@
 
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 
+import { FRISE_COMMUNE, gravuresDuSkin } from '../habit/gravures.js';
 import { useStore } from '../../lib/store.js';
-import { mur, toits, type TraitFrise } from './traces.js';
+import type { TraitFrise } from './traces.js';
 
 /** La largeur et la hauteur réelles d'un élément ; 390 × 56 tant qu'on n'a pas mesuré. */
 function useDimensions(ref: RefObject<HTMLElement | null>): { l: number; h: number } {
@@ -85,11 +86,11 @@ export function Frise({
   const ref = useRef<HTMLElement>(null);
   const { l, h } = useDimensions(ref);
   const skinDeLaTable = useStore((etat) => etat.room?.options.skin ?? 'thiercelieux');
-  const decor = (skin ?? skinDeLaTable) === 'shiganshina' ? 'mur' : 'toits';
-  const traits = useMemo(() => (decor === 'mur' ? mur(l, h) : toits(l, h)), [decor, l, h]);
+  const decor = gravuresDuSkin(skin ?? skinDeLaTable)?.frise ?? FRISE_COMMUNE;
+  const traits = useMemo(() => decor.dessiner(l, h), [decor, l, h]);
 
   return (
-    <header ref={ref} className="frise" data-decor={decor}>
+    <header ref={ref} className="frise" data-decor={decor.nom}>
       <svg
         className="frise-decor"
         aria-hidden="true"

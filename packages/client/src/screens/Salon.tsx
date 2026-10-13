@@ -45,6 +45,7 @@ import {
 
 import { BarrePouce, Bouton, Cuvette, Frise } from '../components/caprices/index.js';
 import { CouvreChef } from '../components/habit/CouvreChef.js';
+import { gravuresDuSkin, MINIATURE_COMMUNE } from '../components/habit/gravures.js';
 import { Glyphe } from '../components/habit/glyphes.js';
 import { SymboleRole } from '../components/habit/Symbole.js';
 import { Interrupteur } from '../components/Interrupteur.js';
@@ -1818,16 +1819,23 @@ function Interrupteurs({
 
 /** Une miniature d'univers (32 × 32) : les toits de Thiercelieux, ou le Mur de Shiganshina. */
 function MiniUnivers({ skin }: { skin: string }) {
-  const toits = skin !== 'shiganshina';
-  const d = toits
-    ? 'M0 32 V22 L6 17 L12 22 V20 L17 15 L22 20 V8 L25 4 L28 8 V32 Z'
-    : 'M0 32 V14 H4 V11 H8 V14 H12 V11 H16 V14 H20 V11 H24 V14 H28 V11 H32 V32 Z';
+  const miniature = gravuresDuSkin(skin)?.miniature ?? MINIATURE_COMMUNE;
   return (
     <svg aria-hidden="true" width="32" height="32" viewBox="0 0 32 32" className="flex-none" style={{ display: 'block' }}>
       <rect width="32" height="32" fill="url(#hach-h-e)" opacity=".5" />
-      <path d={d} fill="var(--surface)" stroke="var(--encre)" strokeWidth="1" />
-      <path d={d} fill={toits ? 'url(#hach-2-e)' : 'url(#hach-x-e)'} />
-      {toits ? <rect x="24" y="11" width="2" height="3" fill="var(--encre)" /> : <path d="M12 32 V24 A4 4 0 0 1 20 24 V32" fill="var(--encre)" />}
+      <path d={miniature.silhouette} fill="var(--surface)" stroke="var(--encre)" strokeWidth="1" />
+      <path d={miniature.silhouette} fill={miniature.hachure} />
+      {miniature.detail.sorte === 'rectangle' ? (
+        <rect
+          x={miniature.detail.x}
+          y={miniature.detail.y}
+          width={miniature.detail.largeur}
+          height={miniature.detail.hauteur}
+          fill="var(--encre)"
+        />
+      ) : (
+        <path d={miniature.detail.d} fill="var(--encre)" />
+      )}
     </svg>
   );
 }

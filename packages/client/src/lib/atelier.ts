@@ -222,9 +222,17 @@ const PARTIELS_AUBE: PartielsDeCloche = [
   [4.1, 0.04, 0.5],
 ];
 
+/**
+ * Les cris de la nuit tombée, par skin : le hurlement du loup pour quiconque
+ * n'a pas le sien (Thiercelieux et tout skin sans entrée ici).
+ */
+const CRIS_DE_NUIT: Record<string, (scene: Scene) => void> = {
+  shiganshina: criTitan,
+};
+
 export const atelier = {
-  /** La nuit tombe : hurlement bref (cri de Titan en skin Shiganshina). */
-  hurlement: (skin?: string): void => jouer(skin === 'shiganshina' ? criTitan : hurlementLoup),
+  /** La nuit tombe : le cri du skin (hurlement du loup par défaut). */
+  hurlement: (skin?: string): void => jouer(CRIS_DE_NUIT[skin ?? ''] ?? hurlementLoup),
 
   /** L'annonce des morts : le glas, deux partiels graves, deux coups. */
   glas: (): void =>

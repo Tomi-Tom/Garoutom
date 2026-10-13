@@ -29,8 +29,8 @@ import { campOf, type RoleId } from '@garoutom/engine';
 
 import { useSkinId, useVoix } from '../../lib/partie.js';
 import { voixDuSkin, type Voix } from '../../skins/registre.js';
-import { niveauSymbole, traceSymbole, useGravuresDuSkin } from './Symbole.js';
-import { TRACES_SHIGANSHINA } from './traces-paresseuses.js';
+import { gravuresDuSkin, useGravuresDuSkin } from './gravures.js';
+import { niveauSymbole, traceSymbole } from './Symbole.js';
 import { CARTOUCHES, DOS, FONDS_IMAGE, type FormatCarte } from './traces/cartes.js';
 import { NUMEROS, SYMBOLES_FACE } from './traces/symboles.js';
 import { useTrace, type Noeud } from './Trace.js';
@@ -221,7 +221,9 @@ export function FaceGravee({ role, format, tirage, skin, morte = false, pleineTa
   const niveau = niveauSymbole(st);
   useGravuresDuSkin(skin);
   const face: Noeud | undefined =
-    papier && !morte && niveau === '128' && skin !== 'shiganshina' ? SYMBOLES_FACE[role] : undefined;
+    papier && !morte && niveau === '128' && gravuresDuSkin(skin)?.facesPropres !== true
+      ? SYMBOLES_FACE[role]
+      : undefined;
   // Le Loup Blanc est « mordu, bruni » (SPEC § 6.1) : sur la face imprimée, sa
   // figure en réserve est brunie jusqu'au blanc — ce qui rend à la planche la
   // clarté que lui prend son cartouche plein (arbitrage n° 3).
@@ -378,8 +380,8 @@ export function FaceGravee({ role, format, tirage, skin, morte = false, pleineTa
  * l'attendant, le dormeur du tirage.
  */
 function DosGrave({ tirage, skin, cache }: { tirage: TirageCarte; skin: string; cache: boolean }) {
-  const district = TRACES_SHIGANSHINA.useModule(skin === 'shiganshina');
-  const dos = district?.DOS_SHIGANSHINA ?? DOS[tirage];
+  const gravures = useGravuresDuSkin(skin);
+  const dos = gravures?.dos ?? DOS[tirage];
   const trace = useTrace(dos.trace, {});
   return (
     <svg
