@@ -147,8 +147,8 @@ describe('<BoutonRegles />', () => {
     expect(screen.getByText(/La table attend ses absents/)).toBeInTheDocument();
   });
 
-  it('affiche les cinq rôles optionnels dans les trois skins, sous leur propre titre', async () => {
-    for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes', 'farwest']) {
+  it('affiche les cinq rôles optionnels dans les cinq skins, sous leur propre titre', async () => {
+    for (const skin of ['thiercelieux', 'shiganshina', 'giletsjaunes', 'farwest', 'pirates']) {
       useStore.setState({ room: salle({ ...DEFAULT_OPTIONS, skin }) });
       const utilisateur = userEvent.setup();
       const { unmount } = render(<BoutonRegles />);
@@ -163,7 +163,7 @@ describe('<BoutonRegles />', () => {
       expect(await toutLire(utilisateur)).not.toMatch(/de le |de la le /);
       unmount();
     }
-  });
+  }, 15_000);
 
   it('la victoire solitaire du Loup Blanc et la rancune de l’Ancien ne se disent que si la table les a', async () => {
     useStore.setState({ room: salle(DEFAULT_OPTIONS) });

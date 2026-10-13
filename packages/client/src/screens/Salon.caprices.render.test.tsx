@@ -156,6 +156,14 @@ describe('<Salon /> — sur le bureau, trois colonnes', () => {
     expect(container.querySelector('[data-jeton="1"]')).toHaveTextContent(voix.nomCouvreChef(1));
   });
 
+  it('chez les Pirates, les couvre-chefs ont les noms du bord', () => {
+    useStore.getState().applySync(sync(6, { ...DEFAULT_OPTIONS, skin: 'pirates' }));
+    useStore.setState({ playerId: 'p0' });
+    const { container } = render(<Salon room={useStore.getState().room!} />);
+    const voix = voixDuSkin('pirates');
+    expect(container.querySelector('[data-jeton="1"]')).toHaveTextContent(voix.nomCouvreChef(1));
+  });
+
   it('une arrivée allume une fenêtre dans la frise, au siège de l’arrivant — puis elle s’éteint', () => {
     vi.useFakeTimers();
     try {

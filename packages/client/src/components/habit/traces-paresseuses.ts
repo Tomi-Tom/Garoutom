@@ -58,6 +58,16 @@ export const TRACES_FARWEST: ModuleParesseux<TracesDuSkin> = paresseux(async () 
   };
 });
 
+/** Les gravures du bord des Pirates, rangées dans la forme commune. */
+export const TRACES_PIRATES: ModuleParesseux<TracesDuSkin> = paresseux(async () => {
+  const bord = await import('./traces/pirates.js');
+  return {
+    symboles: bord.SYMBOLES_PIRATES,
+    dos: bord.DOS_PIRATES,
+    coiffes: bord.COIFFES_PIRATES,
+  };
+});
+
 /** La fin de partie (vignettes et frontispice du recueil) : à précharger dès que la partie se joue. */
 export function prechargerFinDePartie(): Promise<unknown> {
   return Promise.all([TRACES_VIGNETTES.precharger(), TRACE_RECUEIL.precharger()]);

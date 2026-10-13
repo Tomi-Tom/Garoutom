@@ -38,6 +38,7 @@ const { VIGNETTES, vignette } = await importer('gen-C/vignettes.mjs');
 const { SROLES, ssym, sdos, shiganshina, COIFFES } = await importer('gen-C/shig.mjs');
 const { SROLES: SROLES_GJ, gsym, gdos, giletsjaunes: plancheGJ, GCOIFFES } = await importer('gen-C/giletsjaunes.mjs');
 const { SROLES: SROLES_FW, gsym: gsymFW, gdos: gdosFW, farwest: plancheFW, GCOIFFES: GCOIFFES_FW } = await importer('gen-C/farwest.mjs');
+const { SROLES: SROLES_PI, gsym: gsymPI, gdos: gdosPI, pirates: planchePI, GCOIFFES: GCOIFFES_PI } = await importer('gen-C/pirates.mjs');
 const { PAPIER, CUIVRE, hach, hachRect, grain, cartPath } = await importer('gen-C/lib.mjs');
 const { ICONES, GLYPHES } = await importer('lotF/traces.mjs');
 const { CHEFS, buste } = await importer('lotF/chefs.mjs');
@@ -282,6 +283,21 @@ for (const r of SROLES_FW) {
   };
 }
 
+// Pirates : 21 symboles, deux niveaux, et l'encre des doublons — l'or du
+// butin, une sentinelle propre qui devient le jeton `$or` (des hachures,
+// jamais un aplat ; seule la lanterne de poupe, dans le dos, reste or plein).
+const TABLE_PI = { ...JETONS, '#1a1400': '$or', '#c9971f': '$or' };
+const symbolesPI = {};
+for (const r of SROLES_PI) {
+  const role = PAR_NUMERO[r.n];
+  if (!role) throw new Error(`Pirates : le numéro ${r.n} ne correspond à aucun rôle`);
+  const o = { ink: 'currentColor', bg: S.reserve, accent: S.meute, mass: S.masse, or: '#1a1400' };
+  symbolesPI[role] = {
+    grand: extraire(gsymPI(r.id, 128, o), { table: TABLE_PI }).trace,
+    petit: extraire(gsymPI(r.id, 32, o), { table: TABLE_PI }).trace,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* 2. Les cartes : fonds d'image, cartouches, dos                       */
 /* ------------------------------------------------------------------ */
@@ -322,6 +338,7 @@ const dos = {
   shiganshina: extraire(sdos()),
   giletsjaunes: extraire(gdos()),
   farwest: extraire(gdosFW()),
+  pirates: extraire(gdosPI()),
 };
 
 /* ------------------------------------------------------------------ */
@@ -355,6 +372,13 @@ const coiffesFWSvg = [...plancheBourg.matchAll(/<svg width="62" height="62" view
 if (coiffesFWSvg.length !== GCOIFFES_FW.length) throw new Error(`coiffes FW : ${coiffesFWSvg.length} trouvées, ${GCOIFFES_FW.length} attendues`);
 const TABLE_COIFFES_FW = { '#131a2e': 'currentColor', '#f2e8cd': '$surface', '#e3b341': '$fluor' };
 const coiffesFW = GCOIFFES_FW.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesFWSvg[i], { table: TABLE_COIFFES_FW }).trace }));
+
+// Les dix-huit coiffes du bord vivent dans la planche C-VIII, lues pareil.
+const plancheBord = planchePI();
+const coiffesPISvg = [...plancheBord.matchAll(/<svg width="62" height="62" viewBox="0 0 48 48"[^>]*>[\s\S]*?<\/svg>/g)].map((m) => m[0]);
+if (coiffesPISvg.length !== GCOIFFES_PI.length) throw new Error(`coiffes PI : ${coiffesPISvg.length} trouvées, ${GCOIFFES_PI.length} attendues`);
+const TABLE_COIFFES_PI = { '#10171a': 'currentColor', '#efe7ce': '$surface', '#c9971f': '$or' };
+const coiffesPI = GCOIFFES_PI.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesPISvg[i], { table: TABLE_COIFFES_PI }).trace }));
 
 /* ------------------------------------------------------------------ */
 /* 4. Icônes (33) et glyphes d'état (11) — lot F                        */
@@ -462,6 +486,15 @@ export const SYMBOLES_FARWEST: Record<string, { grand: Noeud; petit: Noeud }> = 
 export const DOS_FARWEST: { viewBox: string; trace: Noeud } = ${js(dos.farwest)};
 /** Les coiffes du bourg (buste 48 × 48), un par siège. */
 export const COIFFES_FARWEST: readonly { nom: string; grave: Noeud }[] = ${js(coiffesFW)};
+`);
+
+ecrire('pirates.ts', `${ENTETE('Ce qui est propre au skin Pirates, chargé à la demande : les vingt-et-un symboles (deux niveaux), le dos (le trois-mâts sur la houle, la nuit), les dix-huit coiffes.', 'gen-C/pirates.mjs (dont la planche C-VIII)')}
+/** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
+export const SYMBOLES_PIRATES: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesPI)};
+/** Le dos (300 × 420) : le trois-mâts sur la houle, la nuit. */
+export const DOS_PIRATES: { viewBox: string; trace: Noeud } = ${js(dos.pirates)};
+/** Les coiffes du bord (buste 48 × 48), un par siège. */
+export const COIFFES_PIRATES: readonly { nom: string; grave: Noeud }[] = ${js(coiffesPI)};
 `);
 
 ecrire('icones.ts', `${ENTETE('Les 33 icônes d’interface (grille 24, trait 1,5) et les 11 glyphes d’état (grille 16, trait 1,25).', 'lotF/traces.mjs')}

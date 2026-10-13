@@ -75,8 +75,8 @@ export function contourCartouche(forme: FormeTrace, l: number, h: number): strin
  * - `hachure-2` / `hachure-3` : hachure du jour (masquée la nuit) ;
  * - `mur`, `joint`, `colosse`, `yeux` : le Mur de Shiganshina ;
  * - `gyrophares` : les gyrophares du rond-point (la nuit venue seulement) ;
- * - `lune` : la lune du Far West (la nuit venue seulement) ;
- * - `veilleuse` : la veilleuse du comptoir, seul or plein de la frise.
+ * - `lune` : la lune du Far West, des Pirates (la nuit venue seulement) ;
+ * - `veilleuse` : la veilleuse du comptoir, la lanterne de poupe — seul or plein de la frise.
  */
 export interface TraitFrise {
   d: string;
@@ -251,6 +251,65 @@ export function rue(l: number, yb: number): TraitFrise[] {
   });
   // la veilleuse du comptoir, seul or plein de la frise
   traits.push({ role: 'veilleuse', d: `M${n(ix + 16)} ${n(yb - 5)}A2 2 0 1 0 ${n(ix + 20)} ${n(yb - 5)}A2 2 0 1 0 ${n(ix + 16)} ${n(yb - 5)}Z` });
+  traits.push({ role: 'trait', d: `M0 ${n(yb)}H${n(l)}`, epaisseur: 1 });
+  return traits;
+}
+
+/**
+ * Le bastingage des Pirates : la lisse du navire et ses montants, le grand
+ * mât à la vergue ferlée et son pavillon, les haubans et leurs poulies en
+ * médaillons réguliers — jamais en fouillis ; la nuit, la lune et les
+ * étoiles de quart veillent sur la mer, et la lanterne de poupe — le seul
+ * or plein de la frise — brille jour et nuit.
+ */
+export function bastingage(l: number, yb: number): TraitFrise[] {
+  const traits: TraitFrise[] = [];
+  const mx = Math.round(l * 0.5);
+  // la lisse du bastingage et ses montants
+  traits.push({ role: 'trait', d: `M0 ${n(yb - 12)}H${n(l)}`, epaisseur: 1.2 });
+  let montants = '';
+  for (let x = 8; x < l; x += 18) montants += `M${n(x)} ${n(yb - 12)}V${n(yb)}`;
+  traits.push({ role: 'trait', d: montants, epaisseur: 0.9 });
+  // la lisse courbe du bâtiment, qui relève l'étrave
+  traits.push({
+    role: 'trait',
+    d: `M0 ${n(yb - 8)}C${n(l * 0.2)} ${n(yb - 3)} ${n(l * 0.8)} ${n(yb - 3)} ${n(l)} ${n(yb - 8)}`,
+    epaisseur: 0.8,
+  });
+  // le grand mât, sa vergue ferlée, son pavillon
+  traits.push({ role: 'trait', d: `M${n(mx)} ${n(yb)}V${n(yb - 32)}`, epaisseur: 1.4 });
+  traits.push({ role: 'trait', d: `M${n(mx - 10)} ${n(yb - 27)}H${n(mx + 10)}M${n(mx - 8)} ${n(yb - 30)}H${n(mx + 8)}`, epaisseur: 1 });
+  traits.push({
+    role: 'trait',
+    d: `M${n(mx + 1.5)} ${n(yb - 32)}L${n(mx + 8)} ${n(yb - 30.5)}L${n(mx + 1.5)} ${n(yb - 29)}`,
+    epaisseur: 0.9,
+  });
+  // les haubans, en médaillons réguliers
+  traits.push({
+    role: 'trait',
+    d: `M${n(l * 0.06)} ${n(yb - 12)}L${n(l * 0.14)} ${n(yb - 32)}M${n(l * 0.14)} ${n(yb - 12)}L${n(l * 0.22)} ${n(yb - 32)}`
+      + `M${n(l * 0.94)} ${n(yb - 12)}L${n(l * 0.86)} ${n(yb - 32)}M${n(l * 0.86)} ${n(yb - 12)}L${n(l * 0.78)} ${n(yb - 32)}`,
+    epaisseur: 0.8,
+  });
+  const poulie = (x: number, y: number): string =>
+    `M${n(x - 2)} ${n(y)}A2 2 0 1 0 ${n(x + 2)} ${n(y)}A2 2 0 1 0 ${n(x - 2)} ${n(y)}Z`;
+  traits.push({
+    role: 'trait',
+    d: poulie(l * 0.1, yb - 22) + poulie(l * 0.18, yb - 27) + poulie(l * 0.9, yb - 22) + poulie(l * 0.82, yb - 27),
+    epaisseur: 0.8,
+  });
+  // la nuit, la lune et les étoiles de quart veillent sur la mer
+  traits.push({
+    role: 'lune',
+    d: `M${n(l * 0.86 - 6)} ${n(yb - 38)}A6 6 0 1 0 ${n(l * 0.86 + 6)} ${n(yb - 38)}A6 6 0 1 0 ${n(l * 0.86 - 6)} ${n(yb - 38)}Z`
+      + `M${n(l * 0.07)} ${n(yb - 30)}C${n(l * 0.05)} ${n(yb - 32)} ${n(l * 0.09)} ${n(yb - 32)} ${n(l * 0.07)} ${n(yb - 30)}Z`
+      + `M${n(l * 0.11)} ${n(yb - 34)}C${n(l * 0.09)} ${n(yb - 36)} ${n(l * 0.13)} ${n(yb - 36)} ${n(l * 0.11)} ${n(yb - 34)}Z`,
+  });
+  // la lanterne de poupe, seul or plein de la frise
+  traits.push({
+    role: 'veilleuse',
+    d: `M${n(l - 18)} ${n(yb - 5)}L${n(l - 12)} ${n(yb - 5)}L${n(l - 13)} ${n(yb - 1)}L${n(l - 17)} ${n(yb - 1)}Z`,
+  });
   traits.push({ role: 'trait', d: `M0 ${n(yb)}H${n(l)}`, epaisseur: 1 });
   return traits;
 }

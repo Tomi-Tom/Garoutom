@@ -12,10 +12,10 @@
  * Le cri de la nuit tombée reste à l'atelier (`lib/atelier.ts`) : la voix
  * choisit seule, elle n'a pas besoin de cette table.
  */
-import { mur, rondpoint, rue, toits, type TraitFrise } from '../caprices/traces.js';
+import { bastingage, mur, rondpoint, rue, toits, type TraitFrise } from '../caprices/traces.js';
 import { paresseux, type ModuleParesseux } from '../../lib/paresseux.js';
 
-import { TRACES_FARWEST, TRACES_GILETSJAUNES, TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
+import { TRACES_FARWEST, TRACES_GILETSJAUNES, TRACES_PIRATES, TRACES_SHIGANSHINA, prechargerFinDePartie, type TracesDuSkin } from './traces-paresseuses.js';
 
 /** Le décor de frise d'un skin : son nom (pour `data-decor`) et son tracé. */
 export interface DecorFrise {
@@ -91,6 +91,18 @@ const GRAVURES: Readonly<Record<string, GravuresDuSkin>> = {
         'M2 24C4 21.5 9 20.8 16 20.8C23 20.8 28 21.5 30 24C30 28 24 30.5 16 30.5C8 30.5 2 28 2 24Z M11 24.5V13.5C11 11 13 9.5 16 9.5C19 9.5 21 11 21 13.5V24.5Z',
       hachure: 'url(#hach-or)',
       detail: { sorte: 'rectangle', x: 11, y: 19, largeur: 10, hauteur: 2.5 },
+    },
+    facesPropres: true,
+  },
+  pirates: {
+    traces: TRACES_PIRATES,
+    frise: { nom: 'bastingage', dessiner: bastingage },
+    miniature: {
+      // le tricorne : cornes relevées sur l'aile, calotte creuse, le galon seul en plein
+      silhouette:
+        'M2 16C2 20 3 21 5 22.5C8 24.8 12 25.5 16 25.5C20 25.5 24 24.8 27 22.5C29 21 30 20 30 16C28.5 18.5 26 20 22 20H10C6 20 3.5 18.5 2 16Z M10 18V13.5C10 11 12.4 9.5 16 9.5C19.6 9.5 22 11 22 13.5V18Z',
+      hachure: 'url(#hach-doublon)',
+      detail: { sorte: 'rectangle', x: 10, y: 17.4, largeur: 12, hauteur: 1.8 },
     },
     facesPropres: true,
   },

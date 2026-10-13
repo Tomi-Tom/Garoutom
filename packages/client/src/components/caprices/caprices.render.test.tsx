@@ -375,6 +375,12 @@ describe('<Frise />', () => {
     expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'rue');
     expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(1);
   });
+
+  it('Pirates : le bastingage du navire, la lune pour la nuit seulement — et la lanterne de poupe toujours', () => {
+    const { container } = render(<Frise titre="Jour III" skin="pirates" />);
+    expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'bastingage');
+    expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(1);
+  });
 });
 
 describe('<Matieres />', () => {

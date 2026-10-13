@@ -262,6 +262,23 @@ function sabotsAuGalop(scene: Scene): void {
 }
 
 /**
+ * La cloche de quart des Pirates : deux tintements espacés sur le pont — « à
+ * vous » — puis une note tenue qui s'éteint lentement sur la mer, le temps
+ * que le relief du quart monte sur le pont.
+ */
+function clocheDeQuart(scene: Scene): void {
+  const partiels: PartielsDeCloche = [
+    [1, 0.28, 2.8],
+    [2.0, 0.17, 2.4],
+    [2.76, 0.11, 1.8],
+    [5.4, 0.05, 1.0],
+  ];
+  coupDeCloche(scene, 392, partiels);
+  coupDeCloche(scene, 392, partiels, 1.1);
+  coupDeCloche(scene, 392, partiels, 2.2);
+}
+
+/**
  * Les cris de la nuit tombée, par skin : le hurlement du loup pour quiconque
  * n'a pas le sien (Thiercelieux et tout skin sans entrée ici).
  */
@@ -269,6 +286,7 @@ const CRIS_DE_NUIT: Record<string, (scene: Scene) => void> = {
   shiganshina: criTitan,
   giletsjaunes: sireneDeuxTons,
   farwest: sabotsAuGalop,
+  pirates: clocheDeQuart,
 };
 
 export const atelier = {

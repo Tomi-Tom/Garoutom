@@ -422,7 +422,7 @@ export const pirates: Skin = {
       revelation: 'Nul n’est inscrit sur le rôle d’équipage.',
       nuitDormeur: 'Dormez : la mer, elle, ne dort jamais.',
       mort: 'Tout voir, enfin, depuis la chaloupe.',
-      aubeMorts: 'Les vigies n’ont rien vu.',
+      aubeMorts: 'La mer ne témoigne pas.',
       aubePaisible: 'La mer est plate, pas les nerfs.',
       election: 'Qui tient la barre donne les ordres.',
       vote: 'Tous d’accord, donc tous innocents.',
