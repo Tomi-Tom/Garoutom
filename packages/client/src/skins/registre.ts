@@ -10,7 +10,7 @@
  * identifiant inconnu, venu du réseau, sur le skin par défaut (R12) : une
  * partie n'a pas à s'arrêter pour un habit absent.
  *
- * La forme des textes suit `docs/SKINS.md`, section 5 : un objet par skin, les
+ * La forme des textes suit `docs/SKINS.md`, section 6 : un objet par skin, les
  * clés qui nomment une mécanique reprennent l'identifiant du moteur, les clés
  * éditoriales sont libres. Les `Record` du type `Skin` font de la complétude
  * une exigence de compilation — un `RoleId` nouveau dans le moteur casse le

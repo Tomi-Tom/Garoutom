@@ -6,7 +6,8 @@ des étapes de nuit, des pouvoirs ; l'univers est un habit que le client change
 sans toucher à une règle. Ce document est le contrat entre les deux : ce qu'un
 skin est, ce qu'il fournit, ce qu'il n'a pas le droit d'approcher — puis le skin
 de référence, `thiercelieux`, écrit en entier, comme la table que le client
-implémentera, et l'esquisse du second, `shiganshina`.
+implémentera, puis les esquisses des deux habits qui l'ont suivi :
+`shiganshina`, puis `giletsjaunes`.
 
 `types.ts` le promet en tête : « les noms, les textes, l'ambiance appartiennent
 au skin, côté client (voir `docs/SKINS.md`) ». Voici la page. Le client n'existe
@@ -40,16 +41,16 @@ contrat »).
 
 | Le moteur rend | Le skin fournit |
 |---|---|
-| `RoleId` — les 13 rôles (8 de la v1, 5 optionnels de la v2) | un nom affiché et une description de carte pour chacun |
-| `GameEvent` — les 13 types d'évènements | les phrases du narrateur, avec leurs variables (siège, cause, rôle révélé ou non) |
-| `DeathCause` — les 5 causes | la phrase de mort de chaque cause |
-| `Prompt` — les 12 consignes | le texte d'action montré au siège concerné |
-| `ChatChannel` — les 4 canaux | le libellé de chaque canal (sa teinte est design) |
+| `RoleId` — les 21 rôles (8 de la v1, 5 optionnels de la v2, 8 de la v3) | un nom affiché et une description de carte pour chacun |
+| `GameEvent` — les 14 types d'évènements | les phrases du narrateur, avec leurs variables (siège, cause, rôle révélé ou non) |
+| `DeathCause` — les 6 causes | la phrase de mort de chaque cause |
+| `Prompt` — les 16 consignes | le texte d'action montré au siège concerné |
+| `ChatChannel` — les 5 canaux | le libellé de chaque canal (sa teinte est design) |
 | `Winner` — les 5 issues | le verdict de fin de partie |
 | `PhaseKind` et `NightStep` | les phrases de changement de phase et d'étape |
 | `suggestionsFor` — les compositions | le nom et une ligne d'ambiance pour chacune (R23 : le moteur rend des compositions, le skin les nomme) |
 | la charge de capitaine | son nom — « le capitaine » n'est pas un `RoleId`, mais c'est un mot que l'écran affiche |
-| `LogEntry` — les 17 types de lignes | la nuit racontée : la voix qui récite le récapitulatif final, secrets compris (R88) |
+| `LogEntry` — les 23 types de lignes | la nuit racontée : la voix qui récite le récapitulatif final, secrets compris (R88) |
 | — | l'habit : palette, polices, symboles, art, atelier sonore (voir plus bas) |
 
 Les `Action`, elles, n'ont rien à traduire : ce sont des entrées, pas des
@@ -334,6 +335,7 @@ Sorcière » que le prompt regarde.
 | `village` | Le village | `--lanterne` |
 | `loups` | La meute | `--sang` |
 | `amoureux` | Le serment | `--serment` |
+| `fratrie` | La fratrie | l'encre du serment (R114, D28) |
 | `morts` | L'au-delà | `--lune` |
 
 Le libellé ne fait qu'habiller l'onglet : qui lit, qui écrit, quand — tout est
@@ -410,7 +412,7 @@ complétude, comme pour tout le reste.
 
 | Champ | Contenu | Clés |
 |---|---|---|
-| `legendes.roles` | une légende par rôle, imprimée sur la carte | les 13 `RoleId` |
+| `legendes.roles` | une légende par rôle, imprimée sur la carte | les 21 `RoleId` |
 | `legendes.ecrans` | une légende par planche plein écran | `accueil`, `salon`, `revelation`, `nuitDormeur`, `mort`, `aubeMorts`, `aubePaisible`, `election`, `vote`, `depouillement`, `chasseurAttente`, `succession`, `boucDernierMot`, `fin`, `tableDisparue` (15) |
 | `legendes.recit` | une légende par bloc de la nuit racontée | `loupBlanc`, `rancune`, `poison`, `tir`, `chagrin`, `grace`, `bouc`, `voteMeute`, `voteVillage`, `sauvetage`, `loups`, `resistance`, `protection`, `corbeau`, `voyance`, `amoureux`, `nuitDefaut`, `jourDefaut`, `derniere` (19) |
 | `couvreChefs` | le nom des 18 couvre-chefs, par numéro de siège (`nomCouvreChef(numero)`) | 18 noms, sans rapport avec le rôle |
@@ -562,7 +564,152 @@ Ce que Shiganshina **ne change pas**, c'est tout le reste :
 Le moteur, lui, ne sait même pas que cet univers existe : il transporte la
 chaîne `shiganshina`, et c'est tout.
 
-## 4. Les règles d'or
+## 4. Gilets Jaunes — le troisième habit
+
+**Esquisse.** Comme Shiganshina, cette peau est marquée « Esquisse » là où la
+plume n'a pas été relue par un habitant du rond-point : chaque complément tient
+la place, il ne prétend pas à la phrase définitive.
+
+À Thiercelieux, on cherche des loups-garous parmi les villageois. En skin
+`giletsjaunes`, un rond-point de commune française, entre la départementale et
+le supermarché, tient depuis des semaines : la cabane en palette, le feu de
+camp, le mégaphone, les gilets fluorescents. Parmi les occupants se cachent
+des CRS en civil ; la nuit, l'unité embarque quelqu'un ; le jour,
+l'assemblée générale délibère et livre l'un des siens au fourgon. Mêmes états,
+mêmes tests, autre histoire.
+
+La satire vit dans la transposition et le choix des mots, jamais dans le
+commentaire : l'assemblée qui délibère à côté de ses pneus et l'unité qui
+embarque dans le vide se valent à l'écran. Le narrateur constate, il ne
+milite pas. Aucun nom propre réel ne passe jamais (règle de plume n° 1), aucun
+camp favori. Et la mort n'est jamais une violence : c'est un embarquement —
+« Les CRS ont embarqué {nom}. » — et les embarqués bavardent entre eux dans
+le fourgon.
+
+### Le jour et la nuit, traduits
+
+| Vocabulaire Thiercelieux | Ce qu'il devient |
+|---|---|
+| « la nuit tombe sur le village » | « la nuit tombe sur la départementale » — l'unité en bleu surgit et embarque |
+| « le jour se lève » | l'assemblée générale délibère |
+| la potence | le fourgon — « le fourgon attend {nom} » |
+| le hurlement de l'atelier | la sirène deux-tons du fourgon qui monte |
+| l'au-delà | « Le fourgon » — les embarqués y bavardent entre eux |
+| le capitaine | le porte-parole — « {nom} prend le mégaphone : sa voix portera double. » |
+| loin de la place (l'absent) | « parti chercher du café » — un lieu, jamais un adjectif accordé |
+
+### Les rôles
+
+| `RoleId` (moteur) | Skin Gilets Jaunes | L'idée |
+|---|---|---|
+| `villageois` | Gilet jaune | pas de pouvoir : la voix à l'assemblée, et le téléphone pour filmer |
+| `loup` | CRS | chaque nuit, l'unité embarque un occupant ; le jour, patrouille en civil, mégaphone éteint |
+| `voyante` | la Fouillante | elle fouille les poches de tout le monde, et son carnet s'en souvient |
+| `sorciere` | la Secouriste | deux remèdes dans la trousse, pas deux potions |
+| `chasseur` | le Chasseur | rural, littéral : en tombant, sa dernière cartouche |
+| `cupidon` | le Beau-frère | il marie deux vivants d'un même destin — la famille, c'est pour la vie |
+| `salvateur` | l'Avocat | un rempart juridique par nuit ; la garde à vue passe toujours |
+| `idiot` | l'Idiot du rond-point | gracié, affiché, plus jamais voix au chapitre |
+| `ancien` | l'Ancien | il a déjà tenu des barrages avant celui-ci |
+| `corbeau` | la Balance | un mot glissé sous la porte de la cabane, jamais signé |
+| `bouc` | le Bouc émissaire | littéral : l'égalité des voix retombe sur lui |
+| `petiteFille` | la Lycéenne | elle filme les interpellations depuis le talus |
+| `loupBlanc` | l'Inspecteur | les affaires internes : l'unité le prend pour l'un des siens ; il ne gagne que seul |
+| `villageois2` | le Gilet certifié | recto-verso, les deux faces disent « Gilet jaune réglementaire » — le porteur n'en sait rien |
+| `renard` | le Renard | il flaire le trio d'un vivant et de ses deux voisins |
+| `ours` | l'Éleveur | son chien aboie à l'aube si un casque bleu s'assied chez les voisins — son silence est une information |
+| `voleur` | le Chapardeur | deux cartes dans la caisse à outils, à lui seul |
+| `chienLoup` | le Gendarme | deux camps, une seule solde, un choix la première nuit |
+| `enfantSauvage` | l'Apprenti | il se choisit un modèle ; embarqué, le modèle passe la barrière |
+| `soeurs` | les Deux Sœurs | un murmure ouvert jour et nuit, le fourgon seul le referme |
+| `freres` | les Trois Frères | trois fois le même menton, le même murmure |
+
+Les camps suivent : le village devient « le rond-point », la meute « les
+forces de l'ordre ».
+
+### Les canaux
+
+| `ChatChannel` | Libellé proposé |
+|---|---|
+| `village` | L'assemblée |
+| `loups` | La brigade |
+| `amoureux` | Les tourtereaux |
+| `fratrie` | La fratrie |
+| `morts` | Le fourgon |
+
+### Les compositions suggérées
+
+| Position | Nom proposé | Une ligne d'ambiance |
+|---|---|---|
+| 1 | La manif tranquille | L'équilibre du jeu, calculé pour cette table. |
+| 2 | Une unité de plus | Un CRS de plus : les fourgons ne rentreront pas vides. |
+| 3 | Le rond-point outillé | Tous les rôles possibles à cette table : le camp a des mains, et l'assemblée un avocat. |
+
+### Le narrateur — un exemple par évènement
+
+Chaque phrase suivante est à la place exacte de sa consœur de Thiercelieux —
+mêmes variables, mêmes cas, même silence sur les rôles non révélés.
+
+| Évènement | Phrase |
+|---|---|
+| `debut` | La cabane est montée sur le rond-point. Que l'assemblée commence. |
+| `phase` — `nuit` | La nuit tombe sur la départementale. Le camp s'endort. |
+| `phase` — `jour` | Le jour se lève sur la départementale. L'assemblée délibère. |
+| `morts`, cause `loups` | Les CRS ont embarqué {nom}. |
+| `morts`, cause `poison` | La mauvaise dose a emporté {nom}. |
+| `morts`, cause `vote` | L'assemblée a livré {nom} aux forces de l'ordre. |
+| `morts`, cause `chasseur` | La cartouche du Chasseur a atteint {nom}. |
+| `morts`, cause `chagrin` | Le cœur brisé a eu raison de {nom}. |
+| `morts`, cause `abandon` | {nom} a quitté le rond-point sans un mot. |
+| `aube-paisible` | Personne n'a été embarqué cette nuit. Le feu de camp reprend. |
+| `grace` | L'assemblée allait livrer {nom} aux forces de l'ordre — mais c'est l'Idiot du rond-point. La grâce est accordée, et le droit de vote perdu. |
+| `vote`, condamné | Les voix sont comptées : le fourgon attend {nom}. |
+| `capitaine`, élu | {nom} prend le mégaphone : sa voix portera double. |
+| `tir`, cible atteinte | Le Chasseur lâche sa dernière cartouche : elle emporte {cible}. |
+| `tir`, cible nulle | Le Chasseur a gardé sa cartouche. |
+| `fin`, `village` | Le rond-point tient bon : plus un bouclier sur la départementale. |
+| `fin`, `loups` | Le rond-point est dégagé. Le gilet ne répond plus. |
+| `fin`, `amoureux` | Les tourtereaux restent seuls au rond-point : la partie est à eux. |
+| `fin`, `loupBlanc` | L'Inspecteur se tient seul devant la barrière : il a embarqué jusqu'à ses propres collègues. |
+| `fin`, `personne` | Il ne reste personne pour garder la cabane. |
+
+Et deux prompts, pour donner la main :
+
+| Prompt | Texte |
+|---|---|
+| `devorer` | L'unité a ses ordres. Désignez qui montera dans le fourgon — ou laissez le rond-point dormir. |
+| `sonder` | Fouillez un vivant, jamais vous : ce qu'il cache sous le gilet s'inscrit dans votre carnet. |
+
+### La matière — goudron et fluo
+
+L'habit suit (`habits.ts`, jeu `GILETS_JAUNES`) : le jour se lit sur papier
+kraft de tract ; la nuit est en goudron, bitume bleu-noir de départementale.
+La sanguine devient le bleu d'uniforme — 7,04:1 sur le kraft le jour, mais
+1,95 sur le goudron de nuit : la loi N2 l'interdit, et la craie, le même
+bleu passé à la lampe des gyrophares, la remplace. La garance garde le
+rose-orangé des tourtereaux. Et le fluo du gilet ne se dessine qu'en
+hachure, jamais en aplat ni en texte. Toutes les paires de contrastes sont
+verrouillées au centième dans `contraste.test.ts`, comme pour les deux
+autres habits.
+
+### Les limites
+
+Ce que Gilets Jaunes **ne change pas**, c'est tout le reste :
+
+- **aucune mécanique** — la carte de la Fouillante répond au même prompt
+  `sonder` que celle de la Voyante (D6) ;
+- **aucune durée** — l'embarquement dure `tempsNuit` secondes comme la
+  nuit ;
+- **aucun secret** — le narrateur ne dit que ce que les évènements disent
+  (R87) : le rond-point ignore qui porte le bleu sous le gilet, jusqu'au
+  récit final ;
+- **aucun identifiant brut** — `loup`, `sorciere` ne s'affichent jamais
+  (R2) : Gilets Jaunes dit « CRS », « la Secouriste ».
+
+Le moteur, lui, ne sait toujours pas que cet univers existe : il transporte
+la chaîne `giletsjaunes`, et c'est tout.
+
+## 5. Les règles d'or
 
 Cinq règles, sans exception ni clause de style.
 
@@ -590,7 +737,7 @@ Cinq règles, sans exception ni clause de style.
    une voix ; les murs porteurs — un accent par camp, une encre neutre pour
    le narrateur, des contrastes mesurés — restent debout.
 
-## 5. Le format de fichier — proposition
+## 6. Le format de fichier — proposition
 
 **Proposition, rien de plus** : le client n'existe pas, et ce format n'engage
 que ce document. Un skin serait un dossier — `packages/client/src/skins/<id>/`

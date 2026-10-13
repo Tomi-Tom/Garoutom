@@ -92,7 +92,7 @@ la liste anti-« IA ».
 14. **Les épreuves générées (Pl. VIII) ne sont pas des gravures.** Visage
     symétrique éclairé par en dessous, halo de bougie diffus, sfumato : ce sont
     les tics d'une image générée, pas une aquatinte par paliers. Elles prouvent
-    l'ambiance, elles ne doivent **jamais** servir de référence de trait (§ 9).
+    l'ambiance, elles ne doivent **jamais** servir de référence de trait (§ 10).
 15. **La sanguine illisible la nuit n'est pas résolue.** 2,80:1 sur bistre ; la
     planche la renvoie « toujours sur cartouche bruni » — or un cartouche clair
     la nuit est une tache claire, donc une fuite. Solution : une seconde valeur,
@@ -335,7 +335,7 @@ ci-dessus, pour chaque skin.
   carte s'y brunit jusqu'au papier, et cette clarté ne désigne aucun rôle.
 - **N4 — Budget de luminance.** Capture d'écran de deux sièges à l'instant t
   (un dormeur, un acteur) : leur luminance moyenne ne diffère pas de plus de
-  **3 %** (test Playwright, § 10). La minuterie, le pli, la barre et la consigne
+  **3 %** (test Playwright, § 11). La minuterie, le pli, la barre et la consigne
   sont dans le budget.
 - **N5 — Pas de geste visible.** Aucun rôle n'a, la nuit, un geste que les
   autres n'ont pas : le dormeur a lui aussi une barre au pouce (« Ma carte »,
@@ -1277,7 +1277,7 @@ associée (96 × 96, lot C) :
 | 18 | défaut, jour | « Ils ont parlé longtemps. » | la place vide |
 | — | dernière planche | « Il est l'heure. » | sablier vide |
 
-Ces textes entrent dans le skin (nouveau champ `legendes`, § 10) ; un skin
+Ces textes entrent dans le skin (nouveau champ `legendes`, § 11) ; un skin
 qui en manque est refusé par le registre, comme pour les autres textes.
 
 ---
@@ -1433,7 +1433,7 @@ côte, à 25 % de zoom, doivent paraître identiques (N4).
 | `Caprices-E1-Salon-Joueur` | (940, 4060) | Léa | papier ; frise dont **une fenêtre s'allume par arrivée** ; « La table VRGL » + « Assis en rond, comme d'honnêtes gens. » ; sièges en jetons D3 (couvre-chefs) ; composition lue (« 2 loups · la Voyante · la Sorcière… » en vignettes) ; options en lecture (cases gravées inactives) ; barre : bouton éteint « En attente de l'hôte » + raison |
 | `Caprices-E1-Salon-Hote-Table` | (1410, 4060) | Tom, hôte | étapes en cartouches « La table · La donne · Les règles » ; code `--t-code` + « Partager » ; 5 sièges sur 6 ; barre : « Suivant : la donne » **éteint**, raison « Il manque 1 joueur » |
 | `Caprices-E1-Salon-Hote-Composition` | (1880, 4060) | Tom | « La donne » : mode automatique (3 suggestions en cartouches : la référence, la chasse, le village outillé, avec leur ligne d'ambiance) ; mode manuel en encart : nombre de loups (− / + 48 px), 13 petites cartes à cocher, les optionnelles marquées « optionnel » ; résumé de composition |
-| `Caprices-E1-Salon-Hote-Options` | (2350, 4060) | Tom | « Les règles » : les 8 cases gravées de `Salon.tsx` avec leur indication ; minuteries nuit (15-120 s) et jour (60-900 s) en pas à pas ; choix du skin en deux petites planches (Thiercelieux, Shiganshina) |
+| `Caprices-E1-Salon-Hote-Options` | (2350, 4060) | Tom | « Les règles » : les 8 cases gravées de `Salon.tsx` avec leur indication ; minuteries nuit (15-120 s) et jour (60-900 s) en pas à pas ; choix du skin en trois petites planches (Thiercelieux, Shiganshina, Gilets Jaunes) |
 | `Caprices-E1-Salon-Hote-Lancer` | (2820, 4060) | Tom | 12 assis ; récapitulatif ; barre : « Lancer la partie » actif |
 | `Caprices-E1-Regles` | (3290, 4060) | Tom | feuille basse à 90 % sur un écran de jour : le but, le déroulé, les rôles (petites cartes + description), les réglages de la table en clair |
 | `Caprices-E1-Reglages` | (3760, 4060) | Tom | feuille : **« Le jour s'imprime sur : Papier · Cuivre »** (deux vignettes), minuterie barre / discrète, mouvement réduit, grand texte, vibrations, fil ouvert par défaut |
@@ -1558,7 +1558,68 @@ lanterne verte) est remplacé par ces valeurs.
 
 ---
 
-## 9. L'art final — stratégie de production
+## 9. Le skin Gilets Jaunes dans cette grammaire
+
+Le troisième habit ne change que les **valeurs sémantiques**, les **motifs**
+et les **mots** ; la grammaire est la même pièce.
+
+**Référence** : pas de planche de Goya à citer ici — les pancartes du
+rond-point et la presse locale. Des légendes sèches, pas des slogans. La
+règle-signature : **le fluo du gilet ne se dessine qu'en hachure** — jamais en
+aplat, jamais en texte. Le fluo est une matière réfléchissante, pas une couleur
+de surface.
+
+| Ce qui change | Valeur |
+|---|---|
+| encre (bistre-900) | `#101318` goudron — verge dessus **13,74:1** |
+| papier (vergé) | `#E6DDC4` papier kraft de tract |
+| bruni | `#F1EBDB` — encre dessus **15,64:1** |
+| cuivre en relief (bistre-800) | `#1D232D` — verge dessus **11,65:1** |
+| meute → **les CRS** | le bleu d'uniforme `#24476E` sur kraft **7,04:1** · interdit la nuit (**1,95:1** sur le goudron, loi N2) : la craie `#9EB9DA` le remplace — le même bleu, passé à la lampe des gyrophares (**9,22:1** sur encre) |
+| serment → **les tourtereaux** | même garance : `#8E3E53` sur kraft 5,23:1 · `#EBA3B2` sur encre **9,23:1** |
+| narrateur | délavé `#5A5245` sur kraft **5,68:1** ; palier-1 `#A6B0BD` sur encre **8,48:1** |
+| fluo du gilet | `#E8C81A`, **en hachure seule** (`hach-fluo`), jamais en aplat ni en texte |
+| la frise | **le rond-point** : la cabane en palette, le feu de camp, l'île centrale ; la nuit, les gyrophares au loin |
+| dos de carte | la cabane sur le rond-point, la nuit |
+| couvre-chefs | les 18 coiffes du rond-point : casque de chantier, bonnet de laine, casquette de routier, cagoule de ski, bombe de motard, béret basque, bob de pêche, bandana de colleur d'affiches, calotte de cantonnier, képi de gendarme… (même règle d'ombre chinoise) |
+| loups des planches | l'unité en bleu : casques et boucliers, jamais un visage ; morsure § 4.6 pour la meute |
+| mots des cartouches | « Rond-point », « CRS », « Les tourtereaux », « Le fourgon » ; le cartouche du Loup Blanc reste « Seul » — le mot est codé en dur, il vaut pour l'Inspecteur |
+
+**Légendes** — des pancartes, pas des slogans ; l'intégralité vit dans
+`skins/giletsjaunes.ts`. Pour donner le ton :
+
+| Rôle | Légende |
+|---|---|
+| Gilet jaune | « Il n'y avait que la chaîne pour le dire. » |
+| CRS | « Le bouclier ne discute pas. » |
+| la Fouillante | « Elle fouille les poches, pas la conscience. » |
+| la Balance | « Le mot glissé n'était pas signé. » |
+| la Lycéenne | « Chaque charge a sa vidéo. » |
+| l'Inspecteur | « Les bleus ne contrôlent pas les bleus, dit-on. » |
+| le Gilet certifié | « Certifié des deux côtés. » |
+| le Chapardeur | « Il ne vole pas : il recycle. » |
+| le Gendarme | « Deux camps, une seule solde. » |
+| l'Apprenti | « Il regarde faire, puis fait pareil. » |
+| les Trois Frères | « Trois fois le même menton, trois fois la même parole. » |
+| accueil / fin | « La démocratie tient sur un rond-point. » / « Le feu attendra l'hiver prochain. » |
+
+**Ce qui ne change jamais**, d'un skin à l'autre : la grammaire du trait
+(§ 2.3) ; les formes des cartouches ; les 17 états du jeton et leurs
+emplacements ; le gabarit unique et les lois N1-N6 ; l'échelle typographique,
+la grille, les rayons à 0, l'absence d'ombre ; la mécanique du mouvement
+(crans, brunissage, morsure) ; les contrastes AA des paires du § 3.4 ; « une
+seule couleur pour le camp qui chasse » ; les textes du crieur ne disent que
+ce que l'évènement dit.
+
+L'habit `[data-skin='giletsjaunes']` de `styles.css` porte ces valeurs, paires
+verrouillées au centième dans `contraste.test.ts`. Le pattern du fluo
+(`hach-fluo`) se posera avec le chantier des gravures du skin — 21 symboles,
+dos « la cabane la nuit », les 18 coiffes, deux-tons de la nuit —, sur le
+modèle du Caprice C-Shiganshina.
+
+---
+
+## 10. L'art final — stratégie de production
 
 **Ce qui se dessine à la main en SVG, maintenant (lots F et C)** : les 13
 symboles et leurs versions 16 px, les 18 couvre-chefs (et les 18 coiffes de
@@ -1611,7 +1672,7 @@ Pl. VIII **ne sont pas livrées**.
 
 ---
 
-## 10. Ce que l'implémentation change (hors design)
+## 11. Ce que l'implémentation change (hors design)
 
 1. `data-tirage` (`Partie.tsx`, à côté de `data-heure`) et le réglage `tirage`
    (`lib/reglages.ts`, `Reglages.tsx`).
@@ -1634,7 +1695,7 @@ Pl. VIII **ne sont pas livrées**.
    urgence par la texture et non plus par le sang.
 10. `Fil.tsx` : marges et onglets par canal, pli ; `Action.tsx` : deux temps
     pour l'abstention, « ne viser personne », la balle gardée.
-11. **Le skin gagne un champ `legendes`** (`roles` × 13, `ecrans` × 15,
+11. **Le skin gagne un champ `legendes`** (`roles` × 21, `ecrans` × 15,
     `recit` × 19) et `couvreChefs` (18 noms, pour la documentation) ; le test
     de complétude du registre les exige.
 12. Tests : silhouette DOM nuit (dormeur, acteur, mort : même arbre de zones,
