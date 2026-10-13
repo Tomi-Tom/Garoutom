@@ -9,10 +9,15 @@
  * Le contrat d'accessibilité ne change pas : `role="dialog"` et
  * `aria-modal`, focus piégé dans la feuille, Échap, toucher du voile ou
  * glissé vers le bas ferment, le focus revient au bouton qui l'a ouverte.
- * Pas de portail : la feuille se pose en `fixed` au-dessus de tout.
+ * La feuille voyage en portail jusqu'au `body` : les boutons qui
+ * l'ouvrent vivent parfois dans un contexte d'empilement clos (la frise
+ * isole ses couches, la feuille basse du menu déjà portalée), où un
+ * `position: fixed` y resterait pris. Au `body`, elle se pose au-dessus
+ * de tout — le z le plus haut de la planche.
  */
 
 import { motion, useReducedMotion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
 import { TIRAGE_FEUILLE, TIRAGE_FEUILLE_REDUIT } from '../anim/tokens.js';
@@ -84,8 +89,8 @@ export function Panneau({
     if (evenement.clientY - geste.depart >= GLISSE_FERME_PX) fermer.current();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onKeyDown={surTouche}>
+  return createPortal(
+    <div className="fixed inset-0 z-[150] flex items-end justify-center" onKeyDown={surTouche}>
       {/* Le voile : une aquatinte posée sur la planche (§ 3.8). */}
       <div
         aria-hidden="true"
@@ -133,6 +138,7 @@ export function Panneau({
         </div>
         <div className="overflow-y-auto px-4 pt-2 pb-4">{children}</div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }
