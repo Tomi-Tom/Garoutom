@@ -328,8 +328,11 @@ function Section({ titre, children }: { titre: string; children: ReactNode }) {
  */
 function LigneRole({ role, voix, detail }: { role: RoleId; voix: Voix; detail?: string }) {
   const legende = voix.legendeRole(role);
+  // Le survol rend son nom d'origine au rôle rebaptisé par la peau.
+  const reference = voix.nomRoleReference(role);
+  const origine = reference === voix.nomRole(role) ? undefined : `Rôle d’origine : ${reference}`;
   return (
-    <li className="flex items-start gap-3" data-role-regle="">
+    <li className="flex items-start gap-3" data-role-regle="" title={origine}>
       <CarteRole role={role} retournee taille="petite" avecDescription={false} avecLegende={false} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="m-0">{voix.descriptionRole(role)}</p>

@@ -397,6 +397,12 @@ export interface Voix {
   /* --- Au-delà du contrat gelé --- */
   /** Le nom d'univers, pour le salon et la fiche de la partie. */
   nomUnivers(): string;
+  /**
+   * Le nom d'un rôle tel que l'habit de référence (Thiercelieux) le porte.
+   * Les autres peaux le montrent au survol : chaque univers nomme les mêmes
+   * états, le joueur reconnaît le sien.
+   */
+  nomRoleReference(role: RoleId): string;
   /** Le verdict de fin de partie, phrase entière. */
   phraseFin(winner: Winner): string;
   /** La composition publique commence par le compte des loups : « 2 loups », « 2 Titans ». */
@@ -558,6 +564,8 @@ function voixDe(skin: Skin): Voix {
       return skin.narrateur.phases.nuit.principale;
     },
     nomUnivers: () => skin.univers,
+    // Toujours l'habit de référence, quelle que soit la peau parlante.
+    nomRoleReference: (role) => thiercelieux.roles[role].nom,
     phraseFin: (winner) => skin.narrateur.fin[winner],
     compteLoups: (nombre) =>
       `${String(nombre)} ${nombre > 1 ? skin.plurielLoups.plusieurs : skin.plurielLoups.un}`,

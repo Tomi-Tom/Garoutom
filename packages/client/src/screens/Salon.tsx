@@ -1340,10 +1340,14 @@ function CarteAcocher({
 }) {
   const meute = role === 'loupBlanc';
   const couleur = retenu ? 'var(--action-texte)' : meute ? 'var(--camp-meute)' : 'var(--encre)';
+  // Le survol rend son nom d'origine au rôle rebaptisé par la peau.
+  const reference = voix.nomRoleReference(role);
+  const origine = reference === voix.nomRole(role) ? undefined : `Rôle d’origine : ${reference}`;
   return (
     <button
       type="button"
       aria-pressed={retenu}
+      title={origine}
       disabled={!editable}
       onClick={onToggle}
       className="flex min-h-[84px] min-w-0 flex-col items-start gap-0.5 px-1.5 pt-1.5 pb-1 text-left"
@@ -1367,9 +1371,12 @@ function CarteAcocher({
 function CarteVillage({ nombre, options, voix }: { nombre: number; options: GameOptions; voix: Voix }) {
   const meute = wolvesIn(options.loups, options.roles);
   const simples = Math.max(0, nombre - meute - options.roles.filter((role) => role !== 'loupBlanc').length);
+  const reference = voix.nomRoleReference('villageois');
+  const origine = reference === voix.nomRole('villageois') ? undefined : `Rôle d’origine : ${reference}`;
   return (
     <div
       className="flex min-h-[84px] min-w-0 flex-col items-start gap-0.5 px-1.5 pt-1.5 pb-1"
+      title={origine}
       style={{ background: 'var(--creux)' }}
       data-carte-village=""
     >

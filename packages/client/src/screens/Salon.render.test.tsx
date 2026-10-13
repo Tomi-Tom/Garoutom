@@ -230,6 +230,23 @@ describe('<Salon /> — sur le bureau, trois colonnes', () => {
     expect(screen.queryByText(/2 loups/)).toBeNull();
   });
 
+  it('le survol rend son nom d’origine au rôle rebaptisé par la peau', () => {
+    // Sous Thiercelieux, rien à rappeler : les cartes n’ont pas d’infobulle.
+    useStore.getState().applySync(sync(6));
+    useStore.setState({ playerId: 'p0' });
+    render(<Salon room={useStore.getState().room!} />);
+    expect(screen.queryByTitle(/^Rôle d’origine :/)).toBeNull();
+  });
+
+  it('sous une autre peau, la carte dit quel rôle de référence elle remplace', () => {
+    useStore
+      .getState()
+      .applySync(sync(6, { ...DEFAULT_OPTIONS, auto: false, skin: 'shiganshina' }));
+    useStore.setState({ playerId: 'p0' });
+    render(<Salon room={useStore.getState().room!} />);
+    expect(screen.getByTitle('Rôle d’origine : la Voyante')).toBeInTheDocument();
+  });
+
   it('copie le code et le lien d’invitation, et le dit', async () => {
     useStore.getState().applySync(sync(6));
     useStore.setState({ playerId: 'p0' });
