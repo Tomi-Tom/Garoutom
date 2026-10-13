@@ -127,6 +127,60 @@ describe('les paires du § 3.4, pour chaque skin', () => {
     expect(contraste(g.garanceCraie, g.bistre900).toFixed(2)).toBe('9.23');
     expect(contraste(g.sanguine, g.bistre900).toFixed(2)).toBe('1.95');
   });
+
+  it('Far West : les valeurs de « Wanted » et de la prairie', () => {
+    const f = ENCRES['farwest'] as Encres;
+    expect(contraste(f.bistre900, f.verge).toFixed(2)).toBe('12.49');
+    expect(contraste(f.bistre900, f.bruni).toFixed(2)).toBe('14.16');
+    expect(contraste(f.bistre900, f.teinte).toFixed(2)).toBe('11.25');
+    expect(contraste(f.delave, f.verge).toFixed(2)).toBe('5.16');
+    expect(contraste(f.sanguine, f.verge).toFixed(2)).toBe('5.23');
+    expect(contraste(f.garanceEncre, f.verge).toFixed(2)).toBe('5.62');
+    expect(contraste(f.verge, f.bistre800).toFixed(2)).toBe('10.87');
+    expect(contraste(f.verge, f.palier3).toFixed(2)).toBe('7.24');
+    expect(contraste(f.palier1, f.bistre900).toFixed(2)).toBe('7.18');
+    expect(contraste(f.palier1, f.bistre800).toFixed(2)).toBe('6.25');
+    expect(contraste(f.craie, f.bistre900).toFixed(2)).toBe('6.62');
+    expect(contraste(f.craie, f.bistre800).toFixed(2)).toBe('5.76');
+    expect(contraste(f.garanceCraie, f.bistre900).toFixed(2)).toBe('8.69');
+    expect(contraste(f.sanguine, f.bistre900).toFixed(2)).toBe('2.39');
+  });
+
+  it('Pirates : les valeurs de la carte marine et de la cale', () => {
+    const p = ENCRES['pirates'] as Encres;
+    expect(contraste(p.bistre900, p.verge).toFixed(2)).toBe('12.73');
+    expect(contraste(p.bistre900, p.bruni).toFixed(2)).toBe('14.65');
+    expect(contraste(p.bistre900, p.teinte).toFixed(2)).toBe('11.67');
+    expect(contraste(p.delave, p.verge).toFixed(2)).toBe('5.64');
+    expect(contraste(p.sanguine, p.verge).toFixed(2)).toBe('5.45');
+    expect(contraste(p.garanceEncre, p.verge).toFixed(2)).toBe('5.40');
+    expect(contraste(p.verge, p.bistre800).toFixed(2)).toBe('9.99');
+    expect(contraste(p.verge, p.palier3).toFixed(2)).toBe('6.71');
+    expect(contraste(p.palier1, p.bistre900).toFixed(2)).toBe('8.17');
+    expect(contraste(p.palier1, p.bistre800).toFixed(2)).toBe('6.41');
+    expect(contraste(p.craie, p.bistre900).toFixed(2)).toBe('6.13');
+    expect(contraste(p.craie, p.bistre800).toFixed(2)).toBe('4.81');
+    expect(contraste(p.garanceCraie, p.bistre900).toFixed(2)).toBe('9.36');
+    expect(contraste(p.sanguine, p.bistre900).toFixed(2)).toBe('2.34');
+  });
+
+  it('Open Space : les valeurs du plateau et de la veille', () => {
+    const o = ENCRES['openspace'] as Encres;
+    expect(contraste(o.bistre900, o.verge).toFixed(2)).toBe('15.70');
+    expect(contraste(o.bistre900, o.bruni).toFixed(2)).toBe('17.31');
+    expect(contraste(o.bistre900, o.teinte).toFixed(2)).toBe('13.62');
+    expect(contraste(o.delave, o.verge).toFixed(2)).toBe('5.91');
+    expect(contraste(o.sanguine, o.verge).toFixed(2)).toBe('6.96');
+    expect(contraste(o.garanceEncre, o.verge).toFixed(2)).toBe('5.44');
+    expect(contraste(o.verge, o.bistre800).toFixed(2)).toBe('13.61');
+    expect(contraste(o.verge, o.palier3).toFixed(2)).toBe('9.65');
+    expect(contraste(o.palier1, o.bistre900).toFixed(2)).toBe('7.18');
+    expect(contraste(o.palier1, o.bistre800).toFixed(2)).toBe('6.22');
+    expect(contraste(o.craie, o.bistre900).toFixed(2)).toBe('8.81');
+    expect(contraste(o.craie, o.bistre800).toFixed(2)).toBe('7.64');
+    expect(contraste(o.garanceCraie, o.bistre900).toFixed(2)).toBe('9.17');
+    expect(contraste(o.sanguine, o.bistre900).toFixed(2)).toBe('2.26');
+  });
 });
 
 describe('styles.css recopie fidèlement habits.ts', () => {
@@ -156,6 +210,36 @@ describe('styles.css recopie fidèlement habits.ts', () => {
       const k = cle as keyof Encres;
       if (giletsjaunes[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
       else expect(skin).toContain(`${nom}: ${giletsjaunes[k]};`);
+    }
+  });
+
+  it('les encres de Far West : seules celles qui changent, toutes celles qui changent', () => {
+    const farwest = ENCRES['farwest'] as Encres;
+    const skin = bloc(":root:has([data-skin='farwest'])");
+    for (const [cle, nom] of Object.entries(VARIABLES_ENCRES)) {
+      const k = cle as keyof Encres;
+      if (farwest[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
+      else expect(skin).toContain(`${nom}: ${farwest[k]};`);
+    }
+  });
+
+  it('les encres de Pirates : seules celles qui changent, toutes celles qui changent', () => {
+    const pirates = ENCRES['pirates'] as Encres;
+    const skin = bloc(":root:has([data-skin='pirates'])");
+    for (const [cle, nom] of Object.entries(VARIABLES_ENCRES)) {
+      const k = cle as keyof Encres;
+      if (pirates[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
+      else expect(skin).toContain(`${nom}: ${pirates[k]};`);
+    }
+  });
+
+  it('les encres de Open Space : seules celles qui changent, toutes celles qui changent', () => {
+    const openspace = ENCRES['openspace'] as Encres;
+    const skin = bloc(":root:has([data-skin='openspace'])");
+    for (const [cle, nom] of Object.entries(VARIABLES_ENCRES)) {
+      const k = cle as keyof Encres;
+      if (openspace[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
+      else expect(skin).toContain(`${nom}: ${openspace[k]};`);
     }
   });
 

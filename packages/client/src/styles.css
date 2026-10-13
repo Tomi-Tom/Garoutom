@@ -150,6 +150,73 @@
   --cp-hachure-skin: #E8C81A;
 }
 
+/* Far West : affiche « Wanted » et nuit de prairie. Sable de saloon le jour,
+   indigo de plaine la nuit ; l'or de l'étoile du shérif en hachure seule. */
+[data-skin='farwest'],
+:root:has([data-skin='farwest']) {
+  --cp-bistre-900: #131A2E;
+  --cp-bistre-800: #1B263F;
+  --cp-palier-3: #35406B;
+  --cp-palier-2: #62729C;
+  --cp-palier-1: #9AA6CE;
+  --cp-delave: #67553B;
+  --cp-teinte: #E0CFA9;
+  --cp-verge: #E9DAB7;
+  --cp-bruni: #F2E8CD;
+  --cp-sanguine: #98371F;
+  --cp-craie: #E08A70;
+  --cp-garance-encre: #7E3F4C;
+  --cp-garance-craie: #E5A8AF;
+  --cp-rousseur: #8A5A2E;
+  --cp-creux-nuit: #0C0F1E;
+  --cp-hachure-skin: #E3B341;
+}
+
+/* Pirates : carte marine et vert-de-gris. Papier de carte mouillée le jour,
+   cale vert-de-gris la nuit ; l'or des doublons en hachure seule. */
+[data-skin='pirates'],
+:root:has([data-skin='pirates']) {
+  --cp-bistre-900: #10171A;
+  --cp-bistre-800: #1A2E30;
+  --cp-palier-3: #2E4A4C;
+  --cp-palier-2: #5C7A6B;
+  --cp-palier-1: #93B5B0;
+  --cp-delave: #57503C;
+  --cp-teinte: #DACFB0;
+  --cp-verge: #E2D8BA;
+  --cp-bruni: #EFE7CE;
+  --cp-sanguine: #962E20;
+  --cp-craie: #DE7B60;
+  --cp-garance-encre: #8F3440;
+  --cp-garance-craie: #EFA9A0;
+  --cp-rousseur: #6E5230;
+  --cp-creux-nuit: #081113;
+  --cp-hachure-skin: #C9971F;
+}
+
+/* Open Space : blanc de plateau et veille d'écran. Papier d'imprimante le
+   jour, veille bleutée des moniteurs la nuit ; le rose post-it en hachure
+   seule — jamais en aplat, jamais en texte. */
+[data-skin='openspace'],
+:root:has([data-skin='openspace']) {
+  --cp-bistre-900: #0D1420;
+  --cp-bistre-800: #162234;
+  --cp-palier-3: #2A3B54;
+  --cp-palier-2: #5E7190;
+  --cp-palier-1: #8FA3C0;
+  --cp-delave: #565B55;
+  --cp-teinte: #DCDEDA;
+  --cp-verge: #ECEDEA;
+  --cp-bruni: #F7F8F5;
+  --cp-sanguine: #2D4E8A;
+  --cp-craie: #8FB6E8;
+  --cp-garance-encre: #A23768;
+  --cp-garance-craie: #F49CC8;
+  --cp-rousseur: #7B5B3A;
+  --cp-creux-nuit: #080D16;
+  --cp-hachure-skin: #F0438E;
+}
+
 /* ── 2. Les sémantiques, un jeu par tirage ─────────────────────────────── */
 
 /* Une variable qui en cite une autre se calcule là où elle est déclarée :

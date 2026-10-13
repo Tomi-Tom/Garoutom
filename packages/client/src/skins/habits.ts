@@ -155,10 +155,91 @@ const GILETS_JAUNES: Encres = {
   hachureSkin: '#E8C81A',
 };
 
+/**
+ * Far West : affiche « Wanted » et nuit de prairie. Le jour se lit sur le
+ * papier sable des affiches épinglées au mur du saloon ; la nuit tombe en
+ * indigo de grande plaine. La sanguine devient le rouge du bandana des
+ * hors-la-loi ; la garance, la rose sèche du désert. L'or de l'étoile du
+ * shérif ne se dessine qu'en hachure — jamais en aplat, jamais en texte.
+ */
+const FARWEST: Encres = {
+  bistre900: '#131A2E',
+  bistre800: '#1B263F',
+  palier3: '#35406B',
+  palier2: '#62729C',
+  palier1: '#9AA6CE',
+  delave: '#67553B',
+  teinte: '#E0CFA9',
+  verge: '#E9DAB7',
+  bruni: '#F2E8CD',
+  sanguine: '#98371F',
+  craie: '#E08A70',
+  garanceEncre: '#7E3F4C',
+  garanceCraie: '#E5A8AF',
+  rousseur: '#8A5A2E',
+  creuxNuit: '#0C0F1E',
+  hachureSkin: '#E3B341',
+};
+
+/**
+ * Pirates : carte marine et vert-de-gris. Le jour se lit sur le papier d'une
+ * carte mouillée et séchée, taches de sel comprises ; la nuit tombe dans la
+ * cale, vert-de-gris de coque. La sanguine devient le rouge de mutinerie du
+ * bandeau ; la garance, le corail des coquillages de la traversée. L'or des
+ * doublons ne brille qu'en hachure — jamais en aplat, jamais en texte.
+ */
+const PIRATES: Encres = {
+  bistre900: '#10171A',
+  bistre800: '#1A2E30',
+  palier3: '#2E4A4C',
+  palier2: '#5C7A6B',
+  palier1: '#93B5B0',
+  delave: '#57503C',
+  teinte: '#DACFB0',
+  verge: '#E2D8BA',
+  bruni: '#EFE7CE',
+  sanguine: '#962E20',
+  craie: '#DE7B60',
+  garanceEncre: '#8F3440',
+  garanceCraie: '#EFA9A0',
+  rousseur: '#6E5230',
+  creuxNuit: '#081113',
+  hachureSkin: '#C9971F',
+};
+
+/**
+ * Open Space : blanc de plateau et veille d'écran. Le jour se lit sur le
+ * papier d'imprimante, gris de cloisons souris ; la nuit est la veille bleutée
+ * des moniteurs d'un open space vide. La sanguine devient le bleu du badge
+ * des managers ; la garance, le rose des post-its d'amour. Le rose du post-it
+ * ne se colle qu'en hachure — jamais en aplat, jamais en texte.
+ */
+const OPENSPACE: Encres = {
+  bistre900: '#0D1420',
+  bistre800: '#162234',
+  palier3: '#2A3B54',
+  palier2: '#5E7190',
+  palier1: '#8FA3C0',
+  delave: '#565B55',
+  teinte: '#DCDEDA',
+  verge: '#ECEDEA',
+  bruni: '#F7F8F5',
+  sanguine: '#2D4E8A',
+  craie: '#8FB6E8',
+  garanceEncre: '#A23768',
+  garanceCraie: '#F49CC8',
+  rousseur: '#7B5B3A',
+  creuxNuit: '#080D16',
+  hachureSkin: '#F0438E',
+};
+
 export const ENCRES: Readonly<Record<string, Encres>> = {
   thiercelieux: THIERCELIEUX,
   shiganshina: SHIGANSHINA,
   giletsjaunes: GILETS_JAUNES,
+  farwest: FARWEST,
+  pirates: PIRATES,
+  openspace: OPENSPACE,
 };
 
 /** Les encres d'un skin ; un inconnu retombe sur Thiercelieux (règle d'or n° 4). */
