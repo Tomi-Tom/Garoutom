@@ -109,6 +109,24 @@ describe('les paires du § 3.4, pour chaque skin', () => {
     expect(contraste(s.delave, s.verge).toFixed(2)).toBe('5.54');
     expect(contraste(s.craie, s.bistre900).toFixed(2)).toBe('5.79');
   });
+
+  it('Gilets Jaunes : les valeurs de « goudron et fluo »', () => {
+    const g = ENCRES['giletsjaunes'] as Encres;
+    expect(contraste(g.bistre900, g.verge).toFixed(2)).toBe('13.74');
+    expect(contraste(g.bistre900, g.bruni).toFixed(2)).toBe('15.64');
+    expect(contraste(g.bistre900, g.teinte).toFixed(2)).toBe('12.39');
+    expect(contraste(g.delave, g.verge).toFixed(2)).toBe('5.68');
+    expect(contraste(g.sanguine, g.verge).toFixed(2)).toBe('7.04');
+    expect(contraste(g.garanceEncre, g.verge).toFixed(2)).toBe('5.23');
+    expect(contraste(g.verge, g.bistre800).toFixed(2)).toBe('11.65');
+    expect(contraste(g.verge, g.palier3).toFixed(2)).toBe('7.42');
+    expect(contraste(g.palier1, g.bistre900).toFixed(2)).toBe('8.48');
+    expect(contraste(g.palier1, g.bistre800).toFixed(2)).toBe('7.19');
+    expect(contraste(g.craie, g.bistre900).toFixed(2)).toBe('9.22');
+    expect(contraste(g.craie, g.bistre800).toFixed(2)).toBe('7.82');
+    expect(contraste(g.garanceCraie, g.bistre900).toFixed(2)).toBe('9.23');
+    expect(contraste(g.sanguine, g.bistre900).toFixed(2)).toBe('1.95');
+  });
 });
 
 describe('styles.css recopie fidèlement habits.ts', () => {
@@ -128,6 +146,16 @@ describe('styles.css recopie fidèlement habits.ts', () => {
       const k = cle as keyof Encres;
       if (shiganshina[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
       else expect(skin).toContain(`${nom}: ${shiganshina[k]};`);
+    }
+  });
+
+  it('les encres de Gilets Jaunes : seules celles qui changent, toutes celles qui changent', () => {
+    const giletsjaunes = ENCRES['giletsjaunes'] as Encres;
+    const skin = bloc(":root:has([data-skin='giletsjaunes'])");
+    for (const [cle, nom] of Object.entries(VARIABLES_ENCRES)) {
+      const k = cle as keyof Encres;
+      if (giletsjaunes[k] === thiercelieux[k]) expect(skin).not.toContain(`${nom}:`);
+      else expect(skin).toContain(`${nom}: ${giletsjaunes[k]};`);
     }
   });
 

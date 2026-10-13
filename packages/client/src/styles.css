@@ -127,6 +127,29 @@
   --cp-hachure-skin: #45523F;
 }
 
+/* Gilets Jaunes : goudron et fluo. Le jeu d'encres entier change de matière —
+   kraft de tract le jour, bitume bleu-noir la nuit —, pas seulement quelques
+   primitifs. */
+[data-skin='giletsjaunes'],
+:root:has([data-skin='giletsjaunes']) {
+  --cp-bistre-900: #101318;
+  --cp-bistre-800: #1D232D;
+  --cp-palier-3: #39434F;
+  --cp-palier-2: #67707C;
+  --cp-palier-1: #A6B0BD;
+  --cp-delave: #5A5245;
+  --cp-teinte: #D8D3BE;
+  --cp-verge: #E6DDC4;
+  --cp-bruni: #F1EBDB;
+  --cp-sanguine: #24476E;
+  --cp-craie: #9EB9DA;
+  --cp-garance-encre: #8E3E53;
+  --cp-garance-craie: #EBA3B2;
+  --cp-rousseur: #7E5A33;
+  --cp-creux-nuit: #0A0C10;
+  --cp-hachure-skin: #E8C81A;
+}
+
 /* ── 2. Les sémantiques, un jeu par tirage ─────────────────────────────── */
 
 /* Une variable qui en cite une autre se calcule là où elle est déclarée :

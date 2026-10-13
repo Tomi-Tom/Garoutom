@@ -127,9 +127,40 @@ const SHIGANSHINA: Encres = {
   hachureSkin: '#45523F',
 };
 
+/**
+ * Gilets Jaunes : goudron et fluo. Le jour se lit sur papier kraft de tract ;
+ * la nuit est en goudron, bitume bleu-noir de départementale. La sanguine
+ * devient le bleu d'uniforme — la craie le même bleu, passé à la lampe des
+ * gyrophares ; la garance garde le rose-orangé fluo des tourtereaux.
+ */
+const GILETS_JAUNES: Encres = {
+  bistre900: '#101318',
+  bistre800: '#1D232D',
+  palier3: '#39434F',
+  palier2: '#67707C',
+  palier1: '#A6B0BD',
+  delave: '#5A5245',
+  teinte: '#D8D3BE',
+  verge: '#E6DDC4',
+  bruni: '#F1EBDB',
+  sanguine: '#24476E',
+  craie: '#9EB9DA',
+  garanceEncre: '#8E3E53',
+  garanceCraie: '#EBA3B2',
+  rousseur: '#7E5A33',
+  creuxNuit: '#0A0C10',
+  // Le fluo du gilet — hachure seule, jamais en aplat ni en texte.
+  // TODO(angle mort) : `--cp-hachure-skin` n'a aujourd'hui aucun consommateur
+  // CSS ; le vert de Shiganshina passe par le pattern `hach-vert` en dur dans
+  // `textures.svg`. Le pattern du fluo (`hach-fluo` ?) se posera au moment de
+  // l'art, avec la généralisation de ces patterns par skin.
+  hachureSkin: '#E8C81A',
+};
+
 export const ENCRES: Readonly<Record<string, Encres>> = {
   thiercelieux: THIERCELIEUX,
   shiganshina: SHIGANSHINA,
+  giletsjaunes: GILETS_JAUNES,
 };
 
 /** Les encres d'un skin ; un inconnu retombe sur Thiercelieux (règle d'or n° 4). */
