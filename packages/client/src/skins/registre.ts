@@ -35,7 +35,10 @@ import {
   type Winner,
 } from '@garoutom/engine';
 
+import { farwest } from './farwest.js';
 import { giletsjaunes } from './giletsjaunes.js';
+import { openspace } from './openspace.js';
+import { pirates } from './pirates.js';
 import { shiganshina } from './shiganshina.js';
 import { thiercelieux } from './thiercelieux.js';
 
@@ -514,6 +517,9 @@ const skins = new Map<string, Skin>();
 enregistrerSkin(thiercelieux);
 enregistrerSkin(shiganshina);
 enregistrerSkin(giletsjaunes);
+enregistrerSkin(farwest);
+enregistrerSkin(pirates);
+enregistrerSkin(openspace);
 
 /** Les skins enregistrés, dans l'ordre où le salon les propose. */
 export const SKINS: readonly Skin[] = [...skins.values()];
