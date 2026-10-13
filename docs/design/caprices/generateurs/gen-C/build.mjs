@@ -4,6 +4,7 @@ import { shiganshina } from './shig.mjs';
 import { giletsjaunes } from './giletsjaunes.mjs';
 import { farwest } from './farwest.mjs';
 import { pirates } from './pirates.mjs';
+import { openspace } from './openspace.mjs';
 import * as E from './ecrans.mjs';
 
 const OUT = 'C:/Users/tomp6/AppData/Local/Temp/claude/C--WINDOWS-system32/7f0c4639-b273-4269-9c8e-411b1d64c068/scratchpad/canevas/project/';
@@ -12,6 +13,7 @@ const jobs = {
   'Caprices-C-Vignettes': vignettesPlanche, 'Caprices-C-Shiganshina': shiganshina, 'Caprices-C-GiletsJaunes': giletsjaunes,
   'Caprices-C-FarWest': farwest,
   'Caprices-C-Pirates': pirates,
+  'Caprices-C-OpenSpace': openspace,
   'Caprices-C-Revelation-Dos': E.revDos, 'Caprices-C-Revelation-Appui': E.revAppui, 'Caprices-C-Revelation-Loup': E.revLoup,
   'Caprices-C-Revelation-Pret': E.revPret, 'Caprices-C-Revelation-Spectateur': E.revSpect,
   'Caprices-C-MaCarte-Jour': E.maCarteJour, 'Caprices-C-MaCarte-Nuit': E.maCarteNuit,

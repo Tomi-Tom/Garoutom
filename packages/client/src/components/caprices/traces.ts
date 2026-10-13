@@ -74,9 +74,9 @@ export function contourCartouche(forme: FormeTrace, l: number, h: number): strin
  * - `fenetre` : aplat `--frise-fenetre` ;
  * - `hachure-2` / `hachure-3` : hachure du jour (masquée la nuit) ;
  * - `mur`, `joint`, `colosse`, `yeux` : le Mur de Shiganshina ;
- * - `gyrophares` : les gyrophares du rond-point (la nuit venue seulement) ;
+ * - `gyrophares` : les gyrophares du rond-point, les diodes de l'open space (la nuit venue seulement) ;
  * - `lune` : la lune du Far West, des Pirates (la nuit venue seulement) ;
- * - `veilleuse` : la veilleuse du comptoir, la lanterne de poupe — seul or plein de la frise.
+ * - `veilleuse` : la veilleuse du comptoir, la lanterne de poupe, le voyant de la machine à café — seul plein d'or ou de rose de la frise.
  */
 export interface TraitFrise {
   d: string;
@@ -310,6 +310,50 @@ export function bastingage(l: number, yb: number): TraitFrise[] {
     role: 'veilleuse',
     d: `M${n(l - 18)} ${n(yb - 5)}L${n(l - 12)} ${n(yb - 5)}L${n(l - 13)} ${n(yb - 1)}L${n(l - 17)} ${n(yb - 1)}Z`,
   });
+  traits.push({ role: 'trait', d: `M0 ${n(yb)}H${n(l)}`, epaisseur: 1 });
+  return traits;
+}
+
+/**
+ * L'open space : les bureaux en rang au lieu des toits — la plante verte, les
+ * écrans en veille, les cloisons en lignes brisées, jamais des murs pleins ;
+ * la machine à café veille au milieu, son voyant — seul rose plein de la
+ * frise — brille jour et nuit, et la nuit venue les diodes du plateau
+ * percent le bistre.
+ */
+export function openspace(l: number, yb: number): TraitFrise[] {
+  const traits: TraitFrise[] = [];
+  const ix = Math.round(l * 0.46);
+  // la plante et l'écran en veille, meubles du plateau
+  const plante = (x: number): string =>
+    `M${n(x)} ${n(yb)}V${n(yb - 12)}M${n(x)} ${n(yb - 8)}C${n(x - 5)} ${n(yb - 14)} ${n(x - 9)} ${n(yb - 15)} ${n(x - 11)} ${n(yb - 18)}M${n(x)} ${n(yb - 8)}C${n(x + 5)} ${n(yb - 14)} ${n(x + 9)} ${n(yb - 15)} ${n(x + 11)} ${n(yb - 18)}`;
+  const ecran = (x: number): string => `M${n(x - 7)} ${n(yb)}V${n(yb - 8)}H${n(x + 7)}V${n(yb)}Z M${n(x)} ${n(yb)}V${n(yb + 3)}`;
+  traits.push({
+    role: 'trait',
+    d: [plante(l * 0.15), ecran(l * 0.28), ecran(l * 0.78), plante(l * 0.9)].join(' '),
+    epaisseur: 1.2,
+  });
+  // la nuit, les diodes veillent au sol
+  const diode = (x: number, y: number): string =>
+    `M${n(x - 0.9)} ${n(y)}A0.9 0.9 0 1 0 ${n(x + 0.9)} ${n(y)}A0.9 0.9 0 1 0 ${n(x - 0.9)} ${n(y)}Z`;
+  traits.push({
+    role: 'gyrophares',
+    d: [diode(l * 0.28, yb - 4), diode(l * 0.78, yb - 4), diode(l * 0.08, yb - 2), diode(l * 0.08 + 6, yb - 2)].join(' '),
+  });
+  // la cloison du fond, ligne brisée — jamais un mur plein
+  traits.push({
+    role: 'trait',
+    d: `M${n(ix - 70)} ${n(yb - 9)}V${n(yb)}M${n(ix - 70)} ${n(yb - 9)}H${n(ix - 58)}V${n(yb)}M${n(ix + 70)} ${n(yb - 9)}V${n(yb)}M${n(ix + 70)} ${n(yb - 9)}H${n(ix + 58)}V${n(yb)}`,
+    epaisseur: 0.9,
+  });
+  // la machine à café, son voyant seul rose plein de la frise
+  traits.push({ role: 'toit', d: `M${n(ix - 11)} ${n(yb - 14)}H${n(ix + 11)}V${n(yb - 2)}H${n(ix - 11)}Z`, epaisseur: 1.1 });
+  traits.push({ role: 'trait', d: `M${n(ix - 11)} ${n(yb - 9)}H${n(ix + 11)}`, epaisseur: 0.7 });
+  traits.push({
+    role: 'veilleuse',
+    d: `M${n(ix - 1.3)} ${n(yb - 11)}A1.3 1.3 0 1 0 ${n(ix + 1.3)} ${n(yb - 11)}A1.3 1.3 0 1 0 ${n(ix - 1.3)} ${n(yb - 11)}Z`,
+  });
+  traits.push({ role: 'trait', d: `M${n(ix - 3)} ${n(yb - 4)}H${n(ix + 3)}`, epaisseur: 0.9 });
   traits.push({ role: 'trait', d: `M0 ${n(yb)}H${n(l)}`, epaisseur: 1 });
   return traits;
 }

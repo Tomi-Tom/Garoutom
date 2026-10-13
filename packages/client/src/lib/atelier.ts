@@ -279,6 +279,17 @@ function clocheDeQuart(scene: Scene): void {
 }
 
 /**
+ * Le bip du badge de l'open space : la borne du rez-de-chaussée répond à
+ * l'identification nocturne — un premier « bip » franc, un second un ton
+ * plus haut, le temps que le portillon libère le couloir.
+ */
+function bipDeBadge(scene: Scene): void {
+  partiel(scene, { freq: 1560, duree: 0.09, gain: 0.3, attaque: 0.004, type: 'square' });
+  partiel(scene, { freq: 1560 * 1.26, duree: 0.11, gain: 0.3, attaque: 0.004, type: 'square', retard: 0.22 });
+  partiel(scene, { freq: 3120, duree: 0.04, gain: 0.06, attaque: 0.002, retard: 0.22 });
+}
+
+/**
  * Les cris de la nuit tombée, par skin : le hurlement du loup pour quiconque
  * n'a pas le sien (Thiercelieux et tout skin sans entrée ici).
  */
@@ -287,6 +298,7 @@ const CRIS_DE_NUIT: Record<string, (scene: Scene) => void> = {
   giletsjaunes: sireneDeuxTons,
   farwest: sabotsAuGalop,
   pirates: clocheDeQuart,
+  openspace: bipDeBadge,
 };
 
 export const atelier = {

@@ -44,6 +44,8 @@
   <pattern id="hach-or" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#E3B341" stroke-width="1.3"/></pattern>
   <!-- Or des doublons (skin Pirates seulement) : jamais en aplat ni en texte -->
   <pattern id="hach-doublon" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#C9971F" stroke-width="1.3"/></pattern>
+  <!-- Rose du post-it (skin Open Space seulement) : jamais en aplat ni en texte -->
+  <pattern id="hach-postit" width="3.5" height="3.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="3.5" stroke="#F0438E" stroke-width="1.3"/></pattern>
 
   <!-- ============ PAPIER VERGÉ ============ -->
   <!-- vergeures : 1 trait / 3 px ; pontuseaux : 1 trait / 40 px -->

@@ -381,6 +381,12 @@ describe('<Frise />', () => {
     expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'bastingage');
     expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(1);
   });
+
+  it('Open Space : les bureaux en rang, les diodes pour la nuit seulement — et le voyant de la machine à café toujours', () => {
+    const { container } = render(<Frise titre="Jour III" skin="openspace" />);
+    expect(container.querySelector('header.frise')).toHaveAttribute('data-decor', 'openspace');
+    expect(container.querySelectorAll('.frise-nuit-seule')).toHaveLength(1);
+  });
 });
 
 describe('<Matieres />', () => {

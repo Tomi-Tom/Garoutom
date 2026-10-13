@@ -68,6 +68,16 @@ export const TRACES_PIRATES: ModuleParesseux<TracesDuSkin> = paresseux(async () 
   };
 });
 
+/** Les gravures de l'open space, rangées dans la forme commune. */
+export const TRACES_OPENSPACE: ModuleParesseux<TracesDuSkin> = paresseux(async () => {
+  const openspace = await import('./traces/openspace.js');
+  return {
+    symboles: openspace.SYMBOLES_OPENSPACE,
+    dos: openspace.DOS_OPENSPACE,
+    coiffes: openspace.COIFFES_OPENSPACE,
+  };
+});
+
 /** La fin de partie (vignettes et frontispice du recueil) : à précharger dès que la partie se joue. */
 export function prechargerFinDePartie(): Promise<unknown> {
   return Promise.all([TRACES_VIGNETTES.precharger(), TRACE_RECUEIL.precharger()]);

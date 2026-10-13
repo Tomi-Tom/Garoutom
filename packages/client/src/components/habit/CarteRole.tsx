@@ -236,6 +236,7 @@ export function FaceGravee({ role, format, tirage, skin, morte = false, pleineTa
     fluo: 'var(--cp-hachure-skin, #E8C81A)',
     fluor: 'var(--cp-hachure-skin, #E3B341)',
     or: 'var(--cp-hachure-skin, #C9971F)',
+    rose: 'var(--cp-hachure-skin, #F0438E)',
   });
   const [cx, cy, cw, ch] = f.cuvette;
   const [ox, oy, orx, ory] = f.ovale;

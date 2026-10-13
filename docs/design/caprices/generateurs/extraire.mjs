@@ -39,6 +39,7 @@ const { SROLES, ssym, sdos, shiganshina, COIFFES } = await importer('gen-C/shig.
 const { SROLES: SROLES_GJ, gsym, gdos, giletsjaunes: plancheGJ, GCOIFFES } = await importer('gen-C/giletsjaunes.mjs');
 const { SROLES: SROLES_FW, gsym: gsymFW, gdos: gdosFW, farwest: plancheFW, GCOIFFES: GCOIFFES_FW } = await importer('gen-C/farwest.mjs');
 const { SROLES: SROLES_PI, gsym: gsymPI, gdos: gdosPI, pirates: planchePI, GCOIFFES: GCOIFFES_PI } = await importer('gen-C/pirates.mjs');
+const { SROLES: SROLES_OS, gsym: gsymOS, gdos: gdosOS, openspace: plancheOS, GCOIFFES: GCOIFFES_OS } = await importer('gen-C/openspace.mjs');
 const { PAPIER, CUIVRE, hach, hachRect, grain, cartPath } = await importer('gen-C/lib.mjs');
 const { ICONES, GLYPHES } = await importer('lotF/traces.mjs');
 const { CHEFS, buste } = await importer('lotF/chefs.mjs');
@@ -298,6 +299,22 @@ for (const r of SROLES_PI) {
   };
 }
 
+// Open Space : 21 symboles, deux niveaux, et une encre de plus encore — le
+// rose du post-it, une sentinelle propre qui devient le jeton `$rose` (des
+// hachures, jamais un aplat ; seul le voyant de la machine à café, dans le
+// dos, reste rose plein).
+const TABLE_OS = { ...JETONS, '#1a1400': '$rose', '#f0438e': '$rose' };
+const symbolesOS = {};
+for (const r of SROLES_OS) {
+  const role = PAR_NUMERO[r.n];
+  if (!role) throw new Error(`Open Space : le numéro ${r.n} ne correspond à aucun rôle`);
+  const o = { ink: 'currentColor', bg: S.reserve, accent: S.meute, mass: S.masse, rose: '#1a1400' };
+  symbolesOS[role] = {
+    grand: extraire(gsymOS(r.id, 128, o), { table: TABLE_OS }).trace,
+    petit: extraire(gsymOS(r.id, 32, o), { table: TABLE_OS }).trace,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* 2. Les cartes : fonds d'image, cartouches, dos                       */
 /* ------------------------------------------------------------------ */
@@ -339,6 +356,7 @@ const dos = {
   giletsjaunes: extraire(gdos()),
   farwest: extraire(gdosFW()),
   pirates: extraire(gdosPI()),
+  openspace: extraire(gdosOS()),
 };
 
 /* ------------------------------------------------------------------ */
@@ -379,6 +397,13 @@ const coiffesPISvg = [...plancheBord.matchAll(/<svg width="62" height="62" viewB
 if (coiffesPISvg.length !== GCOIFFES_PI.length) throw new Error(`coiffes PI : ${coiffesPISvg.length} trouvées, ${GCOIFFES_PI.length} attendues`);
 const TABLE_COIFFES_PI = { '#10171a': 'currentColor', '#efe7ce': '$surface', '#c9971f': '$or' };
 const coiffesPI = GCOIFFES_PI.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesPISvg[i], { table: TABLE_COIFFES_PI }).trace }));
+
+// Les dix-huit coiffes du plateau vivent dans la planche C-IX, lues pareil.
+const planchePlateau = plancheOS();
+const coiffesOSSvg = [...planchePlateau.matchAll(/<svg width="62" height="62" viewBox="0 0 48 48"[^>]*>[\s\S]*?<\/svg>/g)].map((m) => m[0]);
+if (coiffesOSSvg.length !== GCOIFFES_OS.length) throw new Error(`coiffes OS : ${coiffesOSSvg.length} trouvées, ${GCOIFFES_OS.length} attendues`);
+const TABLE_COIFFES_OS = { '#0d1420': 'currentColor', '#f7f8f5': '$surface', '#f0438e': '$rose' };
+const coiffesOS = GCOIFFES_OS.map((c, i) => ({ nom: c.nom, grave: extraire(coiffesOSSvg[i], { table: TABLE_COIFFES_OS }).trace }));
 
 /* ------------------------------------------------------------------ */
 /* 4. Icônes (33) et glyphes d'état (11) — lot F                        */
@@ -495,6 +520,15 @@ export const SYMBOLES_PIRATES: Record<string, { grand: Noeud; petit: Noeud }> = 
 export const DOS_PIRATES: { viewBox: string; trace: Noeud } = ${js(dos.pirates)};
 /** Les coiffes du bord (buste 48 × 48), un par siège. */
 export const COIFFES_PIRATES: readonly { nom: string; grave: Noeud }[] = ${js(coiffesPI)};
+`);
+
+ecrire('openspace.ts', `${ENTETE('Ce qui est propre au skin Open Space, chargé à la demande : les vingt-et-un symboles (deux niveaux), le dos (le plateau la nuit, la machine à café veille), les dix-huit coiffes.', 'gen-C/openspace.mjs (dont la planche C-IX)')}
+/** Les symboles, par rôle du moteur (numéro de planche) : grand (≥ 96 px) ou petit. */
+export const SYMBOLES_OPENSPACE: Record<string, { grand: Noeud; petit: Noeud }> = ${js(symbolesOS)};
+/** Le dos (300 × 420) : le plateau la nuit, la machine à café veille. */
+export const DOS_OPENSPACE: { viewBox: string; trace: Noeud } = ${js(dos.openspace)};
+/** Les coiffes du plateau (buste 48 × 48), un par siège. */
+export const COIFFES_OPENSPACE: readonly { nom: string; grave: Noeud }[] = ${js(coiffesOS)};
 `);
 
 ecrire('icones.ts', `${ENTETE('Les 33 icônes d’interface (grille 24, trait 1,5) et les 11 glyphes d’état (grille 16, trait 1,25).', 'lotF/traces.mjs')}

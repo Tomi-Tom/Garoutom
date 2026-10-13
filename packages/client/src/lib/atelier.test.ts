@@ -26,6 +26,7 @@ describe('atelier', () => {
       atelier.hurlement('giletsjaunes');
       atelier.hurlement('farwest');
       atelier.hurlement('pirates');
+      atelier.hurlement('openspace');
       for (const nom of voix) atelier[nom]();
     }).not.toThrow();
     expect(ContexteAudioFactice.noeudsCrees).toBe(0);
@@ -40,6 +41,7 @@ describe('atelier', () => {
       () => atelier.hurlement('giletsjaunes'),
       () => atelier.hurlement('farwest'),
       () => atelier.hurlement('pirates'),
+      () => atelier.hurlement('openspace'),
       ...voix.map((nom) => () => atelier[nom]()),
     ];
     for (const appel of appels) {

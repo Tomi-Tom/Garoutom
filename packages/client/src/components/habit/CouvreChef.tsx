@@ -51,6 +51,7 @@ export function CouvreChef({ numero, taille = 40, skin, tirage = 'papier', mort 
       fluo: 'var(--cp-hachure-skin, #E8C81A)',
       fluor: 'var(--cp-hachure-skin, #E3B341)',
       or: 'var(--cp-hachure-skin, #C9971F)',
+      rose: 'var(--cp-hachure-skin, #F0438E)',
     },
     cuivre ? 'v' : 'e',
   );
