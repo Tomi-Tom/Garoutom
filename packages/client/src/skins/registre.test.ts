@@ -11,8 +11,8 @@ import {
 import { thiercelieux } from './thiercelieux.js';
 
 describe('les légendes du graveur', () => {
-  it('compte 13 rôles, 15 écrans, 19 planches du récit, 18 couvre-chefs', () => {
-    expect(ROLES).toHaveLength(13);
+  it('compte 21 rôles, 15 écrans, 19 planches du récit, 18 couvre-chefs', () => {
+    expect(ROLES).toHaveLength(21);
     expect(CLES_LEGENDE_ECRAN).toHaveLength(15);
     expect(CLES_LEGENDE_RECIT).toHaveLength(19);
     for (const skin of SKINS) {

@@ -5,6 +5,9 @@
  * phase compose son propre gabarit (SPEC § 7.1) avec les zones communes —
  * frise, minuterie, crieur (`components/partie/zones.tsx`). Il route :
  *
+ * - `voleur` → le talon du Voleur (`ChoixVoleur`), avant la révélation : à
+ *   lui les deux cartes, à tous les autres le village qui dort — l'heure,
+ *   elle, compte déjà pour la nuit ;
  * - `revelation` → la carte qu'on retourne (`Revelation`) ; le spectateur,
  *   lui, voit la place et la légende, jamais une carte ;
  * - `nuit` → la nuit (`Nuit`), un seul gabarit pour tous les sièges ;
@@ -41,6 +44,7 @@ import { Depouillement } from '../components/partie/place/Depouillement.js';
 import { usePlanchesPassageres } from '../components/partie/place/PlanchePassagere.js';
 import { estSceneTV, SceneTV } from '../components/partie/place/SceneTV.js';
 import { Revelation } from '../components/partie/Revelation.js';
+import { ChoixVoleur } from '../components/partie/nuit/ChoixVoleur.js';
 import { useZonesCommunes } from '../components/partie/zones.js';
 import { ARCADE_ID } from '../lib/identity.js';
 import { useGame, useVoix } from '../lib/partie.js';
@@ -63,7 +67,9 @@ export function Partie({ room }: { room: RoomView }) {
     );
   }
 
-  const heure = game.phase === 'nuit' || game.phase === 'revelation' ? 'nuit' : 'jour';
+  // La phase du Voleur se joue la nuit venue, avant la révélation : l'heure
+  // des zones — cuivre, lune, frise — est déjà celle de la nuit (R110).
+  const heure = game.phase === 'nuit' || game.phase === 'revelation' || game.phase === 'voleur' ? 'nuit' : 'jour';
   const scene = game.you === null && estSceneTV();
 
   return (
@@ -89,6 +95,8 @@ export function Partie({ room }: { room: RoomView }) {
 /** L'écran que la phase appelle — sa clé suffit à rejouer l'entrée. */
 function ecranDe(game: GameView): string {
   switch (game.phase) {
+    case 'voleur':
+      return 'voleur';
     case 'revelation':
       return game.you === null ? 'spectateur' : 'revelation';
     case 'nuit':
@@ -102,6 +110,8 @@ function ecranDe(game: GameView): string {
 
 function Ecran({ game }: { game: GameView }) {
   switch (ecranDe(game)) {
+    case 'voleur':
+      return <ChoixVoleur />;
     case 'spectateur':
       return <RevelationDuSpectateur />;
     case 'revelation':

@@ -22,8 +22,9 @@ import { NOMS_VIGNETTES, Vignette } from './Vignette.js';
 // La luminance des faces (arbitrage n° 3) : luminance.test.tsx.
 
 const SKINS = ['thiercelieux', 'shiganshina'] as const;
-/** Les identifiants du moteur qui ne sont pas des mots : ils ne doivent jamais s'afficher. */
-const IDENTIFIANTS_BRUTS = /\b(petiteFille|loupBlanc|sorciere|villageois|salvateur|chasseur|cupidon)\b/;
+/** Les identifiants du moteur qui ne sont pas des mots : ils ne doivent jamais s'afficher. La v3 comprise (R105–R114). */
+const IDENTIFIANTS_BRUTS =
+  /\b(petiteFille|loupBlanc|sorciere|villageois|villageois2|salvateur|chasseur|cupidon|renard|ours|flairer|voleur|chienLoup|enfantSauvage|soeurs|freres)\b/;
 
 /** Pose le skin du salon dans le magasin, comme le ferait un `sync`. */
 function reglerSkin(skin: string): void {

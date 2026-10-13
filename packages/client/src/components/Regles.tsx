@@ -10,11 +10,13 @@
 import {
   autoComposition,
   OPTIONAL_ROLES,
+  OPTIONAL_ROLES_V3,
   ROLES,
   SPECIAL_ROLES,
   wolvesIn,
   type GameOptions,
   type OptionalRoleId,
+  type OptionalRoleIdV3,
   type RoleId,
 } from '@garoutom/engine';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
@@ -59,13 +61,23 @@ const QUAND: Record<RoleId, string> = {
   bouc: 'Au vote du village, et à sa mort.',
   petiteFille: 'La nuit, pendant le choix de la meute.',
   loupBlanc: 'La nuit, avec la meute ; les nuits paires, seul.',
+  // Les v3 (R105 à R108).
+  villageois2: 'Jamais : ni pouvoir, ni annonce.',
+  renard: 'La nuit, tant que son flair lui reste.',
+  ours: 'À l’aube, chaque matin qu’il vit.',
+  // La deuxième vague (R109 à R114).
+  voleur: 'Avant la révélation, avant tout le monde.',
+  chienLoup: 'La première nuit seulement.',
+  enfantSauvage: 'La première nuit ; puis, à la mort de son modèle.',
+  soeurs: 'Jamais : ni pouvoir, ni consigne.',
+  freres: 'Jamais : ni pouvoir, ni consigne.',
 };
 
 /**
- * Le détail mécanique des rôles optionnels (R91 à R97) — dit sans nom
- * d'univers : la carte du skin raconte, cette ligne précise.
+ * Le détail mécanique des rôles optionnels (R91 à R97, puis R105 à R108) —
+ * dit sans nom d'univers : la carte du skin raconte, cette ligne précise.
  */
-const DETAIL: Record<OptionalRoleId, string> = {
+const DETAIL: Record<OptionalRoleId | OptionalRoleIdV3, string> = {
   ancien:
     'Survit à la première attaque de la meute, pas à la seconde (le bouclier ou la potion de vie qui l’arrête ne compte pas). Le poison, le vote et le tir le tuent du premier coup. Le sursis reste secret : l’aube est paisible.',
   corbeau:
@@ -75,6 +87,25 @@ const DETAIL: Record<OptionalRoleId, string> = {
     'Sans consigne : elle joue comme un simple villageois, mais voit en direct, pendant le choix de la meute, combien de loups visent chaque joueur — jamais lesquels.',
   loupBlanc:
     'Vote avec la meute, qui le prend pour l’un des siens, et compte parmi les loups pour la borne de la composition. Une nuit sur deux (les nuits paires), il peut dévorer un autre loup. Il gagne seul, s’il est le dernier en vie.',
+  // Les v3 (R105 à R108) : jamais au tirage au hasard, l’hôte les coche (D26).
+  villageois2:
+    'La carte est publique et sans effet : toute la table — la Voyante qui la sonde comme le porteur lui-même — lit « villageois », et le porteur croit être un simple villageois. Seul le récit de fin de partie retourne la carte double.',
+  renard:
+    'Chaque nuit, tant que son pouvoir tient, il flaire le trio d’un vivant — ce joueur et ses deux voisins vivants, lui-même compris. Un loup dans le trio : il le sait, et son pouvoir demeure. Un trio sans loup : le trio entier est appris innocent, et son pouvoir s’éteint à vie. La rancune de l’Ancien lui coupe aussi le flair.',
+  ours:
+    'Il ne joue jamais. Chaque matin où il vit, après l’annonce des morts, sa bête dit ce qui s’assied à côté de lui : elle grogne si un loup — au camp d’origine, quoi qu’il advienne — est l’un de ses voisins vivants, elle se tait sinon. Le silence est une information comme une autre, et la grogne survit à la rancune.',
+  // La deuxième vague (R109 à R114) : comme les premiers v3, jamais au
+  // tirage au hasard — l’hôte les coche (D26).
+  voleur:
+    'Avant la révélation, deux cartes restent sur la table, à lui seul : il en prend une — pour la jouer dès cette nuit — ou garde la sienne, sans aucun pouvoir alors. Deux loups au talon (le Loup Blanc compris) : il faut en prendre une, et le temps écoulé prend la première. La carte laissée sort du jeu ; nul ne sait ce qu’il a pris, ni même s’il a pris — seul le récit de fin de partie le dira.',
+  chienLoup:
+    'La première nuit, il choisit son camp pour toujours : côté village, sans rien ; côté meute, il y dévore chaque nuit et la meute le reconnaît pour l’un des siens. Ce n’est pas un pouvoir du village : la rancune de l’Ancien ne lui coupe rien. Sans choix au temps écoulé, il reste au village.',
+  enfantSauvage:
+    'La première nuit, il désigne son modèle parmi les vivants, lui compris : le modèle n’en saura jamais rien. Le modèle mort, l’Enfant devient un loup-garou dans le silence — la meute ne le reconnaît qu’à la nuit suivante. Ce n’est pas un pouvoir du village : la rancune de l’Ancien n’y peut rien. Sans choix au temps écoulé, il n’aura pas de modèle.',
+  soeurs:
+    'Deux cartes d’un seul cochage. Elles se reconnaissent à la révélation, comme les amoureux, et partagent un murmure permanent — la nuit comme le jour, que seule la mort referme. La connaissance, elle, ne meurt pas : une morte garde ses siens à l’œil. Ni pouvoir, ni annonce : elles gagnent avec le village.',
+  freres:
+    'Trois cartes d’un seul cochage. Ils se reconnaissent à la révélation, comme les amoureux, et partagent un murmure permanent — la nuit comme le jour, que seule la mort referme. La connaissance, elle, ne meurt pas : un mort garde les siens à l’œil. Ni pouvoir, ni annonce : ils gagnent avec le village.',
 };
 
 function majuscule(texte: string): string {
@@ -240,7 +271,11 @@ function PanneauRegles({ onFermer }: { onFermer: () => void }) {
           <>
             <Section titre={`Les rôles — ${voix.nomUnivers()}`}>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {ROLES.filter((role) => !OPTIONAL_ROLES.some((optionnel) => optionnel === role)).map((role) => (
+                {ROLES.filter(
+                  (role) =>
+                    !OPTIONAL_ROLES.some((optionnel) => optionnel === role) &&
+                    !OPTIONAL_ROLES_V3.some((optionnel) => optionnel === role),
+                ).map((role) => (
                   <LigneRole key={role} role={role} voix={voix} />
                 ))}
               </ul>
@@ -248,11 +283,13 @@ function PanneauRegles({ onFermer }: { onFermer: () => void }) {
 
             <Section titre="Rôles optionnels">
               <p className="t-statut">
-                Absents de la composition automatique : l’hôte les ajoute à la main, ou le tirage au hasard
-                peut les sortir. Un exemplaire au plus de chacun.
+                Absents de la composition automatique : l’hôte les ajoute à la main, un exemplaire au plus
+                de chacun. Le tirage au hasard peut sortir les cinq premiers ; les huit de la v3 ne
+                viennent que cochés — et les fratries, elles, portent leurs deux ou trois cartes d’une
+                seule case.
               </p>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {OPTIONAL_ROLES.map((role) => (
+                {[...OPTIONAL_ROLES, ...OPTIONAL_ROLES_V3].map((role) => (
                   <LigneRole key={role} role={role} voix={voix} detail={DETAIL[role]} />
                 ))}
               </ul>
@@ -319,7 +356,7 @@ export function dirComposition(options: GameOptions, nombre: number, voix: Voix)
   const { loups, roles } = options.auto
     ? autoComposition(Math.max(nombre, 6))
     : { loups: options.loups, roles: options.roles };
-  const speciaux = [...SPECIAL_ROLES, ...OPTIONAL_ROLES]
+  const speciaux = [...SPECIAL_ROLES, ...OPTIONAL_ROLES, ...OPTIONAL_ROLES_V3]
     .filter((role) => role !== 'loupBlanc' && roles.some((pris) => pris === role))
     .map((role) => voix.nomRole(role));
   // Le Loup Blanc compte parmi les loups (R13, R96) : « 3 loups dont le Loup Blanc ».

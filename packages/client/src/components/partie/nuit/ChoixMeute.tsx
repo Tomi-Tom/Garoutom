@@ -54,8 +54,11 @@ export function ChoixMeute() {
   const nom = useNoms();
   // `undefined` : rien touché depuis le dernier envoi — le choix suit la voix envoyée.
   const [touche, setTouche] = useState<number | null | undefined>(undefined);
-  if (game?.you == null || game.prompt?.kind !== 'devorer') return null;
+  if (game === null) return null;
   const moi = game.you;
+  // D46 : la vue tait la carte pendant la phase du Voleur — ce prompt ne
+  // vit qu'à la nuit, carte connue. Le garde sur le rôle est pour le type.
+  if (moi === null || moi.role === null || game.prompt?.kind !== 'devorer') return null;
 
   const meute = game.pack?.seats ?? [moi.seat];
   const votes = game.pack?.votes ?? {};

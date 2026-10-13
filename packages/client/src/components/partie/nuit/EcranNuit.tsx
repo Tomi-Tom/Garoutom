@@ -11,9 +11,9 @@
  *
  * Le **pli** est le même pour tous ; seul son libellé suit la vue (§ 5.14) :
  * « Le registre » (qui dort), « Le serment » (l'amoureux vivant), « La
- * meute » (le loup pendant l'étape), « L'au-delà » (le mort). Il ouvre le fil
- * au tiers ; sur grand écran, le fil vit dans la colonne droite, ouverte
- * pour tous.
+ * fratrie » (la sœur, le frère — un lacs lui aussi, R114), « La meute » (le
+ * loup pendant l'étape), « L'au-delà » (le mort). Il ouvre le fil au tiers ;
+ * sur grand écran, le fil vit dans la colonne droite, ouverte pour tous.
  *
  * La **barre au pouce** a, chez tous, exactement deux boutons de même
  * gabarit (arbitrage du chef) : à gauche l'appui long « Gardez le pouce : ma
@@ -66,6 +66,13 @@ function usePliDeNuit(meute: boolean): PliDeNuit {
   if (moi !== null && !moi.alive) return { libelle: voix.libelleCanal('morts'), forme: 'bruni', icone: 'fil' };
   if (moi !== null && (game?.lover != null || game?.channels.includes('amoureux') === true)) {
     return { libelle: voix.libelleCanal('amoureux'), forme: 'lacs', icone: 'fil' };
+  }
+  // Le murmure de la fratrie (R114, D28) : un lacs comme le serment — même
+  // forme pour tous, seul le libellé suit la vue. Il ne paraît qu'après la
+  // révélation : la connaissance naît avec elle (R113), et la phase du
+  // Voleur ne doit rien laisser paraître.
+  if (game !== null && moi !== null && moi.alive && game.phase !== 'voleur' && game.fratrie.includes(moi.seat)) {
+    return { libelle: voix.libelleCanal('fratrie'), forme: 'lacs', icone: 'fil' };
   }
   return { libelle: 'Le registre', forme: 'ecu', icone: 'registre' };
 }

@@ -230,8 +230,10 @@ export function Verdict({
   const { tirage: reglage } = useReglages();
   const vivants = game.players.filter((joueur) => joueur.alive);
 
+  // D46 : la vue tait la carte pendant la phase du Voleur — à la fin, elle
+  // est connue ; le garde sur le rôle est pour le type.
   const ligneRole =
-    game.you === null
+    game.you === null || game.you.role === null
       ? 'Vous suivez la table en spectateur.'
       : `Vous étiez ${voix.nomRole(game.you.role)}, ${game.you.alive ? 'debout à la fin' : 'tombé·e avant la fin'}.`;
   const ligneSurvivants =

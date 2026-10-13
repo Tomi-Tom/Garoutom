@@ -108,7 +108,16 @@ export function installe(banc: Banc, seat: number | null): void {
  * rôles, les étapes, les actions. Sensible à la casse — « Loup-garou » et
  * « Cupidon » sont des noms du skin, pas des identifiants. Les verbes
  * `marquer` et `trahir` n'y sont pas : ce sont aussi des mots français, que
- * les boutons emploient à bon droit (« Ne marquer personne »).
+ * les boutons emploient à bon droit (« Ne marquer personne »). La v3 s'y
+ * ajoute : `villageois2` (jamais un identifiant, jamais la carte double),
+ * `renard`, `ours` et `flairer` — les écrans de nuit disent « le Renard »,
+ * « l'ourson », « votre flair », jamais le mot du moteur. La deuxième vague
+ * suit : `voleur`, `chienLoup`, `enfantSauvage`, `soeurs`, `freres` (le
+ * français écrit « sœurs » et « frères »), et les gestes `voler`,
+ * `seRanger`, `designerModele` — l'écran dit « prendre », « se ranger »,
+ * « choisir un modèle », jamais les mots du moteur. Le canal `fratrie`,
+ * lui, reste hors de la liste : c'est un mot français, l'onglet le porte
+ * en bonne part (« La fratrie »), comme « Le village » avant lui.
  */
 export const IDENTIFIANT_BRUT =
-  /\b(villageois|loup|voyante|sorciere|chasseur|cupidon|salvateur|idiot|ancien|corbeau|bouc|petiteFille|loupBlanc|principale|devorer|sonder|proteger|pret|designerVotants)\b/;
+  /\b(villageois|villageois2|loup|voyante|sorciere|chasseur|cupidon|salvateur|idiot|ancien|corbeau|bouc|petiteFille|loupBlanc|renard|ours|flairer|voleur|chienLoup|enfantSauvage|soeurs|freres|principale|devorer|sonder|proteger|pret|voler|seRanger|designerModele|designerVotants)\b/;

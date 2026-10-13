@@ -12,13 +12,14 @@ export const LIMITE_MESSAGE = 280;
 export const SEUIL_COMPTEUR = 240;
 
 /** L'ordre des onglets, du plus public au plus secret. */
-export const ORDRE_CANAUX: readonly ChatChannel[] = ['village', 'loups', 'amoureux', 'morts'];
+export const ORDRE_CANAUX: readonly ChatChannel[] = ['village', 'loups', 'amoureux', 'fratrie', 'morts'];
 
 /** La teinte d'un canal, en variable CSS de la palette (§ 5.10). */
 export const TEINTE_CANAL: Record<ChatChannel, string> = {
   village: 'var(--canal-village)',
   loups: 'var(--canal-meute)',
   amoureux: 'var(--canal-serment)',
+  fratrie: 'var(--canal-fratrie)',
   morts: 'var(--canal-audela)',
 };
 
@@ -27,6 +28,9 @@ export const FORME_CANAL: Record<ChatChannel, 'ecu' | 'mordu' | 'lacs' | 'bruni'
   village: 'ecu',
   loups: 'mordu',
   amoureux: 'lacs',
+  // Le murmure de la fratrie porte le lacs du serment, lui aussi : même forme
+  // pour tous les liens du sang et du cœur (R114, D28).
+  fratrie: 'lacs',
   morts: 'bruni',
 };
 
@@ -36,6 +40,7 @@ export const FILET_CANAL: Record<ChatChannel, FiletCanal> = {
   village: 'droit',
   loups: 'dentele',
   amoureux: 'double',
+  fratrie: 'double',
   morts: 'pointille',
 };
 
@@ -64,6 +69,9 @@ export function ongletsVisibles(game: GameView, restreint?: readonly ChatChannel
   const presents = new Set<ChatChannel>(game.channels);
   for (const message of game.chat) presents.add(message.channel);
   if (game.options.chat) presents.add('village');
+  // La fratrie ne se connaît qu'à la révélation (R113) : pendant la phase du
+  // Voleur, l'onglet ne doit rien laisser paraître — pas même son existence.
+  if (game.phase === 'voleur') presents.delete('fratrie');
   const visibles = ORDRE_CANAUX.filter(
     (canal) => presents.has(canal) && (restreint === undefined || restreint.includes(canal)),
   );
@@ -143,6 +151,16 @@ export function raisonSilence(game: GameView, canal: ChatChannel): string {
     case 'amoureux':
       if (game.lover === null) return 'Ce murmure n’est pas le vôtre : vous ne faites que l’entendre.';
       return 'Le serment est brisé : plus un mot ne passe.';
+    case 'fratrie':
+      // La connaissance, elle, ne meurt pas (R113) : la fratrie reste dans
+      // les savoirs du mort — seul le canal se referme (R114).
+      if (!vivant) return game.fratrie.includes(game.you?.seat ?? -1)
+        ? 'La mort a refermé le murmure de votre fratrie : vous ne faites que l’écouter.'
+        : 'Ce murmure n’est pas le vôtre : vous ne faites que l’entendre.';
+      if (game.fratrie.length === 0) return 'Ce murmure n’est pas le vôtre : vous ne faites que l’entendre.';
+      // Le murmure vit du premier au dernier jour (R114) : seule la fin le
+      // rend muet.
+      return 'La partie est finie : le murmure s’est tu.';
     case 'morts':
       return 'Seuls les morts prennent la parole ici.';
   }

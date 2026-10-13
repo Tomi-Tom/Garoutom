@@ -115,7 +115,14 @@ export function raconter(
       return [{ cle, texte: dire(n.debut), ton: 'lune' }];
     case 'phase':
       return [
-        { cle, texte: phraseDePhase(event, voix, peau), ton: event.phase === 'nuit' ? 'lune' : 'lanterne', heure: true },
+        {
+          cle,
+          texte: phraseDePhase(event, voix, peau),
+          // Le talon du Voleur se montre la nuit venue, avant la révélation :
+          // la lune, comme les autres heures nocturnes (R110).
+          ton: event.phase === 'nuit' || event.phase === 'voleur' ? 'lune' : 'lanterne',
+          heure: true,
+        },
       ];
     case 'morts':
       return event.deaths.map((mort, rang) => ({
@@ -170,6 +177,17 @@ export function raconter(
     case 'corbeau':
       // La marque, jamais la main : l'évènement ne porte que la cible (R93).
       return [{ cle, texte: dire(n.corbeau, { nom: nom(event.target) }), ton: 'lune' }];
+    case 'ours':
+      // La grogne de l'ourson, à l'aube (R108) : elle dit la meute chez les
+      // voisins vivants — le silence en dit autant, l'un comme l'autre chaque
+      // matin où la bête vit.
+      return [
+        {
+          cle,
+          texte: dire(event.grogne ? n.ours.grogne : n.ours.silence, { nom: nom(event.seat) }),
+          ton: 'lune',
+        },
+      ];
     case 'bouc':
       return [{ cle, texte: dire(n.bouc, { nom: nom(event.seat), role: voix.nomRole('bouc') }), ton: 'sang' }];
     case 'votants':
@@ -199,6 +217,10 @@ function phraseDePhase(event: Extract<GameEvent, { type: 'phase' }>, voix: Voix,
           ? phases.nuit[event.step]
           : voix.phraseNuitQuiTombe(event.day),
       );
+    case 'voleur':
+      // La phrase ne dit ni qui choisit ni ce qu'il voit : le talon
+      // n'appartient qu'à lui (R110, R87).
+      return dire(phases.voleur);
     case 'revelation':
       return dire(phases.revelation);
     case 'chasseur':
@@ -239,7 +261,9 @@ export function chapitres(chronique: readonly EvenementRecu[], voix: Voix, peau:
     const event = recu.event;
     let ouverture: { heure: 'nuit' | 'jour'; numero: number } | null = null;
     if (event.type === 'phase' && event.phase !== 'fin') {
-      const heure = event.phase === 'nuit' || event.phase === 'revelation' ? 'nuit' : 'jour';
+      // La phase du Voleur compte pour la nuit : elle précède la révélation,
+      // et le jour n'y avance pas (R110).
+      const heure = event.phase === 'nuit' || event.phase === 'revelation' || event.phase === 'voleur' ? 'nuit' : 'jour';
       ouverture = { heure, numero: event.day };
     } else if (resultat.length === 0) {
       // Le début de partie est toujours de la nuit 1, même reçu dans le même

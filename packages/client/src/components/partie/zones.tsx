@@ -40,7 +40,9 @@ export interface ZonesCommunes {
 
 /** Le titre de la frise : « Nuit 2 », « Jour 3 », dans la voix du skin. */
 export function titreDeLaFrise(phase: string | undefined, jour: number, recit: { nuit: string; jour: string }): string {
-  const nuit = phase === 'nuit' || phase === 'revelation';
+  // La phase du Voleur compte déjà pour la nuit : elle précède la révélation,
+  // et le compteur de jours n'y bouge pas (R110).
+  const nuit = phase === 'nuit' || phase === 'revelation' || phase === 'voleur';
   return resoudre(nuit ? recit.nuit : recit.jour, { n: String(Math.max(1, jour)) });
 }
 

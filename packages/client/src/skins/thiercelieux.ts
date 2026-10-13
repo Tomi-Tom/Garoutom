@@ -104,6 +104,51 @@ export const thiercelieux: Skin = {
       description:
         'Vous chassez avec la meute, qui vous prend pour l’un des siens. Une nuit sur deux, vous pouvez dévorer un loup. Vous ne gagnez que seul.',
     },
+    /* --- Les optionnels de la v3 (R105 à R108, D26) --- */
+    villageois2: {
+      // La carte est recto-verso (R106, D31) : la description dit la carte,
+      // pas une promesse au porteur — même le porteur croit lire un
+      // villageois, et seul le récit de fin le détrompe.
+      nom: 'Villageois-Villageois',
+      description:
+        'Aucun pouvoir, aucune vie bonus : la carte est recto-verso, et les deux faces disent la même chose — Simple Villageois. Cette certitude est publique ; le porteur, lui, n’en sait rien.',
+    },
+    renard: {
+      nom: 'le Renard',
+      description:
+        'Chaque nuit, flairez le trio d’un vivant de votre choix — lui et ses deux voisins vivants, vous compris. La meute dans le trio : votre nez répond, et votre flair demeure. Un trio sain : votre flair s’éteint à vie, et le trio entier est appris innocent.',
+    },
+    ours: {
+      nom: 'le Montreur d’Ours',
+      description:
+        'Vous ne jouez jamais. Chaque matin où vous vivez, après l’annonce des morts, votre ourson grogne si la meute s’assied à vos côtés — et son silence, lui aussi, est une information.',
+    },
+    /* --- La Vague 2 de la v3 (R109 à R114, D27, D28) --- */
+    voleur: {
+      nom: 'le Voleur',
+      description:
+        'Avant même la révélation, deux cartes restées sur la table sont à vous seul : prenez-en une et jouez-la dès la nuit qui vient — ou restez le Voleur, sans aucun pouvoir. Deux loups dans le talon : il faut en prendre une.',
+    },
+    chienLoup: {
+      nom: 'le Chien-Loup',
+      description:
+        'La première nuit, vous choisissez votre camp pour toujours. Rangé au village, vous n’avez aucun pouvoir ; rangé dans la meute, vous dévorez avec elle — et elle vous reconnaît pour un loup.',
+    },
+    enfantSauvage: {
+      nom: 'l’Enfant Sauvage',
+      description:
+        'La première nuit, désignez votre modèle parmi les vivants, vous compris : il ne le saura jamais. Le jour où il meurt, quoi qu’il arrive, vous devenez un loup-garou.',
+    },
+    soeurs: {
+      nom: 'les Deux Sœurs',
+      description:
+        'Aucun pouvoir. À la révélation, vous vous reconnaissez : un murmure vous est ouvert, jour et nuit, tant que vous vivez — la mort seule le referme.',
+    },
+    freres: {
+      nom: 'les Trois Frères',
+      description:
+        'Aucun pouvoir. À la révélation, vous vous reconnaissez : un murmure vous est ouvert, jour et nuit, tant que vous vivez — la mort seule le referme.',
+    },
   },
 
   camps: { village: 'le village', loups: 'la meute' },
@@ -120,6 +165,9 @@ export const thiercelieux: Skin = {
     debut: 'La table est dressée à Thiercelieux. Que la partie commence.',
 
     phases: {
+      // Le talon du Voleur ne se montre qu’à lui : la phrase dit la scène,
+      // jamais la main qui va choisir (R110, R87).
+      voleur: 'Deux cartes restent sur la table. Quelqu’un doit choisir.',
       revelation: 'Les cartes sont distribuées, face contre table. À vous de les retourner.',
       // L’étape `sorciere` est un fait d’architecture, pas un fait de récit :
       // le village qui dort n’a pas à savoir où en est la nuit. Phrase plate,
@@ -174,6 +222,13 @@ export const thiercelieux: Skin = {
     // La marque, jamais la main : le Corbeau n’est pas nommé autrement que
     // par son rôle, que la composition publique dit déjà.
     corbeau: 'Le Corbeau a désigné {nom} : au vote du jour, deux voix sont déjà comptées.',
+    // La grogne de l’ourson, à l’aube (R108) : elle dit la meute chez les
+    // voisins vivants, jamais leur nom ni leur nombre. Le silence dit
+    // autant — chaque matin vécu, l’un ou l’autre.
+    ours: {
+      grogne: 'L’ourson de {nom} a grogné à l’aube : la meute s’assied à ses côtés.',
+      silence: 'L’ourson de {nom} s’est tu à l’aube : pas de meute à ses côtés.',
+    },
     bouc: 'Les voix se partagent, la place ne tranche pas : c’est {nom}, le Bouc émissaire, qui paie pour tous.',
     votants: {
       designes: 'Dernier mot du Bouc émissaire : demain, seuls voteront {noms}.',
@@ -222,14 +277,34 @@ export const thiercelieux: Skin = {
     // Le Corbeau peut se marquer lui-même (R93) : « vous compris ».
     marquer:
       'Désignez un vivant, vous compris : au vote du jour, deux voix pèseront d’office contre ce vivant — ou ne marquez personne. La marque sera annoncée, jamais votre main.',
+    // Le Renard peut se compter dans son trio (D29), et s’abstenir (R107) :
+    // le prompt ne promet que ce que le moteur permet.
+    flairer:
+      'Désignez un vivant, vous compris : vous flairerez son trio — lui et ses deux voisins vivants. La meute s’y trouve, votre flair demeure ; un trio sain vous le retire à vie. Ou ne sondez personne.',
     trahir: 'La meute dort. Dévorez l’un de ses loups — ou épargnez-la cette nuit.',
     designerVotants: 'Votre dernier mot : désignez qui votera demain — au moins un vivant. Les autres se tairont au vote.',
+    // Le talon n’appartient qu’au Voleur (R110) : l’obligation ne vaut que
+    // quand les deux cartes sont de la meute — Loup Blanc compris.
+    voler: {
+      libre:
+        'Deux cartes sont à vous seul : prenez-en une pour la jouer dès cette nuit — ou restez le Voleur, sans aucun pouvoir. Celle que vous laissez sort du jeu.',
+      obligatoire:
+        'Deux cartes sont à vous seul, et ce sont deux loups : il faut en prendre une. Celle que vous laissez sort du jeu.',
+    },
+    seRanger: 'La première nuit, rangez-vous pour toujours : au village, sans rien — ou dans la meute, avec ses dents.',
+    // « loup-garou » minuscule toucherait l’identifiant du moteur : la meute
+    // le dit tout aussi bien, comme le récapitulatif de l’écran (R112).
+    designerModele:
+      'La première nuit, désignez votre modèle parmi les vivants, vous compris : il ne le saura jamais. À sa mort, vous rejoindrez la meute.',
   },
 
   canaux: {
     village: 'Le village',
     loups: 'La meute',
     amoureux: 'Le serment',
+    // Le murmure des Deux Sœurs et des Trois Frères : un canal par fratrie,
+    // ouvert jour et nuit tant qu’ils vivent (R114, D28).
+    fratrie: 'La fratrie',
     morts: 'L’au-delà',
   },
 
@@ -270,6 +345,16 @@ export const thiercelieux: Skin = {
       resistance: 'La meute a attaqué {nom} : l’Ancien a tenu bon.',
       rancune: 'En tuant {nom}, son Ancien, le village a perdu ses pouvoirs.',
       corbeau: 'Le Corbeau a marqué {nom}.',
+      // Le log ne dit que le centre du trio (R107) : les voisins se lisent
+      // sur la place, la conclusion suffit au récit.
+      renard: {
+        loups: 'Le Renard a flairé le trio autour de {nom} : la meute y était.',
+        sain: 'Le Renard a flairé le trio autour de {nom} : un trio sain, et son flair s’en est allé.',
+      },
+      ours: {
+        grogne: 'À l’aube, l’ourson de {nom} a grogné : la meute est à ses côtés.',
+        silence: 'À l’aube, l’ourson de {nom} s’est tu : pas de meute à ses côtés.',
+      },
       bouc: 'L’égalité est retombée sur {nom}, le Bouc émissaire.',
       votants: {
         designes: 'Le Bouc émissaire a désigné les votants du lendemain : {noms}.',
@@ -279,6 +364,20 @@ export const thiercelieux: Skin = {
         cible: 'Le Loup Blanc a dévoré {nom}, un loup de sa propre meute.',
         personne: 'Le Loup Blanc a épargné la meute.',
       },
+      // Le vol ne se raconte qu’ici : la carte prise, ou la sienne gardée —
+      // le log ne dit ni le talon ni la main (R110).
+      voleur: {
+        prise: 'Le Voleur a pris la carte {role}.',
+        garde: 'Le Voleur a gardé sa carte : aucun pouvoir n’a été joué.',
+      },
+      chienLoup: {
+        village: 'Le Chien-Loup {nom} s’est rangé au village.',
+        loups: 'Le Chien-Loup {nom} s’est rangé dans la meute.',
+      },
+      modele: 'L’Enfant Sauvage {enfant} a pris {nom} pour modèle — {nom} n’en a jamais rien su.',
+      // La transformation ne se crie pas (D33) : le récit seul la relit, et
+      // le rôle d’origine s’y devine.
+      transformation: 'Le modèle de {nom} est mort : l’Enfant Sauvage est devenu un loup-garou.',
     },
   },
 
@@ -299,6 +398,16 @@ export const thiercelieux: Skin = {
       // Validée par le propriétaire (la variante douce est écartée).
       petiteFille: 'Ne crie pas, petite sotte.',
       loupBlanc: 'Les loups ne se mangent pas entre eux, dit-on.',
+      // Planches 14 à 16 du graveur, gravées pour la v3.
+      villageois2: 'On le retourne, c’est toujours lui.',
+      renard: 'Son nez répond, sa gueule se tait.',
+      ours: 'À l’aube il grogne : aux voisins de deviner.',
+      // Planches 17 à 21 du graveur, gravées pour la Vague 2.
+      voleur: 'Il ne dérobe pas : il choisit.',
+      chienLoup: 'La bête choisit son maître.',
+      enfantSauvage: 'Il montre du doigt ; l’ombre regarde.',
+      soeurs: 'Elles se sont reconnues à voix basse.',
+      freres: 'Trois fois le même menton, trois fois la même parole.',
     },
     ecrans: {
       accueil: 'Le sommeil de la raison engendre des loups.',

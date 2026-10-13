@@ -21,8 +21,11 @@ export function ChoixLoupBlanc() {
   const peau = usePeau();
   const voix = useVoix();
   const nom = useNoms();
-  if (game?.you == null || game.prompt?.kind !== 'trahir') return null;
+  if (game === null) return null;
   const moi = game.you;
+  // D46 : la vue tait la carte pendant la phase du Voleur — ce prompt ne
+  // vit qu'à la nuit, carte connue. Le garde sur le rôle est pour le type.
+  if (moi === null || moi.role === null || game.prompt?.kind !== 'trahir') return null;
 
   const meute = game.pack?.seats ?? [];
   const choisissable = (seat: number) =>

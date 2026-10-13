@@ -14,10 +14,25 @@ import { resoudre, type Skin } from '../../../skins/registre.js';
 
 /**
  * Les prompts qu'on rencontre la nuit — les autres appartiennent au jour. Le
- * Corbeau marque à l'étape principale (R93) ; le Loup Blanc trahit à la
- * sienne, les nuits paires (R97).
+ * Corbeau marque à l'étape principale (R93), le Renard y flaire son trio
+ * (R107) ; le Loup Blanc trahit à la sienne, les nuits paires (R97). Les deux
+ * solitaires de la première nuit y jouent en parallèle, à la même étape
+ * principale : le Chien-Loup s'y range (R111), l'Enfant Sauvage y désigne
+ * son modèle (R112). Le prompt `voler`, lui, appartient à la phase du Voleur,
+ * qui précède la révélation — il ne passe pas par ici.
  */
-const KINDS_DE_NUIT = ['cupidon', 'proteger', 'sonder', 'devorer', 'sorciere', 'marquer', 'trahir'] as const;
+const KINDS_DE_NUIT = [
+  'cupidon',
+  'proteger',
+  'sonder',
+  'devorer',
+  'sorciere',
+  'marquer',
+  'flairer',
+  'trahir',
+  'seRanger',
+  'designerModele',
+] as const;
 
 export type PromptDeNuit = Extract<Prompt, { kind: (typeof KINDS_DE_NUIT)[number] }>;
 
@@ -49,8 +64,14 @@ export function textePrompt(
       return resoudre(textes.sorciere.victime, { victime: nom(prompt.victim) });
     case 'marquer':
       return textes.marquer;
+    case 'flairer':
+      return textes.flairer;
     case 'trahir':
       return textes.trahir;
+    case 'seRanger':
+      return textes.seRanger;
+    case 'designerModele':
+      return textes.designerModele;
   }
 }
 

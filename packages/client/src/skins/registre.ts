@@ -84,6 +84,11 @@ export interface Suggestion {
 
 /** Une phrase par changement de phase — la nuit se subdivise par étape. */
 export interface PhrasesPhases {
+  /**
+   * Le Voleur, avant la révélation : la phrase ne dit ni qui il est ni ce
+   * qu'il voit — le talon n'appartient qu'à lui (R110, R87).
+   */
+  voleur: string;
   revelation: string;
   nuit: Record<NightStep, string>;
   chasseur: string;
@@ -112,10 +117,21 @@ export interface TextesPrompts {
   voter: { election: string; jour: string };
   /** Le Corbeau (R93). */
   marquer: string;
+  /** Le Renard flaire un trio — ou personne (R107). */
+  flairer: string;
   /** Le Loup Blanc, une nuit paire (R97). */
   trahir: string;
   /** Le Bouc émissaire mort (R94). */
   designerVotants: string;
+  /**
+   * Le Voleur, avant la révélation : ses deux cartes, et l'obligation d'en
+   * prendre une quand ce sont deux loups — Loup Blanc compris (R110).
+   */
+  voler: { libre: string; obligatoire: string };
+  /** Le Chien-Loup, la première nuit : son camp, pour toujours (R111). */
+  seRanger: string;
+  /** L'Enfant Sauvage, la première nuit : son modèle, vivant, jamais informé (R112). */
+  designerModele: string;
 }
 
 /** Les lignes de la nuit racontée (R88) — une phrase par type de `LogEntry`. */
@@ -136,12 +152,24 @@ export interface LignesRecit {
   rancune: string;
   /** La marque du Corbeau (R93). */
   corbeau: string;
+  /** Le trio que le Renard a flairé, et ce qu'il y a trouvé (R107). */
+  renard: { loups: string; sain: string };
+  /** La grogne du Montreur d'Ours à l'aube — le silence aussi dit quelque chose (R108). */
+  ours: { grogne: string; silence: string };
   /** L'égalité retombée sur le Bouc émissaire (R94). */
   bouc: string;
   /** Les votants désignés par le Bouc — `{noms}` —, ou son silence (R94). */
   votants: { designes: string; personne: string };
   /** Le Loup Blanc, une nuit paire : un loup dévoré, ou la meute épargnée (R97). */
   loupBlanc: { cible: string; personne: string };
+  /** La carte que le Voleur a prise — ou la sienne, qu'il a gardée (R110). */
+  voleur: { prise: string; garde: string };
+  /** Le camp où le Chien-Loup s'est rangé, la première nuit (R111). */
+  chienLoup: { village: string; loups: string };
+  /** Le modèle que l'Enfant Sauvage a désigné, la première nuit (R112). */
+  modele: string;
+  /** L'Enfant Sauvage devient un loup : son modèle est mort (R112, D33). */
+  transformation: string;
 }
 
 /**
@@ -239,6 +267,12 @@ export interface Narrateur {
   rancune: string;
   /** La marque du Corbeau, à l'aube — jamais la main qui l'a posée (R93). */
   corbeau: string;
+  /**
+   * La grogne du Montreur d'Ours, à l'aube — le silence aussi dit quelque
+   * chose (R108) : une phrase par cas, `{nom}` vaut le pseudo du maître de
+   * la bête.
+   */
+  ours: { grogne: string; silence: string };
   /** L'égalité retombe sur le Bouc émissaire (R94). */
   bouc: string;
   /** Le dernier mot du Bouc : `{noms}` désignés, ou le silence (R94). */
@@ -269,6 +303,7 @@ type CleDEvenement = {
   tir: 'tir';
   rancune: 'rancune';
   corbeau: 'corbeau';
+  ours: 'ours';
   bouc: 'bouc';
   votants: 'votants';
   fin: 'fin';
@@ -301,7 +336,7 @@ export interface Skin {
    * rien ne s'accorde avec un pseudo (règle de plume n° 1).
    */
   absent: string;
-  /** Tous les rôles du moteur — les huit de la v1, les cinq optionnels de la v2 —, nom affiché et description de carte. */
+  /** Tous les rôles du moteur — la v1, les optionnels de la v2, puis ceux de la v3 —, nom affiché et description de carte. */
   roles: Record<RoleId, TexteRole>;
   /** Le nom de chaque camp. */
   camps: Record<Camp, string>;
@@ -314,7 +349,7 @@ export interface Skin {
   /** Les compositions suggérées, par position : la référence, la chasse, le village outillé. */
   suggestions: readonly [Suggestion, Suggestion, Suggestion];
   recit: TextesRecit;
-  /** Les légendes du graveur (SPEC § 6) : 13 rôles, 15 écrans, 19 planches du récit. */
+  /** Les légendes du graveur (SPEC § 6) : 21 rôles, 15 écrans, 19 planches du récit. */
   legendes: Legendes;
   /**
    * Les 18 couvre-chefs, par numéro de siège (SPEC § 5.1.2) : le skin les

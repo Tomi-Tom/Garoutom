@@ -211,7 +211,10 @@ export function Pastille({ children, ton = 'encre' }: { children: ReactNode; ton
 /**
  * Les rôles du village qui ont un pouvoir à perdre quand l'Ancien emporte
  * ceux du village (R92, D13). La meute et le Loup Blanc ne perdent rien ; le
- * villageois n'avait rien ; l'Ancien est mort de cette mort-là.
+ * villageois n'avait rien ; l'Ancien est mort de cette mort-là. Le Renard y
+ * entre : la rancune lui coupe le flair (R107). Le Montreur d'Ours, lui, n'y
+ * entre pas — sa grogne survit à la rancune, et il n'a jamais rien à jouer
+ * (R108, D30).
  */
 export const ROLES_A_POUVOIR: ReadonlySet<RoleId> = new Set<RoleId>([
   'voyante',
@@ -223,13 +226,25 @@ export const ROLES_A_POUVOIR: ReadonlySet<RoleId> = new Set<RoleId>([
   'corbeau',
   'bouc',
   'petiteFille',
+  'renard',
 ]);
 
-/** Ce siège vivant a-t-il perdu ses pouvoirs avec l'Ancien ? */
+/**
+ * Ce siège vivant a-t-il perdu ses pouvoirs avec l'Ancien ? D46 : pendant la
+ * phase du Voleur, la vue tait la carte (`role` null) — une carte inconnue
+ * n'a pas de pouvoirs à éteindre, et la rancune de l'Ancien ne frappe jamais
+ * avant la première mort.
+ */
 export function pouvoirsEteints(
-  game: { pouvoirsPerdus: boolean; you: { role: RoleId; alive: boolean } | null },
+  game: { pouvoirsPerdus: boolean; you: { role: RoleId | null; alive: boolean } | null },
 ): boolean {
-  return game.pouvoirsPerdus && game.you !== null && game.you.alive && ROLES_A_POUVOIR.has(game.you.role);
+  return (
+    game.pouvoirsPerdus &&
+    game.you !== null &&
+    game.you.alive &&
+    game.you.role !== null &&
+    ROLES_A_POUVOIR.has(game.you.role)
+  );
 }
 
 /**

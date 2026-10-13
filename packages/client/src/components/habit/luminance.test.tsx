@@ -15,7 +15,7 @@
  * luminance moyenne est la moyenne, sur tous les pixels, de la luminance
  * relative Y de WCAG 2.x (sRGB linéarisé, 0,2126 R + 0,7152 G + 0,0722 B) —
  * la grandeur des contrastes du § 3.4. Chaque face doit tenir à ± 3 % de la
- * moyenne des treize, format par format, pour les deux skins.
+ * moyenne des vingt-et-unes, format par format, pour les deux skins.
  *
  * Ce qui est vérifié : le tirage papier — la face de la révélation (« la carte
  * s'y brunit jusqu'au papier », N3), de Ma carte le jour et du verdict — aux
@@ -26,7 +26,7 @@
  * Blanc de ~10 % sans rien trahir. Le tirage cuivre (Ma carte, la nuit) n'a
  * pas d'image : sa luminance tient au seul trait des symboles (rapport V1-B).
  *
- * Rastériser 52 faces prend plusieurs secondes, davantage quand toute la suite
+ * Rastériser 84 faces prend plusieurs secondes, davantage quand toute la suite
  * tourne en parallèle : le délai est porté à 30 s pour ce fichier. Le rendu
  * serveur n'exécute pas d'effets : les gravures de Shiganshina (chargées à la
  * demande dans l'app) sont attendues avant de mesurer.
@@ -84,7 +84,7 @@ describe('arbitrage n° 3 — la luminance des faces', { timeout: 30_000 }, () =
 
   for (const skin of ['thiercelieux', 'shiganshina']) {
     for (const format of ['grande', 'moyenne'] as const) {
-      it(`${skin}, ${format} : les treize faces papier à ± 3 % de leur moyenne`, () => {
+      it(`${skin}, ${format} : les vingt-et-unes faces papier à ± 3 % de leur moyenne`, () => {
         const mesures = ROLES.map((role) => [role, luminanceMoyenne(role, format, skin)] as const);
         const moyenne = mesures.reduce((s, [, y]) => s + y, 0) / mesures.length;
         const ecarts = mesures.map(([role, y]) => `${role} ${((y / moyenne - 1) * 100).toFixed(1)} %`).join(', ');

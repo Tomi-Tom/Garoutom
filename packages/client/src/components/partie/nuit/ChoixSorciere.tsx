@@ -17,7 +17,7 @@
  * retour : … » — son choix clôt l'étape sur-le-champ (`settle`).
  */
 
-import type { GameView, Prompt } from '@garoutom/engine';
+import type { GameView, Prompt, RoleId } from '@garoutom/engine';
 import { useState, type ReactNode } from 'react';
 
 import { jouer } from '../../../lib/actions.js';
@@ -30,8 +30,14 @@ import { textePrompt } from './textes.js';
 
 export function ChoixSorciere() {
   const game = useGame();
-  if (game?.you == null || game.prompt?.kind !== 'sorciere') return null;
-  return <Sorciere game={game} moi={game.you} prompt={game.prompt} />;
+  if (game === null) return null;
+  const moi = game.you;
+  // D46 : la vue tait la carte pendant la phase du Voleur — ce prompt ne
+  // vit qu'à la nuit, carte connue. Le garde sur le rôle est pour le type,
+  // et le type de la prop le porte à la sous-composante.
+  if (moi === null || moi.role === null || game.prompt?.kind !== 'sorciere') return null;
+  // Le garde a fait le tri : la carte est connue, la prop le dit au type.
+  return <Sorciere game={game} moi={{ ...moi, role: moi.role }} prompt={game.prompt} />;
 }
 
 type PromptSorciere = Extract<Prompt, { kind: 'sorciere' }>;
@@ -42,7 +48,8 @@ function Sorciere({
   prompt,
 }: {
   game: GameView;
-  moi: NonNullable<GameView['you']>;
+  /** La Sorcière, carte connue : le garde de D46 a déjà fait le tri. */
+  moi: NonNullable<GameView['you']> & { role: RoleId };
   prompt: PromptSorciere;
 }) {
   const peau = usePeau();

@@ -312,4 +312,54 @@ export const atelier = {
       lancer(hachoir, t0, duree);
       lancer(souffle, t0, duree);
     }),
+
+  /**
+   * La grogne du Montreur d'Ours, à l'aube (R108) : un grondement bas et
+   * bref. Une dent de scie qui descend au plus grave, hachée par une
+   * modulation lente (le roulement de la gorge), un souffle de bruit sourd
+   * par-dessus — le tout serré dans un passe-bas, environ 0,55 s. Le silence
+   * de la bête, lui, ne sonne pas : il se lit.
+   */
+  grogne: (): void =>
+    jouer((scene) => {
+      const { ctx, sortie, t0 } = scene;
+      const duree = 0.55;
+
+      const grave = ctx.createBiquadFilter();
+      grave.type = 'lowpass';
+      grave.frequency.setValueAtTime(420, t0);
+      grave.frequency.exponentialRampToValueAtTime(170, t0 + duree);
+      const env = enveloppe(ctx, t0, 0.5, 0.04, duree);
+      grave.connect(env).connect(sortie);
+
+      // La voix : un râle qui glisse vers le plus grave.
+      const voix = ctx.createOscillator();
+      voix.type = 'sawtooth';
+      voix.frequency.setValueAtTime(130, t0);
+      voix.frequency.exponentialRampToValueAtTime(72, t0 + duree);
+      // Le grain : le volume tremble lentement, comme la gorge qui roule.
+      const grain = ctx.createGain();
+      grain.gain.value = 0.6;
+      const hachoir = ctx.createOscillator();
+      hachoir.type = 'square';
+      hachoir.frequency.value = 27;
+      const profondeur = ctx.createGain();
+      profondeur.gain.value = 0.4;
+      hachoir.connect(profondeur).connect(grain.gain);
+      voix.connect(grain).connect(grave);
+
+      // Le souffle : du bruit sourd par-dessus, pour l'étoffe du pelage.
+      const souffle = bruit(ctx, duree);
+      const passeBas = ctx.createBiquadFilter();
+      passeBas.type = 'lowpass';
+      passeBas.frequency.value = 300;
+      const gs = ctx.createGain();
+      gs.gain.value = 0.4;
+      souffle.connect(passeBas).connect(gs).connect(grave);
+
+      liberer([voix, hachoir, souffle], [grave, env, grain, profondeur, passeBas, gs]);
+      lancer(voix, t0, duree);
+      lancer(hachoir, t0, duree);
+      lancer(souffle, t0, duree);
+    }),
 };

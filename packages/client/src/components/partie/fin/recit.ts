@@ -21,7 +21,12 @@
  * - `rancune` suit toujours la `mort` de l'Ancien qui l'a déclenchée (R92) :
  *   elle garde l'heure de cette mort — « nuit » quand le poison l'emporte à
  *   l'aube, « jour » quand le vote ou la balle du Chasseur l'abattent — et
- *   ne ferme ni ne rouvre rien.
+ *   ne ferme ni ne rouvre rien. La `transformation` de l'Enfant Sauvage
+ *   suit la même loi (R112, D33) : elle gardera l'heure de la mort du
+ *   modèle, qui la déclenche ;
+ * - `voleur`, `chienLoup` et `modele` (R110 à R112) sont toujours « nuit » :
+ *   le talon se choisit avant la révélation, la nuit venue ; le camp et le
+ *   modèle s'inscrivent à la clôture de l'étape principale.
  * - une `mort` de cause `abandon` (R101, D18) tombe à la **clôture d'une
  *   échéance**, avant ce que cette clôture inscrit : avant les entrées de la
  *   nuit (`amoureux`, `loups`…) quand l'étape principale se clôt, avant
@@ -59,6 +64,17 @@ const TYPES_DE_NUIT = new Set<LogEntry['type']>([
   'sauvetage',
   'resistance',
   'poison',
+  // Le flair se pose à l'étape principale (R107) ; la grogne monte à l'aube,
+  // après les morts, avant le jour (R108) — l'un et l'autre restent au bloc
+  // de la nuit qui les a portés. Les trois solitaires de la v3 suivent la
+  // même règle : le talon du Voleur se choisit avant la révélation, la nuit
+  // venue (R110) ; le camp du Chien-Loup (R111) et le modèle de l'Enfant
+  // Sauvage (R112) s'inscrivent à la clôture de l'étape principale.
+  'renard',
+  'ours',
+  'voleur',
+  'chienLoup',
+  'modele',
 ]);
 
 const CAUSES_DE_NUIT = new Set<string>(['loups', 'poison', 'chagrin']);
@@ -66,8 +82,10 @@ const CAUSES_DE_NUIT = new Set<string>(['loups', 'poison', 'chagrin']);
 /** Cette entrée est-elle dans le bloc de nuit ? */
 export function estDeNuit(entree: LogEntry, nuitOuverte: boolean): boolean {
   if (TYPES_DE_NUIT.has(entree.type)) return true;
-  // La rancune est l'écho d'une mort : elle en garde l'heure.
-  if (entree.type === 'rancune') return nuitOuverte;
+  // La rancune est l'écho d'une mort : elle en garde l'heure. La
+  // transformation, elle aussi : le modèle meurt quand il meurt — l'Enfant
+  // change de peau dans l'heure de cette mort, sans rien rouvrir (R112).
+  if (entree.type === 'rancune' || entree.type === 'transformation') return nuitOuverte;
   return entree.type === 'mort' && nuitOuverte && CAUSES_DE_NUIT.has(entree.cause);
 }
 

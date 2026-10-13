@@ -212,6 +212,9 @@
   --canal-village: var(--camp-village);
   --canal-meute: var(--camp-meute);
   --canal-serment: var(--camp-serment);
+  /* Le murmure de la fratrie (R114, D28) : l'encre du serment — le lien du
+     sang s'habille comme celui du cœur, seule la phrase les distingue. */
+  --canal-fratrie: var(--camp-serment);
 
   --jeton-anneau: var(--encre);
   --jeton-anneau-l: 1.5px;

@@ -109,6 +109,56 @@ export const shiganshina: Skin = {
       description:
         'Vous chassez avec les Titans, qui vous prennent pour l’un des leurs. Une nuit sur deux, vous pouvez dévorer un Titan. Vous ne gagnez que seul.',
     },
+    villageois2: {
+      // Esquisse : l’Habitant double, la carte recto-verso (R106, D31) —
+      // même le porteur croit lire un habitant ordinaire.
+      nom: 'l’Habitant double',
+      description:
+        'Aucun pouvoir, aucune vie bonus : la carte est recto-verso, et les deux faces disent la même chose — Habitant du district. Cette certitude est publique ; le porteur, lui, n’en sait rien.',
+    },
+    renard: {
+      // Esquisse : le Pisteur du Bataillon, le nez au vent.
+      nom: 'le Pisteur',
+      description:
+        'Chaque nuit, pistez le trio d’un vivant de votre choix — lui et ses deux voisins vivants, vous compris. Des Titans dans le trio : votre nez répond, et votre piste demeure. Un trio sain : votre piste s’éteint à vie, et le trio entier est appris innocent.',
+    },
+    ours: {
+      // Esquisse : l’Ours de foire, la bête qui gronde sur la place.
+      nom: 'l’Ours de foire',
+      description:
+        'Vous ne jouez jamais. Chaque matin où vous vivez, après l’annonce des morts, votre bête de foire gronde si les Titans s’assoient à vos côtés — et son silence, lui aussi, est une information.',
+    },
+    /* --- La Vague 2 de la v3 (R109 à R114) : esquisse entière, mêmes règles --- */
+    voleur: {
+      // Esquisse : l’Escamoteur, la main passe, la carte reste.
+      nom: 'l’Escamoteur',
+      description:
+        'Avant même la révélation, deux cartes restées sur la table sont à vous seul : prenez-en une et jouez-la dès la nuit qui vient — ou restez l’Escamoteur, sans aucun pouvoir. Deux Titans dans le talon : il faut en prendre une.',
+    },
+    chienLoup: {
+      // Esquisse : le Chien de garde — de quel côté de la Porte il aboie.
+      nom: 'le Chien de garde',
+      description:
+        'La première nuit, vous choisissez votre camp pour toujours. Rangé dans le district, vous n’avez aucun pouvoir ; rangé parmi les Titans, vous dévorez avec eux — et ils vous prennent pour l’un des leurs.',
+    },
+    enfantSauvage: {
+      // Esquisse : l’Enfant des ruelles, qui montre du doigt son aîné.
+      nom: 'l’Enfant des ruelles',
+      description:
+        'La première nuit, désignez votre modèle parmi les vivants, vous compris : il ne le saura jamais. Le jour où il meurt, quoi qu’il arrive, la peau bout : vous devenez un Titan.',
+    },
+    soeurs: {
+      // Esquisse : les Sœurs du lavoir, qui se reconnaissent au bord du canal.
+      nom: 'les Sœurs du lavoir',
+      description:
+        'Aucun pouvoir. À la révélation, vous vous reconnaissez : un murmure vous est ouvert, jour et nuit, tant que vous vivez — la mort seule le referme.',
+    },
+    freres: {
+      // Esquisse : les Trois de la mine, la même lampe, la même parole.
+      nom: 'les Trois de la mine',
+      description:
+        'Aucun pouvoir. À la révélation, vous vous reconnaissez : un murmure vous est ouvert, jour et nuit, tant que vous vivez — la mort seule le referme.',
+    },
   },
 
   // Esquisse : les noms des camps suivent les libellés de canaux tranchés.
@@ -126,6 +176,9 @@ export const shiganshina: Skin = {
     debut: 'Les Portes de Shiganshina se referment. Découvrez qui vous êtes.',
 
     phases: {
+      // Esquisse : le talon ne se montre qu’à son propriétaire — la phrase
+      // dit la scène, jamais la main (R110, R87).
+      voleur: 'Deux cartes restent sur la table, à l’abri des murs. Quelqu’un doit choisir.',
       // Esquisse : la carte est une mécanique, la phrase vaut pour tout
       // univers — la forme de Thiercelieux, transposée sans déguisement.
       revelation: 'Les cartes sont distribuées, face contre table. À vous de les retourner.',
@@ -183,6 +236,12 @@ export const shiganshina: Skin = {
     // Esquisse : les miroirs des annonces de la v2, mêmes variables.
     rancune: 'Le district a abattu son propre Vétéran, {nom} : tous les régiments perdent leurs pouvoirs.',
     corbeau: 'La Brigade a désigné {nom} : à l’assemblée, deux voix sont déjà comptées.',
+    // Esquisse : la grogne de la bête de foire, à l’aube (R108) — le silence
+    // dit autant, chaque matin vécu.
+    ours: {
+      grogne: 'La bête de foire de {nom} a grondu à l’aube : les Titans s’assoient à ses côtés.',
+      silence: 'La bête de foire de {nom} s’est tue à l’aube : pas de Titan à ses côtés.',
+    },
     bouc: 'Les voix se partagent, l’assemblée ne tranche pas : c’est {nom}, l’Eldien, que le district livre à la place de tous.',
     votants: {
       designes: 'Dernier mot de l’Eldien : demain, seuls voteront {noms}.',
@@ -233,14 +292,33 @@ export const shiganshina: Skin = {
     // Esquisse : les consignes de la v2, mêmes promesses que Thiercelieux.
     marquer:
       'Désignez un vivant, vous compris : à l’assemblée, la Brigade portera deux voix contre ce vivant — ou ne désignez personne. On saura qui est désigné, jamais par qui.',
+    // Esquisse : le Pisteur peut se compter dans son trio (D29), et
+    // s’abstenir (R107) — mêmes promesses que Thiercelieux.
+    flairer:
+      'Désignez un vivant, vous compris : vous pisterez son trio — lui et ses deux voisins vivants. Des Titans s’y trouvent, votre piste demeure ; un trio sain vous la retire à vie. Ou ne pistez personne.',
     trahir: 'Les Titans dorment. Dévorez l’un d’eux — ou épargnez-les cette nuit.',
     designerVotants: 'Votre dernier mot : désignez qui votera demain — au moins un vivant. Les autres se tairont à l’assemblée.',
+    // Esquisse : le talon de l’Escamoteur, mêmes promesses que Thiercelieux —
+    // l’obligation ne vaut qu’avec deux cartes des Titans (R110).
+    voler: {
+      libre:
+        'Deux cartes sont à vous seul : prenez-en une pour la jouer dès cette nuit — ou restez l’Escamoteur, sans aucun pouvoir. Celle que vous laissez sort du jeu.',
+      obligatoire:
+        'Deux cartes sont à vous seul, et ce sont deux Titans : il faut en prendre une. Celle que vous laissez sort du jeu.',
+    },
+    seRanger:
+      'La première nuit, rangez-vous pour toujours : dans le district, sans rien — ou parmi les Titans, avec leurs dents.',
+    designerModele:
+      'La première nuit, désignez votre modèle parmi les vivants, vous compris : il ne le saura jamais. À sa mort, vous deviendrez un Titan.',
   },
 
   canaux: {
     village: 'Le district',
     loups: 'Les Titans',
     amoureux: 'Le pacte',
+    // Esquisse : le murmure des Sœurs du lavoir et des Trois de la mine —
+    // un canal par fratrie, ouvert tant qu’ils vivent (R114, D28).
+    fratrie: 'La fratrie',
     morts: 'Les Chemins',
   },
 
@@ -281,6 +359,16 @@ export const shiganshina: Skin = {
       resistance: 'Un Titan a attaqué {nom} : le Vétéran a tenu bon.',
       rancune: 'En abattant {nom}, son Vétéran, le district a perdu ses pouvoirs.',
       corbeau: 'La Brigade a désigné {nom}.',
+      // Esquisse : le log ne dit que le centre du trio (R107), la conclusion
+      // suffit au récit.
+      renard: {
+        loups: 'Le Pisteur a pisté le trio autour de {nom} : les Titans y étaient.',
+        sain: 'Le Pisteur a pisté le trio autour de {nom} : un trio sain, et sa piste s’en est allée.',
+      },
+      ours: {
+        grogne: 'À l’aube, la bête de foire de {nom} a grondu : les Titans sont à ses côtés.',
+        silence: 'À l’aube, la bête de foire de {nom} s’est tue : pas de Titan à ses côtés.',
+      },
       bouc: 'L’égalité est retombée sur {nom}, l’Eldien.',
       votants: {
         designes: 'L’Eldien a désigné les votants du lendemain : {noms}.',
@@ -290,6 +378,18 @@ export const shiganshina: Skin = {
         cible: 'Le Titan Mâchoire a dévoré {nom}, un Titan.',
         personne: 'Le Titan Mâchoire a épargné les siens.',
       },
+      // Esquisse : le vol et ses compagnons, mêmes variables que Thiercelieux
+      // — le log ne dit ni le talon ni la main (R110, R111, R112).
+      voleur: {
+        prise: 'L’Escamoteur a pris la carte {role}.',
+        garde: 'L’Escamoteur a gardé sa carte : aucun pouvoir n’a été joué.',
+      },
+      chienLoup: {
+        village: 'Le Chien de garde {nom} s’est rangé dans le district.',
+        loups: 'Le Chien de garde {nom} s’est rangé parmi les Titans.',
+      },
+      modele: 'L’Enfant des ruelles {enfant} a pris {nom} pour modèle — {nom} n’en a jamais rien su.',
+      transformation: 'Le modèle de {nom} est mort : l’Enfant des ruelles est devenu un Titan.',
     },
   },
 
@@ -314,6 +414,17 @@ export const shiganshina: Skin = {
       bouc: 'C’est pour cela que vous êtes nés.', // Désastre 12
       petiteFille: 'On ne peut pas regarder.', // Désastre 26
       loupBlanc: 'Les Titans ne se mangent pas entre eux, dit-on.',
+      // Planches 14 à 16 du graveur, gravées pour la v3.
+      villageois2: 'Recto, verso : le même visage.',
+      renard: 'Le voisin sent le voisin.',
+      ours: 'Il grogne à l’aube, dit-on.',
+      // Planches 17 à 21 du graveur, gravées pour la Vague 2 — mêmes gravures
+      // qu’à Thiercelieux : la planche change d’univers, pas de sentence.
+      voleur: 'Il ne dérobe pas : il choisit.',
+      chienLoup: 'La bête choisit son maître.',
+      enfantSauvage: 'Il montre du doigt ; l’ombre regarde.',
+      soeurs: 'Elles se sont reconnues à voix basse.',
+      freres: 'Trois fois le même menton, trois fois la même parole.',
     },
     ecrans: {
       accueil: 'Ils étaient trop grands pour la place.',

@@ -16,13 +16,22 @@
  * dort, sa porte entrouverte en plus, à elle seule. Le serment des amoureux
  * n'est plus une ligne de plus chez eux seuls : c'est le libellé du pli,
  * dont la forme est celle de tous.
+ *
+ * Les deux solitaires de la première nuit jouent ici comme les autres, à
+ * l'étape principale : le Chien-Loup s'y range (R111), l'Enfant Sauvage y
+ * désigne son modèle (R112). Le Voleur, lui, choisit avant la révélation —
+ * sa phase n'est pas `nuit`, et c'est `ChoixVoleur` qui la porte, depuis
+ * l'aiguillage de `Partie`.
  */
 
 import { useGame } from '../../lib/partie.js';
+import { ChoixChienLoup } from './nuit/ChoixChienLoup.js';
 import { ChoixCorbeau } from './nuit/ChoixCorbeau.js';
 import { ChoixCupidon } from './nuit/ChoixCupidon.js';
 import { ChoixLoupBlanc } from './nuit/ChoixLoupBlanc.js';
 import { ChoixMeute } from './nuit/ChoixMeute.js';
+import { ChoixModele } from './nuit/ChoixModele.js';
+import { ChoixRenard } from './nuit/ChoixRenard.js';
 import { ChoixSalvateur } from './nuit/ChoixSalvateur.js';
 import { ChoixSorciere } from './nuit/ChoixSorciere.js';
 import { ChoixVoyante } from './nuit/ChoixVoyante.js';
@@ -50,7 +59,13 @@ export function Nuit() {
       return <ChoixSorciere />;
     case 'marquer':
       return <ChoixCorbeau />;
+    case 'flairer':
+      return <ChoixRenard />;
     case 'trahir':
       return <ChoixLoupBlanc />;
+    case 'seRanger':
+      return <ChoixChienLoup />;
+    case 'designerModele':
+      return <ChoixModele />;
   }
 }

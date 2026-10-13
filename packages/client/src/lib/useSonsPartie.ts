@@ -33,6 +33,9 @@ const DELAI_CLAQUE_MS = 400;
 /** Ce qu'occupe le croassement du Corbeau avant le son suivant. */
 const DELAI_CROASSEMENT_MS = 600;
 
+/** Ce qu'occupe la grogne de l'ourson avant le son suivant. */
+const DELAI_GROGNE_MS = 800;
+
 /** Ce qu'occupe la cloche claire du matin avant le son suivant. */
 const DELAI_CLOCHE_MS = 900;
 
@@ -44,7 +47,9 @@ const MOTIF_VIBRATION = [40, 60, 40];
 
 /** Ce que la fin de partie sonne pour CE siège. */
 export function verdictPour(game: GameView | null, winner: Winner): Verdict {
-  if (!game?.you || winner === 'personne') return 'neutre';
+  // D46 : la vue tait le rôle pendant la phase du Voleur. Un verdict ne
+  // sonne qu'à la fin, carte connue — le garde est pour le type.
+  if (!game?.you || game.you.role === null || winner === 'personne') return 'neutre';
   if (winner === 'amoureux') {
     const moi = game.players.find((player) => player.seat === game.you?.seat);
     return moi?.isLover === true || game.lover !== null ? 'gagne' : 'perdu';
@@ -173,6 +178,11 @@ export function useSonsPartie(): void {
           break;
         case 'corbeau':
           aLaSuite(atelier.croassement, DELAI_CROASSEMENT_MS);
+          break;
+        case 'ours':
+          // La bête gronde (R108) ; son silence, lui, ne sonne pas — il se
+          // lit dans le crieur.
+          if (event.grogne) aLaSuite(atelier.grogne, DELAI_GROGNE_MS);
           break;
         case 'aube-paisible':
           sonnerAube();

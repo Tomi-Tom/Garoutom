@@ -305,8 +305,11 @@ export function Revelation() {
   const moi = game.you;
   const legende = voix.legendeEcran('revelation');
 
-  // Spectateur, ou siège sans consigne : la table attend, sans rien compter.
-  if (moi === null || !moi.alive || game.prompt?.kind !== 'pret') {
+  // Spectateur, siège mort, siège sans consigne — ou carte encore tue : D46
+  // fait taire le rôle pendant la phase du Voleur, et la consigne « pret » ne
+  // vit qu'à la révélation, où la carte est connue. Le garde sur le rôle est
+  // pour le type, jamais pour l'écran.
+  if (moi === null || !moi.alive || moi.role === null || game.prompt?.kind !== 'pret') {
     return (
       <section data-testid="revelation" data-vue="spectateur" className="contents">
         <Gabarit

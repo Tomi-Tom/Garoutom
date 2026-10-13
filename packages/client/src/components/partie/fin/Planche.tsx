@@ -109,6 +109,43 @@ export function useLignes(game: GameView): (entree: LogEntry) => Ligne {
               ? lignes.loupBlanc.personne
               : resoudre(lignes.loupBlanc.cible, { nom: noms(entree.target) }),
         };
+      case 'renard':
+        // Le log ne dit que le centre du trio (R107) : la conclusion suffit.
+        return {
+          texte: entree.loups
+            ? resoudre(lignes.renard.loups, { nom: noms(entree.centre) })
+            : resoudre(lignes.renard.sain, { nom: noms(entree.centre) }),
+        };
+      case 'ours':
+        return {
+          texte: entree.grogne
+            ? resoudre(lignes.ours.grogne, { nom: noms(entree.seat) })
+            : resoudre(lignes.ours.silence, { nom: noms(entree.seat) }),
+        };
+      case 'voleur':
+        // L'abstention se lit à la formule du moteur — la carte gardée
+        // s'inscrit « voleur » (R110) : le récit ne nomme jamais la main qui
+        // a pris, le log ne la connaît pas.
+        return entree.carte === 'voleur'
+          ? { texte: lignes.voleur.garde }
+          : {
+              texte: resoudre(lignes.voleur.prise, { role: voix.nomRole(entree.carte) }),
+              meute: accent(entree.carte),
+            };
+      case 'chienLoup':
+        return {
+          texte: resoudre(entree.camp === 'village' ? lignes.chienLoup.village : lignes.chienLoup.loups, {
+            nom: noms(entree.seat),
+          }),
+        };
+      case 'modele':
+        return {
+          texte: resoudre(lignes.modele, { enfant: noms(entree.seat), nom: noms(entree.target) }),
+        };
+      case 'transformation':
+        // Le siège est celui de l'Enfant : son pseudo dit de qui le modèle
+        // est mort (R112, D33).
+        return { texte: resoudre(lignes.transformation, { nom: noms(entree.seat) }) };
     }
   };
 }

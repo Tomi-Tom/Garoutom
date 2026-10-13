@@ -48,7 +48,7 @@ import { CarteRole } from '../habit/CarteRole.js';
 import { Glyphe } from '../habit/glyphes.js';
 import { Icone } from '../habit/Icone.js';
 import { useEstLarge } from '../useEstLarge.js';
-import { pouvoirsEteints, PouvoirsEteints } from './nuit/commun.js';
+import { Pastille, pouvoirsEteints, PouvoirsEteints } from './nuit/commun.js';
 import { poserLePouce, useSousLePouce } from './place/savoir.js';
 
 /* ------------------------------------------------------------------ */
@@ -238,8 +238,11 @@ function liesDe(game: GameView): Set<number> {
 /**
  * Ce que la carte de ce siège sait de chaque autre siège, en signes posés sur
  * les jetons : le cartouche du rôle (carnet de la Voyante, complices de la
- * meute — le Loup Blanc y paraît « loup », comme la vue le donne, R96) et les
- * lacs du serment. Rien d'autre : la place dit déjà ce qui est public.
+ * meute — le Loup Blanc y paraît « loup », comme la vue le donne, R96), les
+ * lacs du serment, la pastille du sang — « ta sœur », « ton frère » (R113) —,
+ * et le carnet du Renard — une pastille par siège d'un trio appris, qui dit
+ * le trio, jamais un rôle ni une teinte (R107). Rien d'autre : la place dit
+ * déjà ce qui est public.
  */
 export function annotationsDeMaCarte(game: GameView, voix: Voix): Record<number, ReactNode> {
   const roles = new Map<number, RoleId>();
@@ -252,12 +255,28 @@ export function annotationsDeMaCarte(game: GameView, voix: Voix): Record<number,
     }
   }
   const lies = liesDe(game);
+  // Le carnet du Renard : le dernier trio qui compte un siège fait foi. Le
+  // signe dit ce que le trio a rendu — la meute y était, ou il était sain —
+  // sans jamais prétendre au rôle d'un siège.
+  const flaires = new Map<number, boolean>();
+  for (const page of game.renardSavoirs) for (const seat of page.seats) flaires.set(seat, page.loups);
+  // La fratrie (R113) : une connaissance qui naît à la révélation — jamais
+  // avant, la phase du Voleur ne la laisse pas paraître. Elle se dit en mots
+  // de famille, jamais en nom de rôle : « ta sœur », « ton frère ».
+  const moi = game.you?.seat ?? null;
+  const fratrieConnue =
+    moi !== null && game.phase !== 'voleur' && game.fratrie.includes(moi)
+      ? new Set(game.fratrie.filter((seat) => seat !== moi))
+      : new Set<number>();
+  const motDeFratrie = game.you?.role === 'freres' ? 'ton frère' : 'ta sœur';
 
   const annotations: Record<number, ReactNode> = {};
   for (const joueur of game.players) {
     const role = roles.get(joueur.seat);
     const lie = lies.has(joueur.seat);
-    if (role === undefined && !lie) continue;
+    const flaire = flaires.get(joueur.seat);
+    const deFratrie = fratrieConnue.has(joueur.seat);
+    if (role === undefined && !lie && flaire === undefined && !deFratrie) continue;
     annotations[joueur.seat] = (
       <span data-sous-le-pouce="" className="inline-flex items-center gap-1">
         {lie && (
@@ -270,6 +289,22 @@ export function annotationsDeMaCarte(game: GameView, voix: Voix): Record<number,
           <Cartouche forme={formeDuRole(role)} taille={20}>
             {voix.nomRole(role)}
           </Cartouche>
+        )}
+        {deFratrie && (
+          <Pastille ton="serment">
+            {motDeFratrie}
+            <span className="sr-only"> — de votre fratrie</span>
+          </Pastille>
+        )}
+        {flaire !== undefined && (
+          <Pastille>
+            {flaire ? 'la meute dans le trio' : 'trio sain'}
+            <span className="sr-only">
+              {flaire
+                ? ' — la meute était dans un trio flairé avec ce joueur'
+                : ' — un trio flairé avec ce joueur, sans la meute'}
+            </span>
+          </Pastille>
         )}
       </span>
     );
@@ -322,36 +357,78 @@ export function useAnnotationsAvecMaCarte(
 /* La carte sous le pouce                                              */
 /* ------------------------------------------------------------------ */
 
-/** Le nom de l'âme sœur, des complices : ce que la carte rappelle en mots. */
+/**
+ * Avant la révélation, la carte ne se retourne pour personne — pas même pour
+ * son porteur (R87) : la phase du Voleur précède l'heure où chacun se
+ * connaît, et « Ma carte » ne doit pas la devancer.
+ */
+const PAS_ENCORE_REVELEE = 'La révélation n’a pas encore eu lieu : votre carte reste face cachée.';
+
+/** Le nom de l'âme sœur, des complices, de la fratrie : ce que la carte rappelle en mots. */
 function useSavoir(game: GameView | null) {
   const voix = useVoix();
   const nom = useNoms();
   const peau = peauDuSkin(useSkinId());
   if (game === null || game.you === null) return null;
   const moi = game.you;
+  // La phase du Voleur vient avant la révélation : aucun savoir ne se dit.
+  // D46 la rend muette dans la vue elle-même — le garde sur le rôle est
+  // pour le type : partout ailleurs, la carte est connue.
+  if (game.phase === 'voleur' || moi.role === null) return null;
   const complices = game.pack?.seats.filter((seat) => seat !== moi.seat) ?? [];
   const carnet = game.inspections.map((page) => ({
     cle: `${String(page.day)}-${String(page.target)}`,
     texte: `${resoudre(peau.recit.nuit, { n: String(page.day) })} — ${nom(page.target)} : ${voix.nomRole(page.role)}`,
   }));
+  // Le carnet du Renard, trio après trio (R107) : la nuit, les sièges, et ce
+  // que le nez en a dit — jamais un rôle.
+  const trios = game.renardSavoirs.map((page) => ({
+    cle: `trio-${String(page.day)}`,
+    texte: `${resoudre(peau.recit.nuit, { n: String(page.day) })} — ${page.seats
+      .map((seat) => nom(seat))
+      .join(', ')} : ${page.loups ? 'la meute dans le trio' : 'trio sain'}`,
+  }));
+  // La fratrie (R113) : les siens, sans soi — la connaissance ne meurt pas,
+  // un mort la garde quand le canal, lui, s'est refermé (R114).
+  const fratrie =
+    game.fratrie.length === 0 || !game.fratrie.includes(moi.seat)
+      ? []
+      : game.fratrie.filter((seat) => seat !== moi.seat).map(nom);
   return {
-    moi,
+    // D46 : le rôle est su partout hors la phase du Voleur — le voici
+    // rendu non nul pour tout ce que la carte en dira ensuite.
+    moi: { ...moi, role: moi.role },
     ame: game.lover === null ? null : nom(game.lover),
     complices: complices.map(nom),
     roleComplice: voix.nomRole('loup'),
     carnet,
+    trios,
+    fratrie,
   };
 }
 
 function Infos({ game }: { game: GameView }) {
   const savoir = useSavoir(game);
-  if (savoir === null) return null;
-  const { moi, ame, complices, roleComplice } = savoir;
+  // Avant la révélation, le dos seul se montre — et une phrase le dit, pour
+  // que le silence de la carte ne paraisse pas un oubli.
+  if (savoir === null) {
+    return game.phase === 'voleur' ? (
+      <p className="t-statut m-0 text-[14px]">{PAS_ENCORE_REVELEE}</p>
+    ) : null;
+  }
+  const { moi, ame, complices, roleComplice, fratrie } = savoir;
   const lignes: ReactNode[] = [];
   if (ame !== null) {
     lignes.push(
       <Cartouche key="ame" forme="lacs">
         Votre âme sœur : {ame}
+      </Cartouche>,
+    );
+  }
+  if (fratrie.length > 0) {
+    lignes.push(
+      <Cartouche key="fratrie" forme="lacs">
+        Votre fratrie : {fratrie.join(' · ')}
       </Cartouche>,
     );
   }
@@ -388,14 +465,16 @@ function Infos({ game }: { game: GameView }) {
 function useAnnonce(game: GameView | null): string {
   const voix = useVoix();
   const savoir = useSavoir(game);
-  if (savoir === null) return '';
-  const { moi, ame, complices, carnet } = savoir;
+  if (savoir === null) return game !== null && game.phase === 'voleur' ? PAS_ENCORE_REVELEE : '';
+  const { moi, ame, complices, carnet, trios, fratrie } = savoir;
   const morceaux = [`Votre carte : ${voix.nomRole(moi.role)}.`, `« ${voix.legendeRole(moi.role)} »`];
   if (ame !== null) morceaux.push(`Votre âme sœur : ${ame}.`);
+  if (fratrie.length > 0) morceaux.push(`Votre fratrie : ${fratrie.join(', ')}.`);
   if (complices.length > 0) {
     morceaux.push(`${moi.role === 'loupBlanc' ? 'Vous chassez aux côtés de' : 'Vos complices'} : ${complices.join(', ')}.`);
   }
   if (carnet.length > 0) morceaux.push(`Votre carnet : ${carnet.map((page) => page.texte).join(' ; ')}.`);
+  if (trios.length > 0) morceaux.push(`Votre carnet : ${trios.map((page) => page.texte).join(' ; ')}.`);
   if (!moi.alive) morceaux.push('Vous êtes tombé·e — la carte reste à vous.');
   return morceaux.filter((m) => m !== '« »').join(' ');
 }
@@ -435,7 +514,16 @@ function CarteSousLePouce({
       }
     >
       <div className="relative w-full" style={{ aspectRatio: `${String(W)} / ${String(DIMENSIONS[format].H)}` }}>
-        <CarteRole role={moi.role} retournee taille={format} tirage={tirage} avecDescription={false} morte={!moi.alive} />
+        {/* Avant la révélation, le dos seul : la vue porte déjà le rôle, mais
+            l'heure de le lire n'est pas venue (R87). */}
+        <CarteRole
+          role={game.phase === 'voleur' ? null : moi.role}
+          retournee
+          taille={format}
+          tirage={tirage}
+          avecDescription={false}
+          morte={!moi.alive}
+        />
         <Perimetre etat="ouverte" format={format} tirage={tirage} />
       </div>
       <Infos game={game} />

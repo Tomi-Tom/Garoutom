@@ -1,8 +1,9 @@
 /**
  * Le tirage de l'écran : papier ou cuivre (SPEC Caprices § 3.2).
  *
- * Choisi par **l'heure publique**, jamais par le rôle : la révélation et la
- * nuit sont sur cuivre pour tout le monde ; le reste (élection, jour,
+ * Choisi par **l'heure publique**, jamais par le rôle : le talon du Voleur
+ * (avant la révélation), la révélation et la nuit sont sur cuivre pour tout
+ * le monde ; le reste (élection, jour,
  * chasseur, succession, bouc, fin, salon, accueil) est sur papier — sauf si
  * le réglage local « Cuivre » garde tout l'écran sur le tirage de nuit. Ce
  * réglage ne touche jamais la nuit : il ne peut donc rien trahir.
@@ -27,7 +28,7 @@ export type { Tirage };
 export type Heure = 'jour' | 'nuit';
 
 /** Les phases sur cuivre pour tout le monde. */
-const PHASES_CUIVRE: ReadonlySet<PhaseKind> = new Set<PhaseKind>(['revelation', 'nuit']);
+const PHASES_CUIVRE: ReadonlySet<PhaseKind> = new Set<PhaseKind>(['voleur', 'revelation', 'nuit']);
 
 /** L'heure publique d'une phase ; hors partie (accueil, salon), le jour. */
 export function heureDe(phase: PhaseKind | null): Heure {
