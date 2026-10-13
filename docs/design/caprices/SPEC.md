@@ -23,8 +23,9 @@
 
 Sommaire : 1. Critique de la planche · 2. Le parti pris · 3. Tokens · 4. Matières ·
 5. Composants · 6. Iconographie et légendes · 7. Écrans et lots · 8. Skin
-Shiganshina · 9. Art final · 10. Ce que l'implémentation change · Annexe :
-la liste anti-« IA ».
+Shiganshina · 9. Skin Gilets Jaunes · 10. Skin Far West · 11. Skin Pirates ·
+12. Skin Open Space · 13. Art final · 14. Ce que l'implémentation change ·
+Annexe : la liste anti-« IA ».
 
 ---
 
@@ -92,7 +93,7 @@ la liste anti-« IA ».
 14. **Les épreuves générées (Pl. VIII) ne sont pas des gravures.** Visage
     symétrique éclairé par en dessous, halo de bougie diffus, sfumato : ce sont
     les tics d'une image générée, pas une aquatinte par paliers. Elles prouvent
-    l'ambiance, elles ne doivent **jamais** servir de référence de trait (§ 10).
+    l'ambiance, elles ne doivent **jamais** servir de référence de trait (§ 13).
 15. **La sanguine illisible la nuit n'est pas résolue.** 2,80:1 sur bistre ; la
     planche la renvoie « toujours sur cartouche bruni » — or un cartouche clair
     la nuit est une tache claire, donc une fuite. Solution : une seconde valeur,
@@ -335,7 +336,7 @@ ci-dessus, pour chaque skin.
   carte s'y brunit jusqu'au papier, et cette clarté ne désigne aucun rôle.
 - **N4 — Budget de luminance.** Capture d'écran de deux sièges à l'instant t
   (un dormeur, un acteur) : leur luminance moyenne ne diffère pas de plus de
-  **3 %** (test Playwright, § 11). La minuterie, le pli, la barre et la consigne
+  **3 %** (test Playwright, § 14). La minuterie, le pli, la barre et la consigne
   sont dans le budget.
 - **N5 — Pas de geste visible.** Aucun rôle n'a, la nuit, un geste que les
   autres n'ont pas : le dormeur a lui aussi une barre au pouce (« Ma carte »,
@@ -1277,7 +1278,7 @@ associée (96 × 96, lot C) :
 | 18 | défaut, jour | « Ils ont parlé longtemps. » | la place vide |
 | — | dernière planche | « Il est l'heure. » | sablier vide |
 
-Ces textes entrent dans le skin (nouveau champ `legendes`, § 11) ; un skin
+Ces textes entrent dans le skin (nouveau champ `legendes`, § 14) ; un skin
 qui en manque est refusé par le registre, comme pour les autres textes.
 
 ---
@@ -1619,7 +1620,186 @@ modèle du Caprice C-Shiganshina.
 
 ---
 
-## 10. L'art final — stratégie de production
+## 10. Le skin Far West dans cette grammaire
+
+Le quatrième habit ne change que les **valeurs sémantiques**, les **motifs**
+et les **mots** ; la grammaire est la même pièce.
+
+**Référence** : l'affiche « Wanted » épinglée au mur du saloon et le registre
+du comptoir. Des constats, pas de folklore. La règle-signature : **l'or de
+l'étoile ne se dessine qu'en hachure** — jamais en aplat, jamais en texte.
+L'or est un reflet de shérif, pas une couleur de surface.
+
+| Ce qui change | Valeur |
+|---|---|
+| encre (bistre-900) | `#131A2E` indigo de grande plaine — verge dessus **12,50:1** |
+| papier (vergé) | `#E9DAB7` papier sable des affiches du territoire |
+| bruni | `#F2E8CD` — encre dessus **14,17:1** |
+| cuivre en relief (bistre-800) | `#1B263F` — verge dessus **10,92:1** |
+| meute → **les hors-la-loi** | même sanguine : c'est le bandana. `#98371F` sur sable **5,26:1** · interdit la nuit (**2,38:1** sur l'indigo, loi N2) : la craie `#E08A70` le remplace — le même rouge, passé à la lampe du saloon (**6,60:1** sur encre, **5,77:1** sur relief) |
+| serment → **les tourtereaux** | même garance : `#7E3F4C` sur sable 5,65:1 · `#E5A8AF` sur encre **8,68:1** |
+| narrateur | délavé `#67553B` sur sable **5,20:1** ; palier-1 `#9AA6CE` sur encre **7,16:1** |
+| or de l'étoile | `#E3B341`, **en hachure seule** (`hach-or`), jamais en aplat ni en texte |
+| la frise | **la rue du bourg** : le saloon, le puits, la potence ; la nuit, les coyotes dans la prairie, une lanterne au loin |
+| dos de carte | l'affiche clouée au mur du saloon, au trait vergé sur aquatinte IV |
+| couvre-chefs | les 18 coiffes du territoire : chapeau de cow-boy, sombrero de voyageur, casque de mineur, bandana de voleur de bétail, bonnet de fourrure du trappeur, képi de shérif… (même règle d'ombre chinoise) |
+| loups des planches | la bande en bandana rouge, jamais un visage ; morsure § 4.6 pour la meute |
+| mots des cartouches | « Le saloon », « Hors-la-loi », « Les tourtereaux », « Le cimetière » ; le cartouche du Loup Blanc reste « Seul » — le mot est codé en dur, il vaut pour le Chasseur de primes |
+
+**Légendes** — le registre du comptoir ; l'intégralité vit dans
+`skins/farwest.ts`. Pour donner le ton :
+
+| Rôle | Légende |
+|---|---|
+| Pionnier | « Le convoi passait. Personne n'a dormi. » |
+| Hors-la-loi | « Le bandana ne pardonne pas. » |
+| la Cartomancienne | « Elle lit les cartes, jamais les visages. » |
+| le Juge de paix | « Il retarde la corde, une nuit à la fois. » |
+| l'Étranger | « Un étranger pend mieux qu'un voisin. » |
+| la Guetteuse | « Compter les fusils, c'est déjà tirer. » |
+| le Chasseur de primes | « La bande ne trie pas ses balles, dit-on. » |
+| le Marshal | « Deux camps, une seule étoile. » |
+| le Filou | « Il ne vole pas : il emprunte sans rendre. » |
+| les Trois Frères | « Trois fois le même menton, trois fois la même parole. » |
+| accueil / fin | « Une ville vaut une corde. » / « La poussière attendra la prochaine caravane. » |
+
+**Ce qui ne change jamais**, d'un skin à l'autre : la grammaire du trait
+(§ 2.3) ; les formes des cartouches ; les 17 états du jeton et leurs
+emplacements ; le gabarit unique et les lois N1-N6 ; l'échelle typographique,
+la grille, les rayons à 0, l'absence d'ombre ; la mécanique du mouvement
+(crans, brunissage, morsure) ; les contrastes AA des paires du § 3.4 ; « une
+seule couleur pour le camp qui chasse » ; les textes du crieur ne disent que
+ce que l'évènement dit.
+
+L'habit `[data-skin='farwest']` de `styles.css` porte ces valeurs, paires
+verrouillées au centième dans `contraste.test.ts`. Le pattern de l'or
+(`hach-or`) se posera avec le chantier des gravures du skin — 21 symboles,
+dos « l'affiche au saloon », les 18 coiffes, deux-tons de la nuit —, sur le
+modèle du Caprice C-Shiganshina.
+
+---
+
+## 11. Le skin Pirates dans cette grammaire
+
+Le cinquième habit ne change que les **valeurs sémantiques**, les **motifs**
+et les **mots** ; la grammaire est la même pièce.
+
+**Référence** : la carte marine annotée à la sortie du quart et le journal
+de bord du carré. Des constats de mer, pas de flibuste de convention. La
+règle-signature : **l'or des doublons ne brille qu'en hachure** — jamais en
+aplat, jamais en texte. L'or est un reflet de miroir, pas une couleur de
+surface.
+
+| Ce qui change | Valeur |
+|---|---|
+| encre (bistre-900) | `#10171A` vert-de-gris de coque — verge dessus **12,72:1** |
+| papier (vergé) | `#E2D8BA` carte marine mouillée et séchée, sel compris |
+| bruni | `#EFE7CE` — encre dessus **14,65:1** |
+| cuivre en relief (bistre-800) | `#1A2E30` — verge dessus **10,04:1** |
+| meute → **les mutins** | même sanguine, c'est le bandeau. `#962E20` sur carte **5,48:1** · interdit la nuit (**2,32:1** sur la coque, loi N2) : la craie `#DE7B60` le remplace — le même rouge, passé à la lampe de bord (**6,11:1** sur encre, **4,82:1** sur relief) |
+| serment → **les tourtereaux** | même garance : `#8F3440` sur carte 5,43:1 · `#EFA9A0` sur encre **9,34:1** |
+| narrateur | délavé `#57503C` sur carte **5,68:1** ; palier-1 `#93B5B0` sur encre **8,15:1** |
+| or des doublons | `#C9971F`, **en hachure seule** (`hach-or`), jamais en aplat ni en texte |
+| la frise | **le pont du trois-mâts** : grand mât, bastingage, boute à la mer ; la nuit, la lanterne de poupe et le grincement de la coque |
+| dos de carte | la carte marine étalée sur la table du carré, au trait vergé sur aquatinte IV |
+| couvre-chefs | les 18 coiffes du bord : tricorne de capitaine, bandana rouge, calotte de gabier, suroit de quart, capuche de ciré, bombe d'artilleur… (même règle d'ombre chinoise) |
+| loups des planches | la mutinerie en bandeau rouge, jamais un visage ; morsure § 4.6 pour la meute |
+| mots des cartouches | « Le pont », « Mutin », « Les tourtereaux », « La chaloupe » ; le cartouche du Loup Blanc reste « Seul » — le mot est codé en dur, il vaut pour le Flibustier |
+
+**Légendes** — le journal de bord ; l'intégralité vit dans
+`skins/pirates.ts`. Pour donner le ton :
+
+| Rôle | Légende |
+|---|---|
+| Matelot | « Deux mains calleuses, aucun ordre à donner. » |
+| Mutin | « Le couteau dort sous la couchette. » |
+| la Vigie | « Elle voit tout, du haut du grand mât. » |
+| le Barbier | « Un rasoir, et deux anneaux. » |
+| le Charpentier | « Il calfate la brèche, pas la tempête. » |
+| le Nouveau | « Embarqué la veille, sacrifié le lendemain. » |
+| la Clandestine | « Depuis le grand mât, elle compte les couteaux. » |
+| le Flibustier | « La cale ne contrôle pas la cale, dit-on. » |
+| le Renégat | « Deux pavillons, une seule part. » |
+| les Trois Frères | « Trois fois la même houle, trois fois la même parole. » |
+| accueil / fin | « La liberté tient sur un pont. » / « Le navire attendra un autre équipage. » |
+
+**Ce qui ne change jamais**, d'un skin à l'autre : la grammaire du trait
+(§ 2.3) ; les formes des cartouches ; les 17 états du jeton et leurs
+emplacements ; le gabarit unique et les lois N1-N6 ; l'échelle typographique,
+la grille, les rayons à 0, l'absence d'ombre ; la mécanique du mouvement
+(crans, brunissage, morsure) ; les contrastes AA des paires du § 3.4 ; « une
+seule couleur pour le camp qui chasse » ; les textes du crieur ne disent que
+ce que l'évènement dit.
+
+L'habit `[data-skin='pirates']` de `styles.css` porte ces valeurs, paires
+verrouillées au centième dans `contraste.test.ts`. Le pattern de l'or
+(`hach-or`) se posera avec le chantier des gravures du skin — 21 symboles,
+dos « la carte du carré », les 18 coiffes, deux-tons de la nuit —, sur le
+modèle du Caprice C-Shiganshina.
+
+---
+
+## 12. Le skin Open Space dans cette grammaire
+
+Le sixième habit ne change que les **valeurs sémantiques**, les **motifs**
+et les **mots** ; la grammaire est la même pièce.
+
+**Référence** : l'annonce d'intention punaisée au milieu du plateau et le
+compte-rendu de réunion. Des faits d'entreprise, sans miligramme de morale.
+La règle-signature : **le rose du post-it ne se colle qu'en hachure** —
+jamais en aplat, jamais en texte. Le rose est une matière qui se détache,
+pas une couleur de surface.
+
+| Ce qui change | Valeur |
+|---|---|
+| encre (bistre-900) | `#0D1420` veille bleutée des écrans — verge dessus **15,69:1** |
+| papier (vergé) | `#ECEDEA` papier d'imprimante des plateaux |
+| bruni | `#F7F8F5` — encre dessus **17,30:1** |
+| cuivre en relief (bistre-800) | `#162234` — verge dessus **13,66:1** |
+| meute → **les managers** | même sanguine, c'est le badge. `#2D4E8A` sur papier **7,01:1** · interdit la nuit (**2,24:1** sur la veille d'écran, loi N2) : la craie `#8FB6E8` le remplace — le même bleu, passé à la lumière des écrans (**8,78:1** sur encre, **7,64:1** sur relief) |
+| serment → **les tourtereaux** | même garance : `#A23768` sur papier 5,47:1 · `#F49CC8` sur encre **9,14:1** |
+| narrateur | délavé `#565B55` sur papier **5,96:1** ; palier-1 `#8FA3C0` sur encre **7,14:1** |
+| rose du post-it | `#F0438E`, **en hachure seule** (`hach-rose`), jamais en aplat ni en texte |
+| la frise | **la cloison de l'open space** : plante verte, casier, écran éteint ; la nuit, les veilleuses des moniteurs |
+| dos de carte | la porte vitrée des RH, pupitre et lecteur de badge, au trait vergé sur aquatinte IV |
+| couvre-chefs | les 18 coiffes du plateau : casque à isolation active, casquette de la bonne ambiance, capuche de développeur, bob du séminaire d'été, canotier du déguisement de décembre, casque du standard qui n'existe plus… (même règle d'ombre chinoise) |
+| loups des planches | la direction en badge bleu, jamais un visage ; morsure § 4.6 pour la meute |
+| mots des cartouches | « La cafétéria », « Manager », « Les tourtereaux », « La machine à café » ; le cartouche du Loup Blanc reste « Seul » — le mot est codé en dur, il vaut pour le Consultant |
+
+**Légendes** — le compte-rendu du lundi ; l'intégralité vit dans
+`skins/openspace.ts`. Pour donner le ton :
+
+| Rôle | Légende |
+|---|---|
+| Salarié | « Son compte LinkedIn est à jour. » |
+| Manager | « Le sourire ne discute pas. » |
+| la Contrôleuse de gestion | « Elle inspecte les lignes, pas les personnes. » |
+| l'Animateur du séminaire | « La team, c'est pour la vie, comme il dit. » |
+| le Syndicaliste | « Il gagne une nuit à la fois. » |
+| l'Alternant | « Le stage est formateur, dit la convention. » |
+| la Stagiaire | « Chaque réunion a sa photo. » |
+| le Consultant | « La mission ne se discute pas. » |
+| l'Intérimaire | « Deux camps, une seule mission. » |
+| les Trois Frères | « Trois fois le même badge, trois fois la même idée. » |
+| accueil / fin | « La démocratie tient sur un plateau. » / « La prochaine levée de fonds attendra. » |
+
+**Ce qui ne change jamais**, d'un skin à l'autre : la grammaire du trait
+(§ 2.3) ; les formes des cartouches ; les 17 états du jeton et leurs
+emplacements ; le gabarit unique et les lois N1-N6 ; l'échelle typographique,
+la grille, les rayons à 0, l'absence d'ombre ; la mécanique du mouvement
+(crans, brunissage, morsure) ; les contrastes AA des paires du § 3.4 ; « une
+seule couleur pour le camp qui chasse » ; les textes du crieur ne disent que
+ce que l'évènement dit.
+
+L'habit `[data-skin='openspace']` de `styles.css` porte ces valeurs, paires
+verrouillées au centième dans `contraste.test.ts`. Le pattern du rose
+(`hach-rose`) se posera avec le chantier des gravures du skin — 21 symboles,
+dos « la porte des RH », les 18 coiffes, deux-tons de la nuit —, sur le
+modèle du Caprice C-Shiganshina.
+
+---
+
+## 13. L'art final — stratégie de production
 
 **Ce qui se dessine à la main en SVG, maintenant (lots F et C)** : les 13
 symboles et leurs versions 16 px, les 18 couvre-chefs (et les 18 coiffes de
@@ -1672,7 +1852,7 @@ Pl. VIII **ne sont pas livrées**.
 
 ---
 
-## 11. Ce que l'implémentation change (hors design)
+## 14. Ce que l'implémentation change (hors design)
 
 1. `data-tirage` (`Partie.tsx`, à côté de `data-heure`) et le réglage `tirage`
    (`lib/reglages.ts`, `Reglages.tsx`).

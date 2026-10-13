@@ -94,7 +94,7 @@ function spriteDefs() {
 
 export function build() {
   const body = [
-    entete({ num: 'F·VII', titre: 'Les icônes', legende: 'Chaque icône est redessinée au burin.', refs: 'SPEC § 6.2-6.3 · § 10' }),
+    entete({ num: 'F·VII', titre: 'Les icônes', legende: 'Chaque icône est redessinée au burin.', refs: 'SPEC § 6.2-6.3 · § 13' }),
     section({ x: 40, y: 140, w: 1520, h: 290, lettre: 'A', titre: 'Trente-trois icônes d’interface', note: 'grille 24, zone vive 20 (pointillé), trait 1,5 currentColor, extrémités rondes · au plus une zone de hachure (3 traits de 0,75) · aplat ≤ 30 % · à gauche × 2,5 avec construction, puis à 24 et dans la cible de 44', contenu: icones() }),
     section({ x: 40, y: 440, w: 1520, h: 100, lettre: 'B', titre: 'Glyphes d’état, 16 px', note: 'trait 1,25 · posés sur le jeton aux emplacements fixes (F·IV)', contenu: glyphes() }),
     section({ x: 40, y: 550, w: 1520, h: 124, lettre: 'C', titre: 'Les treize symboles de rôle', note: 'grille 32, zone 28 · village : trait 2, contours fermés, hachure seulement dans les formes ≥ 10 px · meute : masse, morsure dessinée, une seule réserve · puis 32 et 16 simplifié (sans hachure) · à aligner avec le lot C', contenu: symboles() }),

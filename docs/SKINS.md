@@ -6,8 +6,8 @@ des étapes de nuit, des pouvoirs ; l'univers est un habit que le client change
 sans toucher à une règle. Ce document est le contrat entre les deux : ce qu'un
 skin est, ce qu'il fournit, ce qu'il n'a pas le droit d'approcher — puis le skin
 de référence, `thiercelieux`, écrit en entier, comme la table que le client
-implémentera, puis les esquisses des deux habits qui l'ont suivi :
-`shiganshina`, puis `giletsjaunes`.
+implémentera, puis les esquisses des cinq habits qui l'ont suivi :
+`shiganshina`, `giletsjaunes`, `farwest`, `pirates`, puis `openspace`.
 
 `types.ts` le promet en tête : « les noms, les textes, l'ambiance appartiennent
 au skin, côté client (voir `docs/SKINS.md`) ». Voici la page. Le client n'existe
@@ -709,7 +709,371 @@ Ce que Gilets Jaunes **ne change pas**, c'est tout le reste :
 Le moteur, lui, ne sait toujours pas que cet univers existe : il transporte
 la chaîne `giletsjaunes`, et c'est tout.
 
-## 5. Les règles d'or
+## 5. Far West — le quatrième habit
+
+**Esquisse.** Comme ses aînés, cette peau est marquée « Esquisse » là où la
+plume n'a pas été relue par un habitant du bourg : chaque complément tient
+la place, il ne prétend pas à la phrase définitive.
+
+À Thiercelieux, on cherche des loups-garous parmi les villageois. En skin
+`farwest`, un bourg de la conquête de l'Ouest, entre le désert et la voie
+ferrée : le saloon, le puits, la potence. Parmi les habitants se cachent des
+hors-la-loi ; la nuit, la bande descend quelqu'un ; le jour, le bourg
+délibère et livre l'un des siens au gibet. Mêmes états, mêmes tests, autre
+histoire.
+
+La légende western est laconique — la foule qui pend vite, le silence des
+pistes. Le narrateur tient le registre du comptoir : il constate, il ne
+pleure personne, il ne juge pas. Aucun nom propre réel ne passe jamais
+(règle de plume n° 1), aucun camp favori. Et la mort n'est jamais une
+violence dépeinte : c'est une descente dans la nuit ou une pendaison qui
+attendait le vote — les pendus bavardent entre eux au cimetière.
+
+### Le jour et la nuit, traduits
+
+| Vocabulaire Thiercelieux | Ce qu'il devient |
+|---|---|
+| « la nuit tombe sur le village » | « la nuit tombe sur la rue principale. Le bourg s'endort. » — la bande descend |
+| « le jour se lève » | le bourg délibère |
+| la potence | le gibet — « la potence attend {nom} » |
+| le hurlement de l'atelier | les coyotes dans la prairie, le galop au loin |
+| l'au-delà | « Le cimetière » — les pendus y bavardent entre eux |
+| le capitaine | le shérif — « {nom} prend l'étoile : sa voix portera double. » |
+| loin de la place (l'absent) | « au saloon voisin » — un lieu, jamais un adjectif accordé |
+
+### Les rôles
+
+| `RoleId` (moteur) | Skin Far West | L'idée |
+|---|---|---|
+| `villageois` | Pionnier | pas de pouvoir : la parole au saloon, et le fusil derrière la porte |
+| `loup` | Hors-la-loi | chaque nuit, la bande descend un habitant ; le jour, il boit au saloon comme les autres |
+| `voyante` | la Cartomancienne | elle tire les cartes de tout le monde, et son carnet s'en souvient |
+| `sorciere` | la Guérisseuse | deux remèdes dans la malle, pas deux potions |
+| `chasseur` | le Trappeur | rural, littéral : en tombant, sa dernière cartouche |
+| `cupidon` | le Prédicateur | il marie deux vivants d'un même destin — la famille, c'est devant Dieu |
+| `salvateur` | le Juge de paix | un rempart légal par nuit ; la bande passe toujours |
+| `idiot` | l'Idiot du saloon | gracié, affiché, plus jamais voix au chapitre |
+| `ancien` | l'Ancien | il a survécu à deux ruées avant celle-ci |
+| `corbeau` | la Moucharde | un mot glissé sous la porte du saloon, jamais signé |
+| `bouc` | l'Étranger | littéral : l'égalité des voix retombe sur lui |
+| `petiteFille` | la Guetteuse | du haut du clocher, elle compte les fusils — jamais lesquels |
+| `loupBlanc` | le Chasseur de primes | la bande le prend pour l'un des siens ; il ne gagne que seul |
+| `villageois2` | l'Honnête Fermier | son brevet dit « honnête pionnier » sur les deux faces — le porteur n'en sait rien |
+| `renard` | le Pisteur | il flaire le trio d'un vivant et de ses deux voisins de ferme |
+| `ours` | le Rancher | son chien aboie à l'aube si un bandana descend chez les voisins — son silence est une information |
+| `voleur` | le Filou | deux cartes restées dans son sac de voyage, à lui seul |
+| `chienLoup` | le Marshal | deux camps, une seule étoile, un choix la première nuit |
+| `enfantSauvage` | l'Émule | il se choisit un modèle ; le jour où le modèle descend, il passe de l'autre côté de la rue |
+| `soeurs` | les Deux Sœurs | un murmure ouvert jour et nuit, le cimetière seul le referme |
+| `freres` | les Trois Frères | trois fois le même menton, le même murmure |
+
+Les camps suivent : le village devient « le bourg », la meute « les
+hors-la-loi ».
+
+### Les canaux
+
+| `ChatChannel` | Libellé proposé |
+|---|---|
+| `village` | Le saloon |
+| `loups` | La bande |
+| `amoureux` | Les tourtereaux |
+| `fratrie` | La fratrie |
+| `morts` | Le cimetière |
+
+### Les compositions suggérées
+
+| Position | Nom proposé | Une ligne d'ambiance |
+|---|---|---|
+| 1 | La piste tranquille | L'équilibre du jeu, calculé pour cette table. |
+| 2 | Un bandana de plus | Un Hors-la-loi de plus : la potence ne chômera pas. |
+| 3 | Le bourg outillé | Tous les rôles possibles à cette table : le camp a des mains, et le saloon un juge. |
+
+### Le narrateur — un exemple par évènement
+
+| Évènement | Phrase |
+|---|---|
+| `debut` | Le puits a donné une ville. Que le bourg se rassemble. |
+| `phase` — `nuit` | La nuit tombe sur la rue principale. Le bourg s'endort. |
+| `phase` — `jour` | Le jour se lève sur la rue principale. Le bourg délibère. |
+| `morts`, cause `loups` | Les hors-la-loi ont descendu {nom}. |
+| `morts`, cause `vote` | Le bourg a pendu {nom}. |
+| `morts`, cause `abandon` | {nom} a quitté le bourg sans un mot. |
+| `aube-paisible` | Personne n'a été descendu cette nuit. Le saloon ouvre ses portes. |
+| `vote`, condamné | Les voix sont comptées : la potence attend {nom}. |
+| `capitaine`, élu | {nom} prend l'étoile : sa voix portera double. |
+| `fin`, `village` | Le bourg tient bon : plus un bandana dans la rue. |
+| `fin`, `loups` | Le bourg est vidé. L'étoile ne répond plus. |
+| `fin`, `personne` | Il ne reste personne pour fermer le saloon. |
+
+### La matière — sable et indigo
+
+L'habit suit (`habits.ts`, jeu `FARWEST`) : le jour se lit sur le papier
+jauni des affiches Wanted épinglées au mur du saloon ; la nuit est en indigo
+de prairie, bleu d'encre plutôt que noir bitume. La sanguine devient le
+rouge du bandana des hors-la-loi — la loi N2 l'interdit de nuit (2,39 sur
+le bistre900), et la craie, le même rouge passé à la lampe de la ville,
+la remplace. Et l'or de l'étoile de shérif ne se dessine qu'en hachure,
+jamais en aplat ni en texte. Toutes les paires de contrastes sont
+verrouillées au centième dans `contraste.test.ts`, comme pour les autres
+habits.
+
+### Les gravures, à venir
+
+Les gravures du Far West ne sont pas encore intégrées : jusqu'au
+raccordement de l'art du skin, le repli est Thiercelieux (règle d'or
+n° 4) — silencieusement, sans bannière d'erreur. La voix et la matière,
+elles, sont déjà entières.
+
+### Les limites
+
+Ce que Far West **ne change pas**, c'est tout le reste : aucune mécanique,
+aucune durée, aucun secret — le narrateur ne dit que ce que les évènements
+disent (R87) — et aucun identifiant brut (R2) : Far West dit
+« Hors-la-loi », « la Cartomancienne ». Le moteur ne sait pas que cet
+univers existe.
+
+## 6. Pirates — le cinquième habit
+
+**Esquisse.** Comme ses aînés, cette peau est marquée « Esquisse » là où la
+plume n'a pas été relue par un habitué du gaillard : chaque complément tient
+la place, il ne prétend pas à la phrase définitive.
+
+À Thiercelieux, on cherche des loups-garous parmi les villageois. En skin
+`pirates`, un trois-mâts au long cours : le pont, la cale, la vigie. Parmi
+l'équipage se cachent des mutins ; la nuit, la mutinerie jette quelqu'un à
+la mer ; le jour, le conseil délibère et fait marcher l'un des siens sur
+la planche. Mêmes états, mêmes tests, autre histoire.
+
+La gouaille maritime, le sel et la superstition — pas de caricature de
+flibuste. Le narrateur constate, il ne prend pas parti. Aucun pavillon
+réel ne passe jamais (règle de plume n° 1), aucun camp favori. Et la mort
+n'est jamais une violence dépeinte : c'est la mer qui reprend ce qu'on lui
+prête — « Les mutins ont jeté {nom} à la mer. » — et les noyés bavardent
+entre eux dans la chaloupe.
+
+### Le jour et la nuit, traduits
+
+| Vocabulaire Thiercelieux | Ce qu'il devient |
+|---|---|
+| « la nuit tombe sur le village » | « la nuit tombe sur le pont. Le navire s'endort. » — la cale grondante |
+| « le jour se lève » | le conseil tient séance |
+| la potence | la planche — « la planche attend {nom} » |
+| le hurlement de l'atelier | la cloche de quart, puis le grincement lent de la coque dans la houle |
+| l'au-delà | « La chaloupe » — les noyés y bavardent entre eux |
+| le capitaine | le capitaine — « {nom} prend la barre : sa voix portera double. » |
+| loin de la place (l'absent) | « parti chercher le vent » — jamais un adjectif accordé |
+
+### Les rôles
+
+| `RoleId` (moteur) | Skin Pirates | L'idée |
+|---|---|---|
+| `villageois` | Matelot | pas de pouvoir : la voix au conseil, et les bras pour la manœuvre |
+| `loup` | Mutin | chaque nuit, la mutinerie jette un matelot à la mer ; le jour, il hale sur les drisses comme les autres |
+| `voyante` | la Vigie | sa longue-vue lit dans la soute de tout le monde, et son carnet s'en souvient |
+| `sorciere` | la Guérisseuse | deux remèdes dans la sacoche, pas deux potions |
+| `chasseur` | le Canonnier | en tombant, sa dernière bordée |
+| `cupidon` | le Barbier | le prêtre étant resté à terre, c'est lui qui célèbre — deux vivants d'un même destin |
+| `salvateur` | le Charpentier | un calfattage de cabine par nuit ; la mer passe toujours |
+| `idiot` | l'Idiot de l'équipage | gracié, affiché, plus jamais voix au chapitre |
+| `ancien` | l'Ancien | il a survécu à des naufrages avant celui-ci |
+| `corbeau` | la Bouteille à la mer | un mot glissé dans la cale, jamais signé |
+| `bouc` | le Nouveau | littéral : l'égalité des voix retombe sur lui — embarqué la veille, sacrifié le lendemain |
+| `petiteFille` | la Clandestine | depuis le grand mât, elle compte les couteaux — jamais lesquels |
+| `loupBlanc` | le Flibustier | les mutins le prennent pour l'un des leurs ; il ne gagne que seul |
+| `villageois2` | le Corsaire | ses lettres portent le même cachet des deux côtés — le porteur n'en sait rien |
+| `renard` | la Fouine | elle flaire le trio d'un vivant et de ses deux voisins de pont |
+| `ours` | le Boucanier | son chien aboie à l'aube si un mutin s'assoit chez les voisins — son silence est une information |
+| `voleur` | le Forban | deux cartes restées sur la table du carré, à lui seul |
+| `chienLoup` | le Renégat | deux camps, une seule part, un choix la première nuit |
+| `enfantSauvage` | le Moussaillon | il se choisit un modèle ; jeté à la mer, le modèle l'envoie rejoindre la cale |
+| `soeurs` | les Deux Sœurs | un murmure ouvert jour et nuit, la mer seule le referme |
+| `freres` | les Trois Frères | trois fois la même houle, le même murmure |
+
+Les camps suivent : le village devient « l'équipage », la meute « les
+mutins ».
+
+### Les canaux
+
+| `ChatChannel` | Libellé proposé |
+|---|---|
+| `village` | Le pont |
+| `loups` | La cale |
+| `amoureux` | Les tourtereaux |
+| `fratrie` | La fratrie |
+| `morts` | La chaloupe |
+
+### Les compositions suggérées
+
+| Position | Nom proposé | Une ligne d'ambiance |
+|---|---|---|
+| 1 | La traversée tranquille | L'équilibre du jeu, calculé pour cette table. |
+| 2 | Un mutin de plus | Un Mutin de plus : la traversée ne finira pas à bon port. |
+| 3 | L'équipage outillé | Tous les rôles possibles à cette table : le bord a des mains, et le conseil un charpentier. |
+
+### Le narrateur — un exemple par évènement
+
+| Évènement | Phrase |
+|---|---|
+| `debut` | L'ancre est levée, l'équipage est réuni. Que la traversée commence. |
+| `phase` — `nuit` | La nuit tombe sur le pont. Le navire s'endort. |
+| `phase` — `jour` | Le jour se lève sur le pont. Le conseil tient séance. |
+| `morts`, cause `loups` | Les mutins ont jeté {nom} à la mer. |
+| `morts`, cause `vote` | Le conseil a fait marcher {nom} sur la planche. |
+| `morts`, cause `abandon` | {nom} a quitté le bord sans un mot. |
+| `aube-paisible` | Personne n'a été jeté à la mer cette nuit. Les vigies tiennent bon. |
+| `vote`, condamné | Les voix sont comptées : la planche attend {nom}. |
+| `capitaine`, élu | {nom} prend la barre : sa voix portera double. |
+| `fin`, `village` | L'équipage tient bon : la cale ne gronde plus. |
+| `fin`, `loups` | La mutinerie a pris le navire : plus une voix sur le pont. |
+| `fin`, `personne` | Il ne reste personne pour tenir la barre. |
+
+### La matière — sel et vert-de-gris
+
+L'habit suit (`habits.ts`, jeu `PIRATES`) : le jour se lit sur le papier
+d'une carte marine, beige sale de papier mouillé et séché ; la nuit est en
+vert-de-gris de coque, bleu-noir de cale et d'abysse. La sanguine devient
+le rouge de bandana de la mutinerie — la loi N2 l'interdit de nuit (2,34
+sur le bistre900), et la craie, le même rouge à la lampe de bord, la
+remplace. Et l'or des doublons ne brille qu'en hachure, jamais en aplat
+ni en texte. Toutes les paires de contrastes sont verrouillées au
+centième dans `contraste.test.ts`, comme pour les autres habits.
+
+### Les gravures, à venir
+
+Les gravures de Pirates ne sont pas encore intégrées : jusqu'au
+raccordement de l'art du skin, le repli est Thiercelieux (règle d'or
+n° 4). La voix et la matière, elles, sont déjà entières.
+
+### Les limites
+
+Ce que Pirates **ne change pas**, c'est tout le reste : aucune mécanique,
+aucune durée, aucun secret (R87), aucun identifiant brut (R2) — Pirates
+dit « Mutin », « la Vigie ». Le moteur ne sait pas que cet univers existe.
+
+## 7. Open Space — le sixième habit
+
+**Esquisse.** Comme ses aînés, cette peau est marquée « Esquisse » là où la
+plume n'a pas été relue par un habitant du plateau : chaque complément tient
+la place, il ne prétend pas à la phrase définitive.
+
+À Thiercelieux, on cherche des loups-garous parmi les villageois. En skin
+`openspace`, une startup en hypercroissance : le plateau de bureaux, la
+zone de détente, la machine à café. Parmi les salariés se cachent des
+managers ; la nuit, la direction licencie quelqu'un ; le jour, la
+cafétéria délibère et livre l'un des siens aux RH. Mêmes états, mêmes
+tests, autre histoire.
+
+La satire est féroce mais symétrique : les salariés qui délibèrent à côté
+de la machine à café et les managers qui réorganisent dans le vide se
+valent à l'écran — on se moque du processus, pas des personnes. Le
+narrateur tient le langage d'entreprise sans jamais militer. Aucun nom
+propre réel ne passe jamais (règle de plume n° 1), aucun camp favori. Et
+la mort n'est jamais une violence : c'est un licenciement — « Les
+managers ont licencié {nom}. » — et les partis bavardent ensemble à la
+machine à café.
+
+### Le jour et la nuit, traduits
+
+| Vocabulaire Thiercelieux | Ce qu'il devient |
+|---|---|
+| « la nuit tombe sur le village » | « la nuit tombe sur le plateau. Les écrans passent en veille. » |
+| « le jour se lève » | la cafétéria délibère |
+| la potence | la porte RH — « les RH attendent {nom} » |
+| le hurlement de l'atelier | le bip du badge sur la porte vitrée, la sonnerie qui tombe dans le vide |
+| l'au-delà | « La machine à café » — les partis y bavardent entre eux |
+| le capitaine | le chef de projet — « {nom} prend le marqueur : sa voix portera double. » |
+| loin de la place (l'absent) | « parti en réunion » — jamais un adjectif accordé |
+
+### Les rôles
+
+| `RoleId` (moteur) | Skin Open Space | L'idée |
+|---|---|---|
+| `villageois` | Salarié | pas de pouvoir : la voix en réunion, et le badge autour du cou |
+| `loup` | Manager | chaque nuit, la direction licencie quelqu'un ; le jour, il fait le tour des plateaux, sourire aux lèvres |
+| `voyante` | la Contrôleuse de gestion | elle inspecte la ligne de tout le monde, et son tableur s'en souvient |
+| `sorciere` | la Pharmacienne | deux remèdes dans la trousse : la dose qui réveille, et l'arrêt maladie définitif |
+| `chasseur` | le Directeur des ventes | en tombant, sa dernière relance |
+| `cupidon` | l'Animateur du séminaire | il lie deux collègues d'un même destin — la team, c'est pour la vie |
+| `salvateur` | le Syndicaliste | un rempart par nuit ; le plan social passe toujours |
+| `idiot` | l'Idiot de l'open space | gracié, affiché, plus jamais voix au chapitre |
+| `ancien` | l'Ancien | il a déjà vu deux plans sociaux avant celui-ci |
+| `corbeau` | l'Enquête annuelle | un mot glissé dans la boîte à idées anonyme, jamais signé |
+| `bouc` | l'Alternant | littéral : l'égalité des voix retombe sur lui |
+| `petiteFille` | la Stagiaire | depuis la salle de pause, elle photographie les réunions — jamais lesquels |
+| `loupBlanc` | le Consultant | les managers le prennent pour l'un des siens ; il ne gagne que seul |
+| `villageois2` | le Salarié moteur | son contrat dit « salarié moteur » sur les deux faces — le porteur n'en sait rien |
+| `renard` | l'Analyste de flux | il flaire le trio d'un vivant et de ses deux voisins de cloison |
+| `ours` | le Gardien de nuit | son chien aboie à l'aube si un badge bleu s'installe chez les voisins — son silence est une information |
+| `voleur` | le Piqueur de stylos | deux rôles restés dans le tiroir de la photocopieuse, à lui seul |
+| `chienLoup` | l'Intérimaire | deux camps, une seule mission, un choix la première nuit |
+| `enfantSauvage` | le Cadet | il se choisit un mentor ; parti, le mentor l'envoie rejoindre la direction |
+| `soeurs` | les Deux Sœurs | un murmure ouvert jour et nuit, la machine à café seule le referme |
+| `freres` | les Trois Frères | trois fois le même badge, la même idée |
+
+Les camps suivent : le village devient « le plateau », la meute « les
+managers ».
+
+### Les canaux
+
+| `ChatChannel` | Libellé proposé |
+|---|---|
+| `village` | La cafétéria |
+| `loups` | Le CODIR |
+| `amoureux` | Les tourtereaux |
+| `fratrie` | La fratrie |
+| `morts` | La machine à café |
+
+### Les compositions suggérées
+
+| Position | Nom proposé | Une ligne d'ambiance |
+|---|---|---|
+| 1 | Le sprint tranquille | L'équilibre du jeu, calculé pour cette table. |
+| 2 | Un manager de plus | Un Manager de plus : les portes RH ne resteront pas fermées. |
+| 3 | Le plateau outillé | Tous les rôles possibles à cette table : le camp a des mains, et la cafétéria un syndicaliste. |
+
+### Le narrateur — un exemple par évènement
+
+| Évènement | Phrase |
+|---|---|
+| `debut` | Le plateau s'installe autour de la machine à café. Que le sprint commence. |
+| `phase` — `nuit` | La nuit tombe sur le plateau. Les écrans passent en veille. |
+| `phase` — `jour` | Le jour se lève sur le plateau. La cafétéria délibère. |
+| `morts`, cause `loups` | Les managers ont licencié {nom}. |
+| `morts`, cause `vote` | La cafétéria a livré {nom} aux RH. |
+| `morts`, cause `abandon` | {nom} a désactivé son badge sans un mot. |
+| `aube-paisible` | Personne n'a été licencié cette nuit. Le café du matin est chaud. |
+| `vote`, condamné | Les voix sont comptées : les RH attendent {nom}. |
+| `capitaine`, élu | {nom} prend le marqueur : sa voix portera double. |
+| `fin`, `village` | Le plateau tient bon : plus un costume dans l'open space. |
+| `fin`, `loups` | Le plateau est désert. Le badge ne répond plus. |
+| `fin`, `personne` | Il ne reste personne pour éteindre les écrans. |
+
+### La matière — blanc de plateau et veille d'écran
+
+L'habit suit (`habits.ts`, jeu `OPENSPACE`) : le jour se lit sur le blanc
+clinique des plateaux, papier d'imprimante légèrement gris ; la nuit est
+la veille bleutée des écrans, bleu-gris de moniteurs qui ne s'éteignent
+jamais tout à fait. La sanguine devient le bleu costume des managers —
+la loi N2 l'interdit de nuit (2,26 sur le bistre900), et la craie, le
+même bleu à la lumière des écrans, la remplace. Et le rose des post-it ne
+se colle qu'en hachure, jamais en aplat ni en texte. Toutes les paires de
+contrastes sont verrouillées au centième dans `contraste.test.ts`,
+comme pour les autres habits.
+
+### Les gravures, à venir
+
+Les gravures de l'Open Space ne sont pas encore intégrées : jusqu'au
+raccordement de l'art du skin, le repli est Thiercelieux (règle d'or
+n° 4). La voix et la matière, elles, sont déjà entières.
+
+### Les limites
+
+Ce qu'Open Space **ne change pas**, c'est tout le reste : aucune
+mécanique, aucune durée, aucun secret (R87), aucun identifiant brut
+(R2) — Open Space dit « Manager », « la Stagiaire ». Le moteur ne sait
+pas que cet univers existe.
+
+## 8. Les règles d'or
 
 Cinq règles, sans exception ni clause de style.
 
@@ -737,7 +1101,7 @@ Cinq règles, sans exception ni clause de style.
    une voix ; les murs porteurs — un accent par camp, une encre neutre pour
    le narrateur, des contrastes mesurés — restent debout.
 
-## 6. Le format de fichier — proposition
+## 9. Le format de fichier — proposition
 
 **Proposition, rien de plus** : le client n'existe pas, et ce format n'engage
 que ce document. Un skin serait un dossier — `packages/client/src/skins/<id>/`

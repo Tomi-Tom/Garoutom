@@ -25,7 +25,7 @@ const trait = (r) => (r.camp === 'meute' ? 'mordu · aquatinte' : r.camp === 'se
 export function faces1() {
   let b = entete('Pl. C-I', 'Garoutom · Caprices · lot C — les cartes', 'Les faces, planches 1 à 7',
     '« Nul ne se connaît. » — la v1 se tire en planches typographiques.',
-    'Carte grande 300 × 420 (SPEC § 5.2). En v1, l’image est le symbole du rôle à 128 px, gravé dans un ovale réservé sur la hachure <i>hach-1</i> (la meute : sur un grain d’aquatinte, jamais de hachure). Sous chaque carte, l’esquisse de mise en place de la planche illustrée à venir (§ 6.1, § 10).');
+    'Carte grande 300 × 420 (SPEC § 5.2). En v1, l’image est le symbole du rôle à 128 px, gravé dans un ovale réservé sur la hachure <i>hach-1</i> (la meute : sur un grain d’aquatinte, jamais de hachure). Sous chaque carte, l’esquisse de mise en place de la planche illustrée à venir (§ 6.1, § 13).');
   const slot = (i, row) => [48 + i * 401, row === 0 ? 156 : 760];
   const ids = ['villageois', 'loup', 'voyante', 'sorciere', 'chasseur', 'cupidon', 'salvateur'];
   ids.forEach((id, k) => {
