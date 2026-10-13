@@ -291,7 +291,7 @@ describe('<Salon /> — sur le bureau, trois colonnes', () => {
 
     const groupe = screen.getByRole('group', { name: 'Rôles optionnels' });
     const boutons = within(groupe).getAllByRole('button');
-    expect(boutons).toHaveLength(5);
+    expect(boutons).toHaveLength(13);
     for (const bouton of boutons) expect(bouton).toBeDisabled();
     expect(within(groupe).getByRole('button', { name: /Bouc émissaire/ })).toHaveAttribute('aria-pressed', 'true');
   });

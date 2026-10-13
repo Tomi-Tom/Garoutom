@@ -31,6 +31,7 @@ import {
   NIGHT_SECONDS,
   OPTIONAL_ROLE_MIN_PLAYERS,
   OPTIONAL_ROLES,
+  OPTIONAL_ROLES_V3,
   randomComposition,
   SPECIAL_ROLES,
   suggestionsFor,
@@ -38,6 +39,7 @@ import {
   type ChoosableRoleId,
   type GameOptions,
   type OptionalRoleId,
+  type OptionalRoleIdV3,
   type PlayerInfo,
   type RoomView,
   type Rng,
@@ -1380,8 +1382,11 @@ function CarteVillage({ nombre, options, voix }: { nombre: number; options: Game
   );
 }
 
+/** Les rôles optionnels, v2 et v3 confondues : la table en coche ce qu'elle veut. */
+const TOUS_OPTIONNELS = [...OPTIONAL_ROLES, ...OPTIONAL_ROLES_V3] as const;
+
 /**
- * La seconde rangée : les rôles optionnels de la v2 (R90). Hors de la
+ * La seconde rangée : les rôles optionnels (v2 puis v3). Hors de la
  * référence et des suggestions, l'hôte les coche à toute table — le moteur
  * n'en refuse que ce que R13 refuse, et le bouton de lancement dit pourquoi.
  * Sous le seuil conseillé (R100), la table avertit sans interdire.
@@ -1397,7 +1402,7 @@ function RolesOptionnels({
   editable: boolean;
   voix: Voix;
 }) {
-  const sousSeuil = OPTIONAL_ROLES.filter((role) => nombre < OPTIONAL_ROLE_MIN_PLAYERS[role]);
+  const sousSeuil = TOUS_OPTIONNELS.filter((role) => nombre < OPTIONAL_ROLE_MIN_PLAYERS[role]);
   return (
     <div className="flex flex-col gap-1.5" data-testid="roles-optionnels">
       <p className="m-0 text-sm font-bold">
@@ -1405,7 +1410,7 @@ function RolesOptionnels({
         <span className="t-statut pl-2 font-normal">pour aller plus loin — jamais dans la composition automatique</span>
       </p>
       <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Rôles optionnels">
-        {OPTIONAL_ROLES.map((role) => (
+        {TOUS_OPTIONNELS.map((role) => (
           <CarteAcocher
             key={role}
             role={role}
@@ -1431,7 +1436,15 @@ function RolesOptionnels({
   );
 }
 
-function SeuilConseille({ role, nombre, voix }: { role: OptionalRoleId; nombre: number; voix: Voix }) {
+function SeuilConseille({
+  role,
+  nombre,
+  voix,
+}: {
+  role: OptionalRoleId | OptionalRoleIdV3;
+  nombre: number;
+  voix: Voix;
+}) {
   const seuil = OPTIONAL_ROLE_MIN_PLAYERS[role];
   return (
     <p className="t-statut m-0" data-testid={`seuil-${role}`} style={{ color: 'var(--encre)' }}>
